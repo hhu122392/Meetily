@@ -1,13 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mockIPC, clearMocks } from '@tauri-apps/api/mocks';
-import { needsMultilingualSetup, prepareWhisperModel } from '../../src/lib/transcription-setup';
+import { needsMultilingualSetup, prepareWhisperModel, shouldShowWhisperPreparation } from '../../src/lib/transcription-setup';
+import { chooseDefaultModelKey, type ModelOption } from '../../src/hooks/useTranscriptionModels';
 
 test('Chinese-capable automatic mode excludes Parakeet, English-only and unknown models', () => {
   assert.equal(needsMultilingualSetup('parakeet', 'parakeet-tdt-0.6b-v3-int8'), true);
   assert.equal(needsMultilingualSetup('localWhisper', 'small.en'), true);
   assert.equal(needsMultilingualSetup('localWhisper', 'unknown'), true);
   assert.equal(needsMultilingualSetup('localWhisper', 'small'), false);
+  assert.equal(needsMultilingualSetup('sensevoice', 'sensevoice-small-int8'), false);
+});
+
+test('SenseVoice uses its own model manager instead of the Whisper preparation panel', () => {
+  assert.equal(shouldShowWhisperPreparation('sensevoice', 'sensevoice-small-int8'), false);
+  assert.equal(shouldShowWhisperPreparation('parakeet', 'parakeet-tdt-0.6b-v3-int8'), true);
+  assert.equal(shouldShowWhisperPreparation('localWhisper', 'unknown'), true);
+});
+
+test('a missing configured SenseVoice model is not silently replaced by another provider', () => {
+  const available: ModelOption[] = [{ provider: 'whisper', name: 'small', displayName: 'Whisper small', size_mb: 1 }];
+  assert.equal(chooseDefaultModelKey(available, { provider: 'sensevoice', model: 'sensevoice-small-int8' }), '');
+  assert.equal(chooseDefaultModelKey(available, { provider: 'localWhisper', model: 'small' }), 'whisper:small');
 });
 
 for (const failure of [null, 'download', 'corrupt-download', 'load', 'wrong-model', 'not-loaded', 'save', 'recording-after-download'] as const) {

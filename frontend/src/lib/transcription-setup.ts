@@ -10,6 +10,12 @@ export function needsMultilingualSetup(provider: string, model: string): boolean
   return provider !== 'localWhisper' || !Object.hasOwn(MODEL_CONFIGS, model);
 }
 
+/** The language dialog only offers a Whisper preparation action for providers
+ * that cannot use their own multilingual model manager. */
+export function shouldShowWhisperPreparation(provider: string, model: string): boolean {
+  return provider !== 'sensevoice' && needsMultilingualSetup(provider, model);
+}
+
 export type ModelPreparationStep = 'checking' | 'downloading' | 'loading' | 'saving';
 
 export async function prepareWhisperModel(

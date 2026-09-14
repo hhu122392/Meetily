@@ -10,7 +10,7 @@ import { useRecordingState } from "@/contexts/RecordingStateContext";
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { needsMultilingualSetup, prepareWhisperModel, type ModelPreparationStep } from "@/lib/transcription-setup";
+import { shouldShowWhisperPreparation, prepareWhisperModel, type ModelPreparationStep } from "@/lib/transcription-setup";
 
 type modalType = "modelSettings" | "deviceSettings" | "languageSettings" | "modelSelector" | "errorAlert" | "chunkDropWarning";
 
@@ -68,7 +68,8 @@ export function SettingsModals({
   const [preparationError, setPreparationError] = useState('');
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const settingsLocked = isRecording || isStopping || isProcessing || isSaving || preparing;
-  const preparationModel = needsMultilingualSetup(transcriptModelConfig.provider, transcriptModelConfig.model)
+  const showWhisperPreparation = shouldShowWhisperPreparation(transcriptModelConfig.provider, transcriptModelConfig.model);
+  const preparationModel = showWhisperPreparation
     ? 'small' : transcriptModelConfig.model;
 
   const prepareModel = async () => {
@@ -109,7 +110,7 @@ export function SettingsModals({
         className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">
         {t('transcription:setup.prepare', { model: preparationModel })}
       </button>
-      {preparationStep && (preparationStep !== 'ready' || !needsMultilingualSetup(transcriptModelConfig.provider, transcriptModelConfig.model)) && <p role="status" className="text-sm">
+      {preparationStep && (preparationStep !== 'ready' || !showWhisperPreparation) && <p role="status" className="text-sm">
         {t(`transcription:setup.${preparationStep}`)}
         {preparationStep === 'downloading' && downloadProgress !== null && ` ${downloadProgress}%`}
       </p>}
@@ -290,7 +291,7 @@ export function SettingsModals({
             disabled={settingsLocked}
             provider={transcriptModelConfig.provider}
           />
-          {preparationControls}
+          {showWhisperPreparation && preparationControls}
 
           <div className="mt-6 flex justify-end">
             <button
@@ -329,7 +330,7 @@ export function SettingsModals({
             {messages.modelSelector && <p role="alert" className="mb-4 text-amber-800">{messages.modelSelector}</p>}
             <LanguageSelection selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage}
               disabled={settingsLocked} provider={transcriptModelConfig.provider} />
-            {preparationControls}
+            {showWhisperPreparation && preparationControls}
             {!settingsLocked && <details><summary className="cursor-pointer text-sm">{t('transcription:labels.advancedModels')}</summary>
             <TranscriptSettings
               transcriptModelConfig={transcriptModelConfig}

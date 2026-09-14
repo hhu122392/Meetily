@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
+import { DEFAULT_SENSEVOICE_MODEL } from '../constants/modelDefaults';
 
-export const DEFAULT_TRANSCRIPT_CONFIG = { provider: 'sensevoice' as const, model: 'sensevoice-small-int8', apiKey: null };
+export const DEFAULT_TRANSCRIPT_CONFIG = { provider: 'sensevoice' as const, model: DEFAULT_SENSEVOICE_MODEL, apiKey: null };
 export const SENSEVOICE_BYTES = 239_233_841 + 315_894;
 export interface SenseVoiceState {
   status: 'checking' | 'missing' | 'partial' | 'downloading' | 'available' | 'error';

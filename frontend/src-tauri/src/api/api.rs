@@ -108,6 +108,27 @@ pub struct TranscriptConfig {
     pub api_key: Option<String>,
 }
 
+pub(crate) fn default_transcript_config() -> TranscriptConfig {
+    TranscriptConfig {
+        provider: crate::config::DEFAULT_TRANSCRIPT_PROVIDER.to_string(),
+        model: crate::config::DEFAULT_SENSEVOICE_MODEL.to_string(),
+        api_key: None,
+    }
+}
+
+#[cfg(test)]
+mod transcript_config_tests {
+    use super::default_transcript_config;
+
+    #[test]
+    fn missing_transcript_config_defaults_to_sensevoice() {
+        let config = default_transcript_config();
+        assert_eq!(config.provider, crate::config::DEFAULT_TRANSCRIPT_PROVIDER);
+        assert_eq!(config.model, crate::config::DEFAULT_SENSEVOICE_MODEL);
+        assert!(config.api_key.is_none());
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaveTranscriptConfigRequest {
     pub provider: String,
@@ -641,11 +662,7 @@ pub async fn api_get_transcript_config<R: Runtime>(
         }
         Ok(None) => {
             log_info!("No transcript config found, returning default.");
-            Ok(Some(TranscriptConfig {
-                provider: "parakeet".to_string(),
-                model: crate::config::DEFAULT_PARAKEET_MODEL.to_string(),
-                api_key: None,
-            }))
+            Ok(Some(default_transcript_config()))
         }
         Err(e) => {
             log_error!("Failed to get transcript config: {}", e);

@@ -16,6 +16,7 @@ import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { useImportDialog } from '@/contexts/ImportDialogContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { requestAppNavigation } from '@/lib/navigation-guard';
+import { DEFAULT_TRANSCRIPT_CONFIG } from '@/lib/sensevoice';
 
 import {
   Dialog,
@@ -77,8 +78,7 @@ const Sidebar: React.FC = () => {
     ollamaEndpoint: null
   });
   const [transcriptModelConfig, setTranscriptModelConfig] = useState<TranscriptModelProps>({
-    provider: 'parakeet',
-    model: 'parakeet-tdt-0.6b-v3-int8',
+    ...DEFAULT_TRANSCRIPT_CONFIG,
   });
   const [settingsSaveSuccess, setSettingsSaveSuccess] = useState<boolean | null>(null);
 

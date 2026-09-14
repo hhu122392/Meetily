@@ -15,6 +15,9 @@ export const DEFAULT_WHISPER_MODEL = 'large-v3-turbo';
  */
 export const DEFAULT_PARAKEET_MODEL = 'parakeet-tdt-0.6b-v3-int8';
 
+/** Default Chinese-first multilingual model. */
+export const DEFAULT_SENSEVOICE_MODEL = 'sensevoice-small-int8';
+
 /**
  * Model defaults by provider type
  */
@@ -22,4 +25,5 @@ export const MODEL_DEFAULTS = {
   whisper: DEFAULT_WHISPER_MODEL,
   localWhisper: DEFAULT_WHISPER_MODEL,
   parakeet: DEFAULT_PARAKEET_MODEL,
+  sensevoice: DEFAULT_SENSEVOICE_MODEL,
 } as const;

@@ -548,12 +548,13 @@ pub fn run() {
             whisper_engine::commands::set_models_directory(whisper_models_dir)
                 .map_err(std::io::Error::other)?;
 
-            // Initialize Whisper engine on startup
-            tauri::async_runtime::spawn(async {
-                if let Err(e) = whisper_engine::commands::whisper_init().await {
-                    log::error!("Failed to initialize Whisper engine on startup: {}", e);
-                }
-            });
+            // Whisper stays lazy. SenseVoice is the default provider, and
+            // initializing Whisper here needlessly loads native CPU code on
+            // machines that never selected Whisper. It also made an old
+            // saved Whisper choice capable of crashing the process during
+            // startup on CPUs missing the model's instruction set. The
+            // Whisper settings flow calls `whisper_init` only after the user
+            // explicitly selects a Whisper model.
 
             // ParakeetEngine appends its `parakeet` subdirectory to this root.
             parakeet_engine::commands::set_models_directory(common_models_root.clone())

@@ -31,6 +31,22 @@ interface TranscriptModelConfig {
   model?: string;
 }
 
+/** Keep a configured SenseVoice choice visible as "not ready" instead of
+ * silently selecting the first downloaded Whisper/Parakeet model. */
+export function chooseDefaultModelKey(allModels: ModelOption[], config: TranscriptModelConfig | undefined): string {
+  const configuredProvider = config?.provider || '';
+  const configuredModel = config?.model || '';
+  const configuredMatch = allModels.find(
+    (m) =>
+      (configuredProvider === 'localWhisper' && m.provider === 'whisper' && m.name === configuredModel) ||
+      (configuredProvider === 'parakeet' && m.provider === 'parakeet' && m.name === configuredModel) ||
+      (configuredProvider === 'sensevoice' && m.provider === 'sensevoice' && m.name === configuredModel),
+  );
+  if (configuredMatch) return `${configuredMatch.provider}:${configuredMatch.name}`;
+  if (configuredProvider === 'sensevoice') return '';
+  return allModels.length > 0 ? `${allModels[0].provider}:${allModels[0].name}` : '';
+}
+
 /**
  * Custom hook for fetching and managing transcription models (Whisper and Parakeet).
  *
@@ -108,27 +124,9 @@ export function useTranscriptionModels(transcriptModelConfig: TranscriptModelCon
     setAvailableModels(allModels);
 
     // Set default model based on user's saved configuration
-    const configuredProvider = transcriptModelConfig?.provider || '';
-    const configuredModel = transcriptModelConfig?.model || '';
-
-    // Try to match the configured model
-    // Note: 'localWhisper' in config maps to 'whisper' provider in model list
-    const configuredMatch = allModels.find(
-      (m) =>
-        (configuredProvider === 'localWhisper' && m.provider === 'whisper' && m.name === configuredModel) ||
-        (configuredProvider === 'parakeet' && m.provider === 'parakeet' && m.name === configuredModel) ||
-        (configuredProvider === 'sensevoice' && m.provider === 'sensevoice' && m.name === configuredModel)
-    );
-
     // Only set default model if user hasn't manually selected one
     if (!userSelectedRef.current) {
-      if (configuredMatch) {
-        // Use the configured model if available
-        setSelectedModelKey(`${configuredMatch.provider}:${configuredMatch.name}`);
-      } else if (allModels.length > 0) {
-        // Fall back to first available model
-        setSelectedModelKey(`${allModels[0].provider}:${allModels[0].name}`);
-      }
+      setSelectedModelKey(chooseDefaultModelKey(allModels, transcriptModelConfig));
     }
 
     setLoadingModels(false);
