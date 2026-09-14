@@ -1,0 +1,154 @@
+{
+  "displayLanguage": {
+    "title": "显示语言",
+    "description": "选择 Meetily 界面使用的语言。此设置不会更改转写语言或摘要语言。",
+    "activeLocale": "当前界面语言：{{locale}}",
+    "restartNotRequired": "更改会立即生效，无需重新启动。",
+    "options": { "system": "跟随系统", "en": "英语", "zhCN": "简体中文" },
+    "resolvedLocales": { "en": "英语", "zhCN": "简体中文" }
+  },
+  "page": { "title": "设置", "back": "返回" },
+  "tabs": {
+    "general": "常规", "recordings": "录音", "transcription": "转写",
+    "summary": "摘要", "beta": "测试功能", "aiSummary": "AI 摘要",
+    "preferences": "偏好设置", "about": "关于"
+  },
+  "common": {
+    "done": "完成", "cancel": "取消", "save": "保存", "default": "默认",
+    "download": "下载", "retry": "重试", "delete": "删除", "remove": "移除",
+    "active": "已启用", "inactive": "未启用", "disabled": "已禁用", "ready": "可用",
+    "selected": "已选择", "error": "错误", "loading": "正在加载…", "note": "注意："
+  },
+  "preferences": {
+    "title": "偏好设置", "loading": "正在加载偏好设置…",
+    "notificationsTitle": "通知",
+    "notificationsDescription": "启用或禁用会议开始和结束时发送的系统通知。",
+    "storageTitle": "数据存储位置",
+    "storageDescription": "查看和打开 Meetily 存储数据的位置。",
+    "meetingRecordings": "会议录音", "openFolder": "打开文件夹",
+    "storageNote": "数据库和模型统一存放在应用数据目录中，以便集中管理。"
+  },
+  "recording": {
+    "title": "录音设置",
+    "description": "配置会议期间音频录制文件的保存方式。",
+    "saveAudio": "保存音频录制",
+    "saveAudioDescription": "录音停止后自动保存音频文件。",
+    "saveLocation": "保存位置", "defaultFolder": "默认文件夹", "chooseFolder": "选择文件夹", "openFolder": "打开文件夹",
+    "fileFormat": "文件格式：", "fileType": "{{format}} 文件",
+    "timestampDescription": "每场会议单独建一个文件夹（会议名 + 时间戳），音频保存为 audio.{{format}}",
+    "disabledDescription": "音频录制保存已禁用。请启用“保存音频录制”以自动保存会议音频。",
+    "startNotification": "录音开始通知",
+    "startNotificationDescription": "录音开始时在应用内显示提示卡片（不是系统通知），用于告知参会者。与上面的“通知”开关相互独立：上面管系统通知，这里只管应用内卡片。",
+    "defaultDevices": "默认音频设备",
+    "defaultDevicesDescription": "设置新录音默认使用的麦克风和系统音频设备。"
+  },
+  "devices": {
+    "title": "音频设备", "settingsTitle": "音频设备设置",
+    "microphone": "麦克风", "systemAudio": "系统音频",
+    "recordingMode": "录音模式",
+    "modeMicrophoneAndSystem": "麦克风 + 系统音频",
+    "modeMicrophoneOnly": "仅麦克风",
+    "modeSystemOnly": "仅系统音频",
+    "selectMicrophone": "选择麦克风", "selectSystemAudio": "选择系统音频",
+    "defaultMicrophone": "跟随系统默认（麦克风）", "defaultSystemAudio": "跟随系统默认（系统音频）",
+    "unavailableSelection": "上次选择（当前不可用）",
+    "unavailableHint": "已保存的设备当前不可用。录音不会因此被拦下，将自动改用系统默认设备。",
+    "noMicrophones": "未找到麦克风设备", "noSystemAudio": "未找到系统音频设备",
+    "microphoneLevels": "麦克风音量：",
+    "microphoneDescription": "录制你的声音和环境音",
+    "systemAudioDescription": "录制音乐、通话等电脑音频",
+    "levelsDescription": "绿色 = 正常，黄色 = 偏响，红色 = 过响",
+    "tip": "提示：", "testTip": "选择“测试麦克风”可检查麦克风是否正常工作。",
+    "testMicrophone": "测试麦克风", "stopTest": "停止测试", "refresh": "刷新设备",
+    "loading": "正在加载音频设备…", "loadFailed": "无法加载音频设备。",
+    "monitoringFailed": "无法开始监测麦克风音量。",
+    "saved": "设备偏好设置已保存", "selected": "已选择设备",
+    "selectionDescription": "麦克风：{{micDevice}}，系统音频：{{systemDevice}}"
+  },
+  "audioBackend": {
+    "title": "系统音频后端", "methods": "音频捕获方式：",
+    "description": "可尝试其他后端，以找到最适合当前系统的捕获方式。",
+    "screenCaptureKitDescription": "使用 Apple ScreenCaptureKit 捕获，兼容性较好。",
+    "coreAudioDescription": "直接使用 Core Audio 捕获，延迟更低，并可更细致地控制音频管线。",
+    "defaultDescription": "默认的系统音频捕获方式。",
+    "selectionOnlySystem": "后端选择只影响系统音频捕获。",
+    "microphoneDefault": "麦克风始终使用默认方式。",
+    "newSessions": "更改会应用于新开始的录音会话。",
+    "refresh": "刷新音频后端", "loadFailed": "无法加载音频后端。",
+    "changeFailed": "无法更改音频后端。"
+  },
+  "summary": {
+    "autoTitle": "自动生成摘要",
+    "autoDescription": "会议结束后自动生成摘要。",
+    "modelConfiguration": "摘要模型配置",
+    "modelDescription": "配置用于生成会议摘要的 AI 模型。",
+    "languageTitle": "摘要语言",
+    "languageDescription": "为新会议固定一种默认语言；其他语言仍可在会议页快速切换。（会议页仍有单独的“自动”选项，这里不需要选它。）",
+    "addLanguage": "添加语言", "unsetDefault": "取消默认语言", "setDefault": "设为默认语言",
+    "unpinLanguage": "取消将{{language}}设为默认语言", "pinLanguage": "将{{language}}设为默认语言",
+    "removeLanguage": "移除{{language}}",
+    "languageHint": "选择任意语言即可设为默认语言，最多可保留五个快速切换选项。",
+    "languageDefaultHint": "默认语言：{{language}}。再次选择可取消默认；最多可保留五个快速切换选项。"
+  },
+  "transcription": {
+    "modelSettings": "转写模型设置",
+    "setupRequired": "需要设置语音识别",
+    "showConfidence": "显示置信度指示器",
+    "showConfidenceDescription": "用彩色指示器显示转写置信度。",
+    "performanceWarning": "转写性能警告"
+  },
+  "language": { "settingsTitle": "语言设置" },
+  "messages": {
+    "preferenceSaved": "偏好设置已保存", "modelSettingsSaved": "模型设置已保存",
+    "devicesSelected": "已选择设备", "youAreRunningTheLatestVersion": "当前已是最新版本"
+  },
+  "errors": {
+    "savePreference": "无法保存偏好设置。",
+    "saveDevices": "无法保存设备偏好设置。",
+    "loadModelSettings": "无法加载模型设置。",
+    "saveModelSettings": "无法保存模型设置。",
+    "openFolder": "无法打开此文件夹。"
+  },
+  "accessibility": {
+    "closePreferences": "关闭偏好设置", "closeDeviceSettings": "关闭音频设备设置",
+    "closeLanguageSettings": "关闭语言设置", "closeModelSettings": "关闭转写模型设置",
+    "showApiKey": "显示 API 密钥", "hideApiKey": "隐藏 API 密钥", "aboutMeetily": "关于 Meetily"
+  },
+  "actions": {
+    "checkForUpdates": "检查更新",
+    "enableOrDisableNotificationsOfStartAndEndOfMeeting": "启用或禁用会议开始和结束通知",
+    "openFolder": "打开文件夹", "updateAvailableV": "可用更新：v"
+  },
+  "descriptions": {
+    "microphoneValueSystemAudioValue": "麦克风：{{micDevice}}，系统音频：{{systemDevice}}"
+  },
+  "labels": {
+    "aiModelConfiguration": "AI 模型配置",
+    "aLibraryOfOnDeviceAIAgentsAutomatingFollowUps": "本机 AI 智能体库，可自动处理跟进、行动项追踪等工作。",
+    "audioDeviceSettings": "音频设备设置", "availableOllamaModels": "可用的 Ollama 模型",
+    "avoidPayPerMinuteBillsByRunningModelsLocallyOr": "在本机运行模型可避免按分钟付费，也可以只为自行选择的调用付费。",
+    "betaFeatures": "测试功能", "builtByZackriyaSolutions": "由 Zackriya Solutions 构建", "builtInAI": "内置 AI",
+    "chatWithTheZackriyaTeam": "与 Zackriya 团队交流", "comingSoon": "即将推出：",
+    "databaseAndModelsAreStoredTogetherInYourApplicationData": "数据库和模型统一存放在应用数据目录中，以便集中管理。",
+    "dataStorageLocations": "数据存储位置",
+    "displayColoredDotsShowingTranscriptionConfidenceQuality": "用彩色圆点显示转写置信度",
+    "googleMeetZoomTeamsOnlineOrOffline": "无论线上还是线下，均支持 Google Meet、Zoom 和 Teams。",
+    "ifYouRePlanningToBuildPrivacyFirstCustomAI": "如果你计划构建隐私优先的自定义 AI 智能体或完全定制的产品来服务你的",
+    "languageSettings": "语言设置", "meetilyLogo": "Meetily 标志", "meetingRecordings": "会议录音",
+    "preferLocalOpenSourceModelGreatWantToPlugIn": "偏好本地开源模型？可以。想接入外部 API？也可以。没有平台锁定。",
+    "realTimeNotesAndSummariesThatNeverLeaveYourMachine": "实时笔记和摘要始终留在你的设备上。",
+    "showConfidenceIndicators": "显示置信度指示器", "speechRecognitionSetupRequired": "需要设置语音识别",
+    "summarizationModel": "摘要模型",
+    "theseFeaturesAreStillBeingTestedYouMayEncounterIssues": "这些功能仍在测试中，使用时可能遇到问题，感谢你的反馈。",
+    "transcriptionModelSettings": "转写模型设置", "transcriptionPerformanceWarning": "转写性能警告",
+    "useAnyModel": "使用任意模型", "viewAndAccessWhereMeetilyStoresYourData": "查看和打开 Meetily 存储数据的位置",
+    "weCanHelpYouBuildIt": "，我们可以协助你实现。", "whatMakesMeetilyDifferent": "Meetily 的独特之处",
+    "whenDisabledBetaFeaturesWillBeHiddenYourExistingMeetings": "禁用后将隐藏测试功能，现有会议不受影响。",
+    "worksEverywhere": "随处可用",
+    "yourDataAndAIProcessingWorkflowCanNowStayWithin": "你的数据与 AI 处理流程可以完全留在内部环境中，无需云端，也不会外泄。"
+  },
+  "status": {
+    "loadingPreferences": "正在加载偏好设置…", "readyToPushYourBusinessFurther": "准备好进一步推动业务了吗？",
+    "recordingStopped": "录音已停止"
+  }
+}

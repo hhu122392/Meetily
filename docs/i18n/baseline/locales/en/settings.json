@@ -1,0 +1,58 @@
+{
+  "accessibility": {
+    "aboutMeetily": "About Meetily"
+  },
+  "actions": {
+    "checkForUpdates": "Check for Updates",
+    "enableOrDisableNotificationsOfStartAndEndOfMeeting": "Enable or disable notifications of start and end of meeting",
+    "openFolder": "Open Folder",
+    "updateAvailableV": "Update available: v"
+  },
+  "descriptions": {
+    "microphoneValueSystemAudioValue": "Microphone: {{micDevice}}, System Audio: {{systemDevice}}"
+  },
+  "labels": {
+    "aiModelConfiguration": "AI Model Configuration",
+    "aLibraryOfOnDeviceAIAgentsAutomatingFollowUps": "A library of on-device AI agents-automating follow-ups, action tracking, and more.",
+    "audioDeviceSettings": "Audio Device Settings",
+    "availableOllamaModels": "Available Ollama Models",
+    "avoidPayPerMinuteBillsByRunningModelsLocallyOr": "Avoid pay-per-minute bills by running models locally (or pay only for the calls you choose).",
+    "betaFeatures": "Beta Features",
+    "builtByZackriyaSolutions": "Built by Zackriya Solutions",
+    "builtInAI": "Built-in AI",
+    "chatWithTheZackriyaTeam": "Chat with the Zackriya team",
+    "comingSoon": "Coming soon:",
+    "databaseAndModelsAreStoredTogetherInYourApplicationData": "Database and models are stored together in your application data directory for unified management.",
+    "dataStorageLocations": "Data Storage Locations",
+    "displayColoredDotsShowingTranscriptionConfidenceQuality": "Display colored dots showing transcription confidence quality",
+    "googleMeetZoomTeamsOnlineOrOffline": "Google Meet, Zoom, Teams-online or offline.",
+    "ifYouRePlanningToBuildPrivacyFirstCustomAI": "If you're planning to build privacy-first custom AI agents or a fully tailored product for your",
+    "languageSettings": "Language Settings",
+    "meetilyLogo": "Meetily Logo",
+    "meetingRecordings": "Meeting Recordings",
+    "preferLocalOpenSourceModelGreatWantToPlugIn": "Prefer local open-source model? Great. Want to plug in an external API? Also fine. No lock-in.",
+    "realTimeNotesAndSummariesThatNeverLeaveYourMachine": "Real-time notes and summaries that never leave your machine.",
+    "showConfidenceIndicators": "Show Confidence Indicators",
+    "speechRecognitionSetupRequired": "Speech Recognition Setup Required",
+    "summarizationModel": "Summarization Model",
+    "theseFeaturesAreStillBeingTestedYouMayEncounterIssues": "These features are still being tested. You may encounter issues, and we appreciate your feedback.",
+    "transcriptionModelSettings": "Transcription Model Settings",
+    "transcriptionPerformanceWarning": "Transcription Performance Warning",
+    "useAnyModel": "Use Any Model",
+    "viewAndAccessWhereMeetilyStoresYourData": "View and access where Meetily stores your data",
+    "weCanHelpYouBuildIt": ", we can help you build it.",
+    "whatMakesMeetilyDifferent": "What makes Meetily different",
+    "whenDisabledBetaFeaturesWillBeHiddenYourExistingMeetings": "When disabled, beta features will be hidden. Your existing meetings remain unaffected.",
+    "worksEverywhere": "Works everywhere",
+    "yourDataAndAIProcessingWorkflowCanNowStayWithin": "Your data & AI processing workflow can now stay within your premise. No cloud, no leaks."
+  },
+  "messages": {
+    "devicesSelected": "Devices selected",
+    "youAreRunningTheLatestVersion": "You are running the latest version"
+  },
+  "status": {
+    "loadingPreferences": "Loading Preferences...",
+    "readyToPushYourBusinessFurther": "Ready to push your business further?",
+    "recordingStopped": "Recording Stopped"
+  }
+}

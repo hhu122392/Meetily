@@ -1,0 +1,57 @@
+{
+  "accessibility": {
+    "gettingThingsReady": "Getting things ready",
+    "intelligentSummariesAndInsights": "Intelligent summaries & insights",
+    "setupOverview": "Setup Overview",
+    "welcomeToMeetily": "Welcome to Meetily",
+    "worksOfflineNoCloudRequired": "Works offline, no cloud required",
+    "yourDataNeverLeavesYourDevice": "Your data never leaves your device"
+  },
+  "actions": {
+    "downloadError": "Download Error",
+    "downloadSummarizationEngine": "Download Summarization Engine",
+    "downloadTranscriptionEngine": "Download Transcription Engine",
+    "downloadWillContinueInTheBackground": "Download will continue in the background.",
+    "finishSetup": "Finish Setup",
+    "grantPermissions": "Grant Permissions",
+    "tryAgain": "Try Again"
+  },
+  "descriptions": {
+    "clickEnableToGrantAudioCapturePermission": "Click Enable to grant Audio Capture permission",
+    "meetilyNeedsAccessToYourMicrophoneAndSystemAudioTo": "Meetily needs access to your microphone and system audio to record meetings",
+    "meetilyRequiresThatYouDownloadTheTranscriptionAndSummarizationAI": "Meetily requires that you download the Transcription & Summarization AI models for the software to work.",
+    "pleaseCheckYourConnectionAndTryAgain": "Please check your connection and try again.",
+    "pleaseRetryTheDownloadBeforeContinuing": "Please retry the download before continuing.",
+    "pleaseTryAgain": "Please try again.",
+    "recordTranscribeSummarizeAllOnYourDevice": "Record. Transcribe. Summarize. All on your device.",
+    "requiredToCaptureYourVoiceDuringMeetings": "Required to capture your voice during meetings",
+    "youCanAlsoSelectExternalAIProvidersLikeOpenAIClaude": "You can also select external AI providers like OpenAI, Claude, or Ollama for summary generation in settings.",
+    "youCanStartUsingMeetilyAfterDownloadingTheTranscriptionEngine": "You can start using Meetily after downloading the Transcription Engine.",
+    "youCanStartUsingTheAppRecordingWillBeAvailable": "You can start using the app. Recording will be available once speech recognition is ready."
+  },
+  "errors": {
+    "downloadRetryFailed": "Download retry failed",
+    "failedToCompleteSetup": "Failed to complete setup",
+    "summaryModelDownloadRetryFailed": "Summary model download retry failed",
+    "summaryModelRecommendationIsNotReadyYet": "Summary model recommendation is not ready yet",
+    "transcriptionEngineRequired": "Transcription engine required"
+  },
+  "labels": {
+    "accessDeniedPleaseGrantInSystemSettings": "Access Denied - Please grant in System Settings",
+    "accessGranted": "Access Granted",
+    "getStarted": "Get Started",
+    "iLlDoThisLater": "I'll do this later",
+    "letSGo": "Let's Go",
+    "pleaseEnableAudioCaptureInSystemSettingsPrivacyAndSecurity": "Please enable Audio Capture in System Settings → Privacy & Security → Audio Capture",
+    "pleaseEnableMicrophoneAccessInSystemPreferencesSecurityAndPrivacy": "Please enable microphone access in System Preferences > Security & Privacy > Microphone",
+    "reportIssuesOnGitHub": "Report issues on GitHub",
+    "takesLessThan3Minutes": "Takes less than 3 minutes",
+    "youCanContinueWhileThisFinishes": "You can continue while this finishes"
+  },
+  "messages": {
+    "downloadsWillContinueInTheBackground": "Downloads will continue in the background"
+  },
+  "status": {
+    "recordingWonTWorkWithoutPermissionsYouCanGrantThem": "Recording won't work without permissions. You can grant them later in settings."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": 1,
+  "admissionId": "meetily-windows-production-certificate-admission-v1",
+  "status": "PendingCandidateEvidence",
+  "targetPolicyId": "meetily-windows-production-signing-v1",
+  "targetThumbprintSet": "productionActive",
+  "requirements": {
+    "requiredCodeSigningEkuOid": "1.3.6.1.5.5.7.3.3",
+    "minimumRemainingValidityDays": 30,
+    "requireExactApprovedSubject": true,
+    "requireTrustedCertificateChain": true,
+    "requireDigiCertHealthcheck": true,
+    "requireDigiCertCertificateSync": true,
+    "requireProofOfPossession": true,
+    "requireTauriUpdaterPrivateKeyPresence": true,
+    "requireTauriUpdaterPrivateKeyPasswordPresence": true,
+    "forbidSelfSignedCertificate": true,
+    "forbidHistoricalThumbprintReuse": true,
+    "requiredIndependentApprovals": [
+      "releaseOwner",
+      "securityReviewer"
+    ]
+  },
+  "candidate": {
+    "subject": null,
+    "sha1Thumbprint": null,
+    "serialNumber": null,
+    "issuer": null,
+    "notBeforeUtc": null,
+    "notAfterUtc": null
+  },
+  "approvals": {
+    "releaseOwner": {
+      "status": "Pending",
+      "approvedAtUtc": null,
+      "approvalReference": null
+    },
+    "securityReviewer": {
+      "status": "Pending",
+      "approvedAtUtc": null,
+      "approvalReference": null
+    }
+  },
+  "controls": {
+    "approvalRecordMustMatchProductionActive": true,
+    "candidateMustMatchConfiguredThumbprint": true,
+    "candidateMustMatchSynchronizedCertificate": true,
+    "proofOfPossessionArtifactMustBeDisposable": true,
+    "approvalDoesNotAuthorizeReleaseByItself": true,
+    "realSignedRcGateStillRequired": true
+  },
+  "provenance": {
+    "createdAtUtc": "2026-08-24T00:00:00Z",
+    "sourcePhase": "5A-4C-1",
+    "note": "This record intentionally keeps the production certificate unapproved until public certificate evidence, two independent approvals, DigiCert connectivity, proof of possession, and Tauri updater-key presence are all demonstrated. No secret value belongs in this file."
+  }
+}

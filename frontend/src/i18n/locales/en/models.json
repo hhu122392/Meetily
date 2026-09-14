@@ -1,0 +1,161 @@
+{
+  "config": {
+    "title": "Model settings", "summaryModel": "Summarization model", "transcriptModel": "Transcription model",
+    "selectProvider": "Select provider", "selectModel": "Select model", "searchModels": "Search models...",
+    "availableOllama": "Available Ollama models", "builtInModels": "Built-in AI models",
+    "using": "Using:", "endpointUrl": "Endpoint URL *", "endpointDescription": "Base URL of the OpenAI-compatible API",
+    "modelName": "Model name *", "modelDescription": "Model identifier used for requests",
+    "apiKey": "API key", "apiKeyOptional": "API key (optional)", "apiKeyPlaceholder": "Enter your API key",
+    "optionalKeyPlaceholder": "Leave empty if not required", "advanced": "Advanced options",
+    "maxTokens": "Max tokens", "temperature": "Temperature (0.0–2.0)", "topP": "Top P (0.0–1.0)",
+    "customEndpoint": "Custom endpoint (optional)", "customEndpointDescription": "Leave empty or enter a custom endpoint, for example http://x.yy.zz:11434",
+    "endpointChangedBeforeSave": "The endpoint changed. Fetch models from the new endpoint before saving.",
+    "endpointChanged": "The endpoint changed. Fetch models to load them from the new endpoint.",
+    "noModels": "No models found.",
+    "noBuiltInModels": "No built-in AI models were found. Download a model to get started.",
+    "noMatchingModels": "No models match “{{query}}”. Try a different search term.",
+    "noOllamaModels": "No models found. Download the recommended model or fetch the available Ollama models.",
+    "ollamaUnavailable": "Ollama is not installed or is not running. Install Ollama to use local models.",
+    "ollamaAfterInstall": "After installing Ollama, restart this application and fetch the models again.",
+    "modelSize": "Size: {{size}}", "modelModified": "Modified: {{modified}}"
+  },
+  "providers": {
+    "builtIn": "Built-in AI (offline; no API required)", "builtInShort": "Built-in AI",
+    "customOpenAI": "Custom server (OpenAI-compatible)", "claude": "Claude", "groq": "Groq",
+    "ollama": "Ollama", "openAI": "OpenAI", "openRouter": "OpenRouter",
+    "parakeet": "Parakeet (recommended — real-time and accurate)",
+    "localWhisper": "Local Whisper (high accuracy)",
+    "sensevoice": "SenseVoice (Chinese-first, local)"
+  },
+  "sensevoice": {
+    "ready": "Installed · available",
+    "empty": "No SenseVoice model detected",
+    "help": "Default local transcription model. Supports Chinese, English, Cantonese, Japanese and Korean. About 228.5 MiB; recordings are processed on this device.",
+    "checking": "Checking",
+    "missing": "Not downloaded",
+    "partial": "Incomplete download",
+    "downloading": "Downloading",
+    "available": "Downloaded",
+    "error": "Download failed. Retry.",
+    "download": "Download SenseVoice",
+    "retry": "Retry download",
+    "selected": "Selected",
+    "select": "Use this model"
+  },
+  "actions": {
+    "save": "Save", "download": "Download", "downloadOllama": "Download Ollama", "fetchModels": "Fetch models",
+    "testConnection": "Test Connection", "delete": "Delete", "deleteModel": "Delete model",
+    "deleteToFreeSpace": "Delete model to free up space", "retry": "Retry", "cancel": "Cancel",
+    "cancelDownload": "Cancel download", "redownload": "Download again", "unlock": "Unlock to edit",
+    "lock": "Lock to prevent editing", "showApiKey": "Show API key", "hideApiKey": "Hide API key",
+    "downloadRecommended": "Download gemma3:1b (recommended, about 800 MB)",
+    "downloadGemma31bRecommended800MB": "Download gemma3:1b (Recommended, ~800MB)"
+  },
+  "status": {
+    "loadingModels": "Loading models...", "fetching": "Fetching...", "testing": "Testing connection...",
+    "downloading": "Downloading...", "downloadingModel": "Downloading {{model}}", "downloadingModelEllipsis": "Downloading {{model}}...", "finalizing": "Finalizing...",
+    "progress": "{{progress}}% complete", "progressLabel": "Progress: {{progress}}%",
+    "completedLoading": "Download complete; loading the model...", "ready": "Ready", "selected": "Selected",
+    "corrupted": "Corrupted", "error": "Error", "recommended": "Recommended",
+    "usingForTranscription": "Using {{model}} for transcription", "active": "Active", "inactive": "Inactive",
+    "downloadProgress": "{{model}} is downloading ({{progress}}%). Please wait until download completes.",
+    "progressPercent": "Progress: {{progress}}%", "testingConnection": "Testing Connection..."
+  },
+  "messages": {
+    "connectionSuccess": "Connection successful.", "downloadStarted": "Downloading {{model}}. This may take a few minutes.",
+    "alreadyDownloading": "{{model}} is already downloading.", "downloaded": "{{model}} is downloaded and ready to use.",
+    "downloadCancelled": "The download of {{model}} was cancelled.", "switched": "Switched to {{model}}.",
+    "deleted": "{{model}} was deleted.", "deletedToFreeSpace": "{{model}} was removed to free up space.",
+    "modelReady": "The model is ready to use.",
+    "downloadOfValueCancelled": "Download of {{modelName}} cancelled",
+    "modelValueDeleted": "Model {{modelName}} deleted", "modelValueDownloaded": "Model {{modelName}} downloaded!",
+    "modelValueDownloadedSuccessfully": "Model {{model}} downloaded successfully",
+    "valueIsAlreadyDownloading": "{{recommendedModel}} is already downloading"
+  },
+  "errors": {
+    "generic": "An error occurred.", "loadModels": "Unable to load models.",
+    "loadTranscriptionModels": "Unable to load transcription models.", "loadBuiltInModels": "Unable to load built-in AI models.",
+    "loadOpenRouterModels": "Unable to load OpenRouter models.", "saveCustomConfig": "Unable to save the custom OpenAI configuration.",
+    "endpointAndModelRequired": "Enter an endpoint URL and model name first.",
+    "ollamaNotInstalled": "Ollama is not installed.", "ollamaInstallDescription": "Install Ollama before downloading its models.",
+    "download": "Unable to download {{model}}.", "cancelDownload": "Unable to cancel the download.",
+    "delete": "Unable to delete {{model}}.", "corrupted": "The file is corrupted. Download it again or delete it.",
+    "connection": "Unable to connect with the current configuration.",
+    "invalidOllamaEndpoint": "Enter a valid Ollama endpoint beginning with http:// or https://.",
+    "downloadFailedValue": "Download failed: {{modelName}}", "failedToDeleteValue": "Failed to delete {{modelName}}",
+    "failedToDownloadValue": "Failed to download {{modelName}}", "failedToLoadBuiltInAIModels": "Failed to load Built-in AI models",
+    "failedToLoadModels": "Failed to load models", "failedToLoadOpenRouterModels": "Failed to load OpenRouter models",
+    "failedToSaveCustomOpenAIConfiguration": "Failed to save custom OpenAI configuration",
+    "ollamaIsNotInstalled": "Ollama is not installed",
+    "pleaseEnterEndpointURLAndModelNameFirst": "Please enter endpoint URL and model name first"
+  },
+  "download": {
+    "modelsAvailable": "{{downloaded}} of {{total}} models available", "total": "{{size}} total",
+    "offlineDescription": "Models run locally; transcription does not require an internet connection.",
+    "bytesProgress": "{{downloaded}} / {{total}}", "speed": "{{speed}} MiB/s",
+    "tokenCount": "{{count}} tokens", "sizeDescription": "{{name}}, size {{size}}"
+  },
+  "transcription": {
+    "advancedModels": "Advanced models", "accuracy": "accuracy", "processing": "processing",
+    "failedToLoad": "Unable to load models.", "modelDownloaded": "Model downloaded and ready to use",
+    "downloadMayTakeTime": "This may take a few minutes", "modelRemoved": "Model removed to free up space"
+  },
+  "builtIn": {
+    "qwen2bName": "Qwen 3.5 2B (balanced)",
+    "qwen2bDescription": "A balanced Qwen 3.5 model for built-in summaries, with higher quality and modest local requirements.",
+    "qwen4bName": "Qwen 3.5 4B (high quality)",
+    "qwen4bDescription": "A high-quality Qwen 3.5 model for built-in summaries and the best local Qwen option in this lineup.",
+    "gemma4bName": "Gemma 3 4B (balanced)",
+    "gemma4bDescription": "A balanced model with a strong quality-to-speed tradeoff. Requires about 3.5 GB of RAM.",
+    "gemma1bName": "Gemma 3 1B (fast)",
+    "gemma1bDescription": "The fastest model. Runs on nearly any hardware with about 1 GB of RAM and works well for quick summaries."
+  },
+  "parakeet": {
+    "lightningName": "Lightning", "lightningTagline": "Real-time processing; best for speed with great accuracy",
+    "compactName": "Compact", "compactTagline": "Real-time processing with a smaller download",
+    "preciseName": "Precise", "preciseTagline": "Processes at about 20× real time with higher precision"
+  },
+  "whisper": {
+    "small": "Small", "medium": "Medium", "largeCompressed": "Large V3 compressed",
+    "largeTurbo": "Large V3 Turbo", "large": "Large V3", "advancedName": "Whisper {{model}}",
+    "q5_1": "Q5_1 quantized", "q5_0": "Q5_0 quantized", "quantized": "Quantized",
+    "attribute": "{{speed}} · {{accuracy}}", "accuracySpec": "{{accuracy}} accuracy",
+    "speedSpec": "{{speed}} processing"
+  },
+  "values": {
+    "accuracyHigh": "High", "accuracyGood": "Good", "accuracyDecent": "Basic",
+    "speedSlow": "Slower", "speedMedium": "Moderate", "speedFast": "Fast",
+    "speedVeryFast": "Very fast", "speedUltraFast": "Ultra-fast"
+  },
+  "accessibility": { "lockToPreventEditing": "Lock to prevent editing", "unlockToEdit": "Unlock to edit" },
+  "descriptions": {
+    "modelIsNowReadyToUse": "Model is now ready to use",
+    "noModelsFoundDownloadARecommendedModelOrClickFetch": "No models found. Download a recommended model or click \"Fetch Models\" to load available Ollama models.",
+    "pleaseDownloadAndInstallOllamaBeforeDownloadingModels": "Please download and install Ollama before downloading models."
+  },
+  "labels": {
+    "advancedOptions": "Advanced Options",
+    "afterInstallingOllamaRestartThisApplicationAndClickFetchModels": "After installing Ollama, restart this application and click \"Fetch Models\" to continue.",
+    "andNbsp": "&nbsp;", "anErrorOccurred": "An error occurred", "apiKey": "API Key", "apiKeyOptional": "API Key (optional)",
+    "availableOllamaModels": "Available Ollama Models", "baseURLOfTheOpenAICompatibleAPI": "Base URL of the OpenAI-compatible API",
+    "builtInAIModels": "Built-in AI Models", "builtInAIOfflineNoAPINeeded": "Built-in AI (Offline, No API needed)",
+    "customEndpointOptional": "Custom Endpoint (optional)", "customServerOpenAI": "Custom Server (OpenAI)",
+    "endpointChangedClickFetchModelsToLoadModelsFromThe": "Endpoint changed. Click \"Fetch Models\" to load models from the new endpoint.",
+    "endpointChangedPleaseClickFetchModelsToLoadModelsFrom": "Endpoint changed. Please click \"Fetch Models\" to load models from the new endpoint before saving.",
+    "endpointURL": "Endpoint URL *", "fetchModels": "Fetch Models",
+    "fileIsCorruptedRetryDownloadOrDelete": "File is corrupted. Retry download or delete.",
+    "leaveEmptyOrEnterACustomEndpointEGHttp": "Leave empty or enter a custom endpoint (e.g., http://x.yy.zz:11434)",
+    "maxTokens": "Max Tokens", "mib": "MiB /", "mibS": "MiB/s)",
+    "modelIdentifierToUseForRequests": "Model identifier to use for requests", "modelName": "Model Name *", "modelSettings": "Model Settings",
+    "noModelsFound": "No models found.", "noModelsFoundDownloadAModelToGetStartedWith": "No models found. Download a model to get started with Built-in AI.",
+    "noModelsFoundMatching": "No models found matching \"", "ollamaIsNotInstalledOrNotRunningPleaseDownloadAnd": "Ollama is not installed or not running. Please download and install Ollama to use local models.",
+    "summarizationModel": "Summarization Model", "temperature0020": "Temperature (0.0-2.0)", "topP0010": "Top P (0.0-1.0)",
+    "tryADifferentSearchTerm": "\". Try a different search term.", "withASizeOf": "with a size of"
+  },
+  "placeholders": {
+    "modelName": "gpt-4, llama-3-70b, etc.", "maxTokens": "e.g., 4096", "temperature": "e.g., 0.7", "topP": "e.g., 0.9",
+    "eG07": "e.g., 0.7", "eG09": "e.g., 0.9", "eG4096": "e.g., 4096",
+    "enterYourAPIKey": "Enter your API key", "gpt4Llama370bEtc": "gpt-4, llama-3-70b, etc.",
+    "leaveEmptyIfNotRequired": "Leave empty if not required", "searchModels": "Search models...", "selectProvider": "Select provider"
+  }
+}

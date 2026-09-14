@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "displayName": "meetily",
+    "identifier": "com.meetily.ai"
+  },
+  "policy": {
+    "unknownResidualFile": "block",
+    "ownedPathHashMismatch": "block",
+    "removeDirectoriesOnlyWhenEmpty": true,
+    "protectedDataRoots": [
+      {
+        "id": "app-data",
+        "pathTemplate": "%APPDATA%/com.meetily.ai"
+      },
+      {
+        "id": "custom-template-repository",
+        "pathTemplate": "%APPDATA%/Meetily/templates"
+      },
+      {
+        "id": "configuration",
+        "pathTemplate": "%APPDATA%/meetily"
+      },
+      {
+        "id": "default-recordings",
+        "pathTemplate": "%USERPROFILE%/Music/meetily-recordings"
+      }
+    ]
+  },
+  "releases": [
+    {
+      "version": "0.3.0",
+      "ownedResidualDirectories": [
+        "templates"
+      ],
+      "ownedResidualFiles": [
+        {
+          "path": "templates/daily_standup.json",
+          "sha256": "c476a12b3caea4bb83276b5af1770cccd28d5d698b68e1767bb238fd6e096548"
+        },
+        {
+          "path": "templates/project_sync.json",
+          "sha256": "e799defd3515e5ef9985f22786457cd13ab06a305c3f48de2dd93c5b2071103a"
+        },
+        {
+          "path": "templates/psychatric_session.json",
+          "sha256": "a8dc26c7699498907730edfa744f8d8ff287b3bc9b547a18ed5f7e6b75a7f3d6"
+        },
+        {
+          "path": "templates/retrospective.json",
+          "sha256": "11767dd066e1dc32ba7b009f1e58f6bef99a966061fccdf25bba6fe7545f40b5"
+        },
+        {
+          "path": "templates/sales_marketing_client_call.json",
+          "sha256": "eb8922b07b3267629a0a4d8a33b22c65b06417a96a2e3d0558f84875aa21476a"
+        },
+        {
+          "path": "templates/standard_meeting.json",
+          "sha256": "0e156082b6d12cc1e46bd36755bf2f62643ffc69141558519a975284d0002e13"
+        }
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "ownedResidualDirectories": [
+        "templates/en",
+        "templates/zh-CN",
+        "templates"
+      ],
+      "ownedResidualFiles": [
+        {
+          "path": "templates/daily_standup.json",
+          "sha256": "c476a12b3caea4bb83276b5af1770cccd28d5d698b68e1767bb238fd6e096548"
+        },
+        {
+          "path": "templates/project_sync.json",
+          "sha256": "e799defd3515e5ef9985f22786457cd13ab06a305c3f48de2dd93c5b2071103a"
+        },
+        {
+          "path": "templates/psychatric_session.json",
+          "sha256": "a8dc26c7699498907730edfa744f8d8ff287b3bc9b547a18ed5f7e6b75a7f3d6"
+        },
+        {
+          "path": "templates/retrospective.json",
+          "sha256": "11767dd066e1dc32ba7b009f1e58f6bef99a966061fccdf25bba6fe7545f40b5"
+        },
+        {
+          "path": "templates/sales_marketing_client_call.json",
+          "sha256": "eb8922b07b3267629a0a4d8a33b22c65b06417a96a2e3d0558f84875aa21476a"
+        },
+        {
+          "path": "templates/standard_meeting.json",
+          "sha256": "0e156082b6d12cc1e46bd36755bf2f62643ffc69141558519a975284d0002e13"
+        },
+        {
+          "path": "templates/en/daily_standup.json",
+          "sha256": "823fd4bb75e7d0d5f6c137dfe396c4ed582f2b1105002c96bf617490ffa8cf42"
+        },
+        {
+          "path": "templates/en/project_sync.json",
+          "sha256": "f530e6ad4dc68e2c688d78d7d9ee5035e2317858a61b8a5b70350c720fbd1e61"
+        },
+        {
+          "path": "templates/en/psychatric_session.json",
+          "sha256": "0d0519524891b300dcac3b5208e1737801135e857146922144a9a46b4ffb3791"
+        },
+        {
+          "path": "templates/en/retrospective.json",
+          "sha256": "add370065d7b143e96c56352eb8af22292f044a99202225d91771da44b9df4ca"
+        },
+        {
+          "path": "templates/en/sales_marketing_client_call.json",
+          "sha256": "9ce0ddf93150a619fdb50e9d57d981048d7da5ae7d0a01f132971562b094d051"
+        },
+        {
+          "path": "templates/en/standard_meeting.json",
+          "sha256": "37c8ffbbc7e35fe765f077b37ad72c2c5f22d36587f637bb55ca99ab21508802"
+        },
+        {
+          "path": "templates/zh-CN/daily_standup.json",
+          "sha256": "4e74876d014c102ee081db37f15338c20396ea49cdbc01023dd49d70d691c940"
+        },
+        {
+          "path": "templates/zh-CN/project_sync.json",
+          "sha256": "4404f3bdbf1ea53faff3d1dc54e55213148defe1da2d5470d76029b3f6426afe"
+        },
+        {
+          "path": "templates/zh-CN/psychatric_session.json",
+          "sha256": "3f82c78bb1fabc9dda4823b3d82eae9e46bd535622c5356af24a8fc761d377f5"
+        },
+        {
+          "path": "templates/zh-CN/retrospective.json",
+          "sha256": "5de1d1506d3a32abb90288865ec1d5b2641819c3c4d261ac5b924099ba86cc5f"
+        },
+        {
+          "path": "templates/zh-CN/sales_marketing_client_call.json",
+          "sha256": "e84dc86615972030d9669a061de0c5f16a84d4e2fdfbc216d921a39850d73e93"
+        },
+        {
+          "path": "templates/zh-CN/standard_meeting.json",
+          "sha256": "ed04847187150aa4b70e309988b410527c493dade599363a810581b31c34de9b"
+        }
+      ]
+    },
+    {
+      "version": "0.4.1",
+      "sameOwnedResourcesAs": "0.4.0"
+    },
+    {
+      "version": "0.4.2",
+      "sameOwnedResourcesAs": "0.4.0"
+    }
+  ]
+}

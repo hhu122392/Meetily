@@ -1,0 +1,940 @@
+{
+  "schemaVersion": 1,
+  "phase": "15.7-stage-4-template-and-ai-content-i18n",
+  "generatedAt": "2026-08-23T04:48:08.932Z",
+  "supportedLocales": [
+    "en",
+    "zh-CN"
+  ],
+  "fallbackLocale": "en",
+  "templates": [
+    {
+      "id": "daily_standup",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/daily_standup.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/daily_standup.json"
+      },
+      "hashes": {
+        "en": "6150AE6C07B76CA0B8A6A9661E56A41C54DE9FF3005269710BE4FEF176A62DD6",
+        "zhCN": "346929C87823B193930FEADDB8303D61405B34F2242529E7A2FB3C2005949E02"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "date",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "yesterday",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": true
+          },
+          {
+            "id": "today",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": true
+          },
+          {
+            "id": "blockers",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "notes",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "date",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "yesterday",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": true
+          },
+          {
+            "id": "today",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": true
+          },
+          {
+            "id": "blockers",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "notes",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Daily Standup",
+        "zhCN": "每日站会"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 17,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 16
+      }
+    },
+    {
+      "id": "project_sync",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/project_sync.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/project_sync.json"
+      },
+      "hashes": {
+        "en": "98541B33D53B3B7BDB0B94D0EC1F64263885532F34ABA63B5852D532019D401C",
+        "zhCN": "2DD1A551200417167AF3E7F4EA22FBF0D19B1D66704C4ED98AB506A6A6064CF6"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "meeting_date_time",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "milestones_status",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "progress_summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "top_risks_mitigations",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "key_decisions",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "related_documents",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "meeting_date_time",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "milestones_status",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "progress_summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "top_risks_mitigations",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "key_decisions",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "related_documents",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Project Sync / Status Update",
+        "zhCN": "项目同步／状态更新"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 23,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 23
+      }
+    },
+    {
+      "id": "psychatric_session",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/psychatric_session.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/psychatric_session.json"
+      },
+      "hashes": {
+        "en": "FE5EAC0C9F659E649AD7815985DB6AAC052CE40B1B2F82B4DFE3B66AD5E79E9A",
+        "zhCN": "8AA770993285CF7D0F716B5BC0BB486350E534F84DB8F44AC037F785A63804AF"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "session_metadata",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "ai_session_summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "subjective_s",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "objective_o",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "assessment_a",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "plan_p",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "medications",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "diagnoses_dsmicd",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "safety_risk_management",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "next_appointment",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "audit_trail",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "session_metadata",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "ai_session_summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "subjective_s",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "objective_o",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "assessment_a",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "plan_p",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "medications",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "diagnoses_dsmicd",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "safety_risk_management",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "next_appointment",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "audit_trail",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Psychiatric Session Note (SOAP + AI Hybrid)",
+        "zhCN": "精神科会谈记录（SOAP + AI 混合）"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 27,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 27
+      }
+    },
+    {
+      "id": "retrospective",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/retrospective.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/retrospective.json"
+      },
+      "hashes": {
+        "en": "83BE5E7D5D95FC92033A6BB78CF663CD4B8B5323191904CE75363302BDABAE8E",
+        "zhCN": "F4CA2560E51C305F2620F6B1537D46D752C9D7CB237821EC8BA2ADD4E7A7D2C9"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "sprint",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendance",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "start_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "stop_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "continue_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "notes_votes",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "sprint",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendance",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "start_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "stop_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "continue_doing",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "notes_votes",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Retrospective (Agile)",
+        "zhCN": "敏捷回顾会"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 20,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 20
+      }
+    },
+    {
+      "id": "sales_marketing_client_call",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/sales_marketing_client_call.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json"
+      },
+      "hashes": {
+        "en": "AC700D6A43493BBAA8F1B0107BBBFEE46C7A6779FB1807012C2976713D3702AF",
+        "zhCN": "7AA64485C05415A595555CCA7D76456EE8016CBC73F289F287C5E0016BA255F9"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "meeting_metadata",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "client_goals_success_criteria",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "agreed_deliverables",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "commercial_terms_discussed",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "risks_concerns",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "next_steps",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "meeting_metadata",
+            "format": "string",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "attendees",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "client_goals_success_criteria",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "agreed_deliverables",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "commercial_terms_discussed",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "risks_concerns",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "next_steps",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Client / Sales Meeting",
+        "zhCN": "客户／销售会议"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 19,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 19
+      }
+    },
+    {
+      "id": "standard_meeting",
+      "version": 1,
+      "files": {
+        "en": "frontend/src-tauri/templates/en/standard_meeting.json",
+        "zhCN": "frontend/src-tauri/templates/zh-CN/standard_meeting.json"
+      },
+      "hashes": {
+        "en": "3591AE2A685F26C6D36AB87DC74F393B3817FBCC72BD72465CB432B12840B9C0",
+        "zhCN": "FF5C066E6FD73AD6F288B83D8E1AEFCFB8BB6170A968D6F4DCE4E2DD83F05FAA"
+      },
+      "locales": {
+        "en": "en",
+        "zhCN": "zh-CN"
+      },
+      "sourceTypes": {
+        "en": "builtin",
+        "zhCN": "builtin"
+      },
+      "sections": {
+        "en": [
+          {
+            "id": "summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "key_decisions",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "discussion_highlights",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ],
+        "zhCN": [
+          {
+            "id": "summary",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "key_decisions",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "action_items",
+            "format": "list",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": true,
+            "hasExampleItemFormat": false
+          },
+          {
+            "id": "discussion_highlights",
+            "format": "paragraph",
+            "required": true,
+            "empty_behavior": "show_not_mentioned",
+            "hasItemFormat": false,
+            "hasExampleItemFormat": false
+          }
+        ]
+      },
+      "names": {
+        "en": "Standard Meeting Notes",
+        "zhCN": "标准会议纪要"
+      },
+      "missingRequired": {
+        "en": [],
+        "zhCN": []
+      },
+      "chineseContent": {
+        "fields": 11,
+        "blanks": [],
+        "pendingMarkers": [],
+        "hanCharacterFields": 11
+      }
+    }
+  ]
+}

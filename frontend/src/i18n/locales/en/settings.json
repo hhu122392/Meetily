@@ -1,0 +1,154 @@
+{
+  "displayLanguage": {
+    "title": "Display language",
+    "description": "Choose the language used by the Meetily interface. This does not change transcription or summary languages.",
+    "activeLocale": "Current interface language: {{locale}}",
+    "restartNotRequired": "Changes apply immediately. No restart is required.",
+    "options": { "system": "Use system language", "en": "English", "zhCN": "Simplified Chinese" },
+    "resolvedLocales": { "en": "English", "zhCN": "Simplified Chinese" }
+  },
+  "page": { "title": "Settings", "back": "Back" },
+  "tabs": {
+    "general": "General", "recordings": "Recordings", "transcription": "Transcription",
+    "summary": "Summary", "beta": "Beta", "aiSummary": "AI Summary",
+    "preferences": "Preferences", "about": "About"
+  },
+  "common": {
+    "done": "Done", "cancel": "Cancel", "save": "Save", "default": "Default",
+    "download": "Download", "retry": "Retry", "delete": "Delete", "remove": "Remove",
+    "active": "Active", "inactive": "Inactive", "disabled": "Disabled", "ready": "Ready",
+    "selected": "Selected", "error": "Error", "loading": "Loading...", "note": "Note:"
+  },
+  "preferences": {
+    "title": "Preferences", "loading": "Loading preferences...",
+    "notificationsTitle": "Notifications",
+    "notificationsDescription": "Enable or disable system notifications when a meeting starts and ends.",
+    "storageTitle": "Data storage locations",
+    "storageDescription": "View and access where Meetily stores your data.",
+    "meetingRecordings": "Meeting recordings", "openFolder": "Open folder",
+    "storageNote": "The database and models are stored together in your application data directory for unified management."
+  },
+  "recording": {
+    "title": "Recording settings",
+    "description": "Configure how audio recordings are saved during meetings.",
+    "saveAudio": "Save audio recordings",
+    "saveAudioDescription": "Automatically save audio files when recording stops.",
+    "saveLocation": "Save location", "defaultFolder": "Default folder", "chooseFolder": "Choose folder", "openFolder": "Open folder",
+    "fileFormat": "File format:", "fileType": "{{format}} files",
+    "timestampDescription": "Each meeting gets its own folder (meeting title + timestamp); the audio file is saved as audio.{{format}}",
+    "disabledDescription": "Audio recording is disabled. Enable “Save audio recordings” to save meeting audio automatically.",
+    "startNotification": "Recording start notification",
+    "startNotificationDescription": "Show an in-app card (not a system notification) when recording starts, so participants can be told. It is independent from the “Notifications” switch above: that one controls system notifications.",
+    "defaultDevices": "Default audio devices",
+    "defaultDevicesDescription": "Set the preferred microphone and system-audio devices for new recordings."
+  },
+  "devices": {
+    "title": "Audio devices", "settingsTitle": "Audio device settings",
+    "microphone": "Microphone", "systemAudio": "System audio",
+    "recordingMode": "Recording mode",
+    "modeMicrophoneAndSystem": "Microphone + system audio",
+    "modeMicrophoneOnly": "Microphone only",
+    "modeSystemOnly": "System audio only",
+    "selectMicrophone": "Select microphone", "selectSystemAudio": "Select system audio",
+    "defaultMicrophone": "Follow system default (microphone)", "defaultSystemAudio": "Follow system default (system audio)",
+    "unavailableSelection": "Previous selection (currently unavailable)",
+    "unavailableHint": "The saved device is unavailable. Recording will not be blocked; the system default device is used instead.",
+    "noMicrophones": "No microphone devices found", "noSystemAudio": "No system-audio devices found",
+    "microphoneLevels": "Microphone levels:",
+    "microphoneDescription": "Records your voice and ambient sound",
+    "systemAudioDescription": "Records computer audio such as music and calls",
+    "levelsDescription": "Green = good, yellow = loud, red = too loud",
+    "tip": "Tip:", "testTip": "Select “Test microphone” to check whether your microphone works.",
+    "testMicrophone": "Test microphone", "stopTest": "Stop test", "refresh": "Refresh devices",
+    "loading": "Loading audio devices...", "loadFailed": "Unable to load audio devices.",
+    "monitoringFailed": "Unable to start microphone-level monitoring.",
+    "saved": "Device preferences saved", "selected": "Devices selected",
+    "selectionDescription": "Microphone: {{micDevice}}, System audio: {{systemDevice}}"
+  },
+  "audioBackend": {
+    "title": "System-audio backend", "methods": "Audio capture methods:",
+    "description": "Try another backend to find the method that works best on this system.",
+    "screenCaptureKitDescription": "Apple ScreenCaptureKit capture with broad compatibility.",
+    "coreAudioDescription": "Direct Core Audio capture with lower latency and more pipeline control.",
+    "defaultDescription": "Default system-audio capture.",
+    "selectionOnlySystem": "Backend selection affects only system-audio capture.",
+    "microphoneDefault": "The microphone always uses the default method.",
+    "newSessions": "Changes apply to new recording sessions.",
+    "refresh": "Refresh audio backends", "loadFailed": "Unable to load audio backends.",
+    "changeFailed": "Unable to change the audio backend."
+  },
+  "summary": {
+    "autoTitle": "Automatic summary",
+    "autoDescription": "Generate a summary automatically after a meeting ends.",
+    "modelConfiguration": "Summary model configuration",
+    "modelDescription": "Configure the AI model used to generate meeting summaries.",
+    "languageTitle": "Summary language",
+    "languageDescription": "Pin one default language for new meetings. Other languages stay available as quick-switch options. (The per-meeting \"Auto\" choice lives on the meeting page, so there is nothing to pick here.)",
+    "addLanguage": "Add language", "unsetDefault": "Unset as default", "setDefault": "Set as default",
+    "unpinLanguage": "Unpin {{language}} as default", "pinLanguage": "Pin {{language}} as default",
+    "removeLanguage": "Remove {{language}}",
+    "languageHint": "Select any language to make it the default. You can keep up to five quick-switch options.",
+    "languageDefaultHint": "Default: {{language}} — select it again to unset it. You can keep up to five quick-switch options."
+  },
+  "transcription": {
+    "modelSettings": "Transcription model settings",
+    "setupRequired": "Speech recognition setup required",
+    "showConfidence": "Show confidence indicators",
+    "showConfidenceDescription": "Display colored indicators for transcription confidence.",
+    "performanceWarning": "Transcription performance warning"
+  },
+  "language": { "settingsTitle": "Language settings" },
+  "messages": {
+    "preferenceSaved": "Preference saved", "modelSettingsSaved": "Model settings saved successfully",
+    "devicesSelected": "Devices selected", "youAreRunningTheLatestVersion": "You are running the latest version"
+  },
+  "errors": {
+    "savePreference": "Unable to save the preference.",
+    "saveDevices": "Unable to save device preferences.",
+    "loadModelSettings": "Unable to load model settings.",
+    "saveModelSettings": "Unable to save model settings.",
+    "openFolder": "Unable to open this folder."
+  },
+  "accessibility": {
+    "closePreferences": "Close preferences", "closeDeviceSettings": "Close audio device settings",
+    "closeLanguageSettings": "Close language settings", "closeModelSettings": "Close transcription model settings",
+    "showApiKey": "Show API key", "hideApiKey": "Hide API key", "aboutMeetily": "About Meetily"
+  },
+  "actions": {
+    "checkForUpdates": "Check for Updates",
+    "enableOrDisableNotificationsOfStartAndEndOfMeeting": "Enable or disable notifications of start and end of meeting",
+    "openFolder": "Open Folder", "updateAvailableV": "Update available: v"
+  },
+  "descriptions": {
+    "microphoneValueSystemAudioValue": "Microphone: {{micDevice}}, System Audio: {{systemDevice}}"
+  },
+  "labels": {
+    "aiModelConfiguration": "AI Model Configuration",
+    "aLibraryOfOnDeviceAIAgentsAutomatingFollowUps": "A library of on-device AI agents-automating follow-ups, action tracking, and more.",
+    "audioDeviceSettings": "Audio Device Settings", "availableOllamaModels": "Available Ollama Models",
+    "avoidPayPerMinuteBillsByRunningModelsLocallyOr": "Avoid pay-per-minute bills by running models locally (or pay only for the calls you choose).",
+    "betaFeatures": "Beta Features", "builtByZackriyaSolutions": "Built by Zackriya Solutions", "builtInAI": "Built-in AI",
+    "chatWithTheZackriyaTeam": "Chat with the Zackriya team", "comingSoon": "Coming soon:",
+    "databaseAndModelsAreStoredTogetherInYourApplicationData": "Database and models are stored together in your application data directory for unified management.",
+    "dataStorageLocations": "Data Storage Locations",
+    "displayColoredDotsShowingTranscriptionConfidenceQuality": "Display colored dots showing transcription confidence quality",
+    "googleMeetZoomTeamsOnlineOrOffline": "Google Meet, Zoom, Teams-online or offline.",
+    "ifYouRePlanningToBuildPrivacyFirstCustomAI": "If you're planning to build privacy-first custom AI agents or a fully tailored product for your",
+    "languageSettings": "Language Settings", "meetilyLogo": "Meetily Logo", "meetingRecordings": "Meeting Recordings",
+    "preferLocalOpenSourceModelGreatWantToPlugIn": "Prefer local open-source model? Great. Want to plug in an external API? Also fine. No lock-in.",
+    "realTimeNotesAndSummariesThatNeverLeaveYourMachine": "Real-time notes and summaries that never leave your machine.",
+    "showConfidenceIndicators": "Show Confidence Indicators", "speechRecognitionSetupRequired": "Speech Recognition Setup Required",
+    "summarizationModel": "Summarization Model",
+    "theseFeaturesAreStillBeingTestedYouMayEncounterIssues": "These features are still being tested. You may encounter issues, and we appreciate your feedback.",
+    "transcriptionModelSettings": "Transcription Model Settings", "transcriptionPerformanceWarning": "Transcription Performance Warning",
+    "useAnyModel": "Use Any Model", "viewAndAccessWhereMeetilyStoresYourData": "View and access where Meetily stores your data",
+    "weCanHelpYouBuildIt": ", we can help you build it.", "whatMakesMeetilyDifferent": "What makes Meetily different",
+    "whenDisabledBetaFeaturesWillBeHiddenYourExistingMeetings": "When disabled, beta features will be hidden. Your existing meetings remain unaffected.",
+    "worksEverywhere": "Works everywhere",
+    "yourDataAndAIProcessingWorkflowCanNowStayWithin": "Your data & AI processing workflow can now stay within your premise. No cloud, no leaks."
+  },
+  "status": {
+    "loadingPreferences": "Loading Preferences...", "readyToPushYourBusinessFurther": "Ready to push your business further?",
+    "recordingStopped": "Recording Stopped"
+  }
+}

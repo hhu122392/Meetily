@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "resourceKeys": [],
+  "sourceFindings": [
+    "frontend/src/components/AnalyticsDataModal.tsx:133:jsx-expression",
+    "frontend/src/components/Logo.tsx:12:jsx-attribute:alt",
+    "frontend/src/components/Logo.tsx:19:jsx-text"
+  ]
+}

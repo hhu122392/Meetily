@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 1,
+  "complexSourceExpressions": [
+    {
+      "id": "TXT-0022",
+      "sourceText": "Supported formats: {getAudioFormatsDisplayList()}",
+      "finalKeys": [
+        "import.descriptions.supportedFormats"
+      ],
+      "variableMap": {
+        "getAudioFormatsDisplayList()": "formats"
+      },
+      "migrationInstruction": "Evaluate the format list before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/app/layout.tsx",
+          "line": 154,
+          "kind": "object_property:description"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0076",
+      "sourceText": "{selectedBlocks.length} blocks",
+      "finalKeys": [
+        "summary.labels.selectedBlocks_one",
+        "summary.labels.selectedBlocks_other"
+      ],
+      "variableMap": {
+        "selectedBlocks.length": "count"
+      },
+      "migrationInstruction": "Use i18next plural selection with count.",
+      "sources": [
+        {
+          "file": "frontend/src/components/AISummary/index.tsx",
+          "line": 688,
+          "kind": "jsx_expression"
+        },
+        {
+          "file": "frontend/src/components/AISummary/index.tsx",
+          "line": 695,
+          "kind": "jsx_expression"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0138",
+      "sourceText": "{deviceName} - {isActive ? 'Active' : 'Inactive'}",
+      "finalKeys": [
+        "recording.accessibility.deviceActive",
+        "recording.accessibility.deviceInactive"
+      ],
+      "variableMap": {
+        "deviceName": "deviceName",
+        "isActive ? 'Active' : 'Inactive'": "select-key-by-isActive"
+      },
+      "migrationInstruction": "Choose the active or inactive key before translation.",
+      "sources": [
+        {
+          "file": "frontend/src/components/AudioLevelMeter.tsx",
+          "line": 68,
+          "kind": "jsx_attribute:title"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0234",
+      "sourceText": "Import complete! {result.segments_count} segments created.",
+      "finalKeys": [
+        "import.messages.importComplete_one",
+        "import.messages.importComplete_other"
+      ],
+      "variableMap": {
+        "result.segments_count": "count"
+      },
+      "migrationInstruction": "Use plural selection with result.segments_count as count.",
+      "sources": [
+        {
+          "file": "frontend/src/components/ImportAudio/ImportAudioDialog.tsx",
+          "line": 98,
+          "kind": "call:toast.success"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0280",
+      "sourceText": "Retranscription complete! {event.payload.segments_count} segments created.",
+      "finalKeys": [
+        "transcription.messages.retranscriptionComplete_one",
+        "transcription.messages.retranscriptionComplete_other"
+      ],
+      "variableMap": {
+        "event.payload.segments_count": "count"
+      },
+      "migrationInstruction": "Use plural selection with event.payload.segments_count as count.",
+      "sources": [
+        {
+          "file": "frontend/src/components/MeetingDetails/RetranscribeDialog.tsx",
+          "line": 157,
+          "kind": "call:toast.success"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0314",
+      "sourceText": "{selectedModel} is downloading ({status.progress}%). Please wait until download completes.",
+      "finalKeys": [
+        "models.status.downloadProgress"
+      ],
+      "variableMap": {
+        "selectedModel": "model",
+        "status.progress": "progress"
+      },
+      "migrationInstruction": "Pass selectedModel as model and status.progress as progress.",
+      "sources": [
+        {
+          "file": "frontend/src/components/MeetingDetails/SummaryGeneratorButtonGroup.tsx",
+          "line": 132,
+          "kind": "object_property:description"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0326",
+      "sourceText": "Summary language: {effectiveLangLabel}{isLocalFallbackLanguage ? ' (saved on this device)' : ''}",
+      "finalKeys": [
+        "summary.accessibility.language",
+        "summary.accessibility.languageLocalFallback"
+      ],
+      "variableMap": {
+        "effectiveLangLabel": "language",
+        "isLocalFallbackLanguage ? ' (saved on this device)' : ''": "select-key-by-isLocalFallbackLanguage"
+      },
+      "migrationInstruction": "Choose the local-fallback key when isLocalFallbackLanguage is true.",
+      "sources": [
+        {
+          "file": "frontend/src/components/MeetingDetails/SummaryPanel.tsx",
+          "line": 233,
+          "kind": "jsx_attribute:title"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0352",
+      "sourceText": "Downloading gemma3:1b",
+      "finalKeys": [
+        "models.status.downloadingModel"
+      ],
+      "variableMap": {
+        "hardcoded gemma3:1b": "model"
+      },
+      "migrationInstruction": "Pass gemma3:1b as model; keep model IDs out of natural-language resources.",
+      "sources": [
+        {
+          "file": "frontend/src/components/ModelSettingsModal.tsx",
+          "line": 1282,
+          "kind": "jsx_text"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0353",
+      "sourceText": "Downloading gemma3:1b...",
+      "finalKeys": [
+        "models.status.downloadingModelEllipsis"
+      ],
+      "variableMap": {
+        "hardcoded gemma3:1b": "model"
+      },
+      "migrationInstruction": "Pass gemma3:1b as model; keep model IDs out of natural-language resources.",
+      "sources": [
+        {
+          "file": "frontend/src/components/ModelSettingsModal.tsx",
+          "line": 1268,
+          "kind": "jsx_text"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0383",
+      "sourceText": "Progress: {Math.round(getProgress(recommendedModel) || 0)}%",
+      "finalKeys": [
+        "models.status.progressPercent"
+      ],
+      "variableMap": {
+        "Math.round(getProgress(recommendedModel) || 0)": "progress"
+      },
+      "migrationInstruction": "Calculate and round progress before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/components/ModelSettingsModal.tsx",
+          "line": 708,
+          "kind": "object_property:description"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0453",
+      "sourceText": "{displayInfo?.icon || '✓'} {displayName} ready!",
+      "finalKeys": [
+        "transcription.messages.parakeetModelReady"
+      ],
+      "variableMap": {
+        "displayInfo?.icon || '✓'": "icon",
+        "displayName": "model"
+      },
+      "migrationInstruction": "Resolve the icon and display name before translation.",
+      "sources": [
+        {
+          "file": "frontend/src/components/ParakeetModelManager.tsx",
+          "line": 136,
+          "kind": "call:toast.success"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0540",
+      "sourceText": "Default: {labelForCode(pinned)} - click it again to unset. Max 5 quick-switch options.",
+      "finalKeys": [
+        "summary.descriptions.defaultLanguage"
+      ],
+      "variableMap": {
+        "labelForCode(pinned)": "language"
+      },
+      "migrationInstruction": "Resolve the localized language display name before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/components/SummaryLanguageSettings.tsx",
+          "line": 95,
+          "kind": "jsx_expression"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0542",
+      "sourceText": "Pin {labelForCode(code)} as default",
+      "finalKeys": [
+        "summary.accessibility.pinLanguageAsDefault"
+      ],
+      "variableMap": {
+        "labelForCode(code)": "language"
+      },
+      "migrationInstruction": "Resolve the localized language display name before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/components/SummaryLanguageSettings.tsx",
+          "line": 43,
+          "kind": "jsx_attribute:aria-label"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0543",
+      "sourceText": "Remove {labelForCode(code)}",
+      "finalKeys": [
+        "summary.accessibility.removeLanguage"
+      ],
+      "variableMap": {
+        "labelForCode(code)": "language"
+      },
+      "migrationInstruction": "Resolve the localized language display name before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/components/SummaryLanguageSettings.tsx",
+          "line": 60,
+          "kind": "jsx_attribute:aria-label"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0545",
+      "sourceText": "Unpin {labelForCode(code)} as default",
+      "finalKeys": [
+        "summary.accessibility.unpinLanguageAsDefault"
+      ],
+      "variableMap": {
+        "labelForCode(code)": "language"
+      },
+      "migrationInstruction": "Resolve the localized language display name before calling t().",
+      "sources": [
+        {
+          "file": "frontend/src/components/SummaryLanguageSettings.tsx",
+          "line": 43,
+          "kind": "jsx_attribute:aria-label"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0587",
+      "sourceText": "A new version ({updateInfo.version}) is available",
+      "finalKeys": [
+        "updates.messages.newVersionAvailable"
+      ],
+      "variableMap": {
+        "updateInfo.version": "version"
+      },
+      "migrationInstruction": "Pass updateInfo.version as version.",
+      "sources": [
+        {
+          "file": "frontend/src/components/UpdateDialog.tsx",
+          "line": 208,
+          "kind": "jsx_expression"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0628",
+      "sourceText": "{getModelIcon(model?.accuracy || 'Good')} {displayName} ready!",
+      "finalKeys": [
+        "transcription.messages.whisperModelReady"
+      ],
+      "variableMap": {
+        "getModelIcon(model?.accuracy || 'Good')": "icon",
+        "displayName": "model"
+      },
+      "migrationInstruction": "Resolve the icon and display name before translation.",
+      "sources": [
+        {
+          "file": "frontend/src/components/WhisperModelManager.tsx",
+          "line": 184,
+          "kind": "call:toast.success"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0666",
+      "sourceText": "Failed to {isRegeneration ? 'regenerate' : 'generate'} summary",
+      "finalKeys": [
+        "summary.errors.generateFailed",
+        "summary.errors.regenerateFailed"
+      ],
+      "variableMap": {
+        "isRegeneration ? 'regenerate' : 'generate'": "select-key-by-isRegeneration"
+      },
+      "migrationInstruction": "Choose a key using isRegeneration; do not interpolate a verb.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/meeting-details/useSummaryGeneration.ts",
+          "line": 242,
+          "kind": "call:toast.error"
+        },
+        {
+          "file": "frontend/src/hooks/meeting-details/useSummaryGeneration.ts",
+          "line": 378,
+          "kind": "call:toast.error"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0682",
+      "sourceText": "Using {modelConfig.provider}/{modelConfig.model}",
+      "finalKeys": [
+        "summary.status.usingModel"
+      ],
+      "variableMap": {
+        "modelConfig.provider": "provider",
+        "modelConfig.model": "model"
+      },
+      "migrationInstruction": "Pass provider and model as simple variables.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/meeting-details/useSummaryGeneration.ts",
+          "line": 139,
+          "kind": "object_property:description"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0683",
+      "sourceText": "{selectedModel} is downloading ({status.progress}%). Please wait until download completes.",
+      "finalKeys": [
+        "models.status.downloadProgress"
+      ],
+      "variableMap": {
+        "selectedModel": "model",
+        "status.progress": "progress"
+      },
+      "migrationInstruction": "Pass selectedModel as model and status.progress as progress.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/meeting-details/useSummaryGeneration.ts",
+          "line": 557,
+          "kind": "object_property:description"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0686",
+      "sourceText": "{isRegeneration ? 'Regenerating' : 'Generating'} summary...",
+      "finalKeys": [
+        "summary.status.generating",
+        "summary.status.regenerating"
+      ],
+      "variableMap": {
+        "isRegeneration ? 'Regenerating' : 'Generating'": "select-key-by-isRegeneration"
+      },
+      "migrationInstruction": "Choose a key using isRegeneration; do not interpolate a sentence fragment.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/meeting-details/useSummaryGeneration.ts",
+          "line": 138,
+          "kind": "call:toast.info"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0693",
+      "sourceText": "Audio context is in invalid state: {audioRef.current.state}",
+      "finalKeys": [
+        "recording.errors.audioContextInvalidState"
+      ],
+      "variableMap": {
+        "audioRef.current.state": "state"
+      },
+      "migrationInstruction": "Read audioRef.current.state before translation and pass it as state.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/useAudioPlayer.ts",
+          "line": 171,
+          "kind": "new_error"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0719",
+      "sourceText": "Processing {status.chunks_in_queue} remaining chunks...",
+      "finalKeys": [
+        "recording.status.processingRemainingChunks_one",
+        "recording.status.processingRemainingChunks_other"
+      ],
+      "variableMap": {
+        "status.chunks_in_queue": "count"
+      },
+      "migrationInstruction": "Use plural selection with status.chunks_in_queue as count.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/useRecordingStop.ts",
+          "line": 186,
+          "kind": "indirect_call:setStatus"
+        }
+      ]
+    },
+    {
+      "id": "TXT-0725",
+      "sourceText": "{freshTranscripts.length} transcript segments saved.",
+      "finalKeys": [
+        "recording.messages.transcriptSegmentsSaved_one",
+        "recording.messages.transcriptSegmentsSaved_other"
+      ],
+      "variableMap": {
+        "freshTranscripts.length": "count"
+      },
+      "migrationInstruction": "Use i18next plural selection with freshTranscripts.length as count.",
+      "sources": [
+        {
+          "file": "frontend/src/hooks/useRecordingStop.ts",
+          "line": 327,
+          "kind": "object_property:description"
+        }
+      ]
+    }
+  ]
+}

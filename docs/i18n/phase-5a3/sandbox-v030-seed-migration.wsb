@@ -1,0 +1,40 @@
+<Configuration>
+  <VGpu>Disable</VGpu>
+  <Networking>Disable</Networking>
+  <AudioInput>Disable</AudioInput>
+  <VideoInput>Disable</VideoInput>
+  <ProtectedClient>Enable</ProtectedClient>
+  <PrinterRedirection>Disable</PrinterRedirection>
+  <ClipboardRedirection>Disable</ClipboardRedirection>
+  <MemoryInMB>4096</MemoryInMB>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>D:\桌面\meetlily\target-phase5a3-assets\official-v0.3.0</HostFolder>
+      <SandboxFolder>C:\MeetilyInput</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\桌面\meetlily\target-phase5a3-assets\webview2-x64</HostFolder>
+      <SandboxFolder>C:\WebView2Input</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\桌面\meetlily\target-phase5a3-fixtures\historical-v030-seed</HostFolder>
+      <SandboxFolder>C:\MeetilyFixture</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\桌面\meetlily\target-phase5a3-upgrade\docs\i18n\scripts</HostFolder>
+      <SandboxFolder>C:\MeetilyScripts</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\桌面\meetlily\target-phase5a3-sandbox-output\v030-seed-migration</HostFolder>
+      <SandboxFolder>C:\MeetilyOutput</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\MeetilyScripts\bootstrap-phase5a3-v030-migrated-fixture.ps1</Command>
+  </LogonCommand>
+</Configuration>

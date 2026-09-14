@@ -1,0 +1,35 @@
+{
+  "accessibility": { "audioAvailable": "有可恢复音频", "noAudio": "无可恢复音频" },
+  "actions": {
+    "browseForDatabase": "浏览并选择数据库", "cancel": "取消", "chooseDifferentFile": "选择其他文件", "close": "关闭", "delete": "删除", "import": "导入",
+    "importAnAudioFileToCreateANewMeetingWith": "导入音频文件并创建包含转写内容的新会议", "importAudioFile": "导入音频文件", "importComplete": "导入完成", "importDatabase": "导入数据库", "importFailed": "导入失败", "recover": "恢复", "selectAudioFile": "选择音频文件",
+    "selectYourPreviousMeetilyFolderBackendDirectoryOrDatabaseFile": "请选择以前的 Meetily 文件夹、后端目录或数据库文件：", "startFreshNoImport": "全新开始（不导入）", "tryAgain": "重试", "yesImport": "是，导入"
+  },
+  "confirmations": { "deleteMeeting": "确定要删除这条中断会议记录吗？此操作无法撤销。" },
+  "descriptions": {
+    "audioImport": "导入音频文件并创建包含转写内容的新会议", "enableBetaImportFeature": "请在“设置 > 测试功能”中启用“导入音频与重新转写”功能。", "importError": "导入过程中发生错误", "parakeetAutomaticLanguage": "Parakeet 不支持手动选择语言，将始终使用自动检测。",
+    "recoveredMeetingSummaryLanguageWarning": "已保存恢复的会议，但未能应用默认摘要语言。", "supportedFormats": "支持的格式：{{formats}}", "theImportedMeetingWasSavedButTheDefaultSummaryLanguage": "已保存导入的会议，但未能应用默认摘要语言。",
+    "supportedFormatsNote": "上面这串是容器与编码混排的清单（例如 MP4 容器里可能是 AAC），实际以文件内容为准。",
+    "localProcessingNote": "转写在本机完成，音频不会上传；只有生成摘要时，才会把文字按你选择的模型发送出去。"
+  },
+  "errors": {
+    "betaFeatureDisabled": "Beta 功能未启用", "cancelFailed": "无法取消导入。任务可能仍在运行，请重试。", "couldNotApplyDefaultSummaryLanguage": "无法应用默认摘要语言", "databaseBrowseFailed": "无法打开或检查数据库位置，请重试。", "dropAudioFileRequired": "请拖放音频文件", "recordingInProgress": "请先停止当前录音，再导入音频文件。",
+    "databaseImportFailed": "无法导入数据库；现有数据未被更改。", "databaseInitializationFailed": "无法初始化新数据库，请重试。", "deleteMeetingFailed": "无法删除这条中断会议记录，请重试。", "importFailed": "导入失败", "importFailedValue": "导入失败：{{error}}", "initializationFailedValue": "初始化失败：{{error}}",
+    "noDatabaseFoundAtSelectedLocationPleaseSelectTheMeetily": "所选位置没有找到数据库。请选择 Meetily 文件夹、后端文件夹或直接选择数据库文件。", "previewLoadFailed": "无法加载转写预览。恢复数据未被更改。", "processingFailed": "无法导入此音频。请检查文件后重试。", "recoveryFailed": "无法恢复会议。恢复数据已保留，你可以再次重试。", "startFailed": "无法启动音频导入，请重试。", "validationFailed": "无法验证所选音频文件。请选择受支持且可读取的文件。"
+  },
+  "labels": {
+    "advancedOptions": "高级选项", "anErrorOccurredDuringImport": "导入过程中发生错误", "audioAvailable": "有音频", "chooseDifferentFile": "选择其他文件", "databaseFound": "已找到数据库！", "dropAudioFileToImport": "拖放音频文件以导入", "interruptedMeetings": "中断的会议", "language": "语言",
+    "languageSelectionIsnTSupportedForParakeetItAlwaysUses": "Parakeet 不支持手动选择语言，将始终使用自动检测。", "mb": "MB）", "meetingTitle": "会议标题", "model": "模型", "mp4WAVMP3FLACOGGMKVWebMWMA": "MP4、WAV、MP3、FLAC、OGG、MKV、WebM、WMA", "noAudio": "无音频", "noBrowseManually": "否，手动浏览", "or": "或", "preview": "预览",
+    "modelSizeValue": "（{{size}} MB）", "previousMeetilyInstallationDetected": "检测到以前安装的 Meetily！", "sizeValue": "大小：{{size}}", "startedValue": "开始于 {{date}}", "transcriptCount_one": "{{count}} 个转写片段", "transcriptCount_other": "{{count}} 个转写片段", "weFoundAnExistingDatabaseFromYourPreviousMeetilyInstallation": "发现以前安装的 Meetily（Python 后端版本）所使用的数据库。", "welcomeToMeetily": "欢迎使用 Meetily！"
+  },
+  "messages": { "databaseImportedSuccessfullyReloading": "数据库导入成功，正在重新加载…", "databaseInitializedSuccessfullyStartingApp": "数据库初始化成功，正在启动应用…", "importCancelled": "已取消导入", "importComplete_one": "导入完成！已生成 {{count}} 个片段。", "importComplete_other": "导入完成！已生成 {{count}} 个片段。" },
+  "placeholders": { "enterMeetingTitle": "输入会议标题", "loadingModels": "正在加载模型…", "selectLanguage": "选择语言", "selectModel": "选择模型" },
+  "prompts": { "doYouHaveDataFromAPreviousMeetilyInstallation": "你是否有以前安装的 Meetily 数据？", "wouldYouLikeToImportYourPreviousMeetingsTranscriptsAnd": "是否要导入以前的会议、转写内容和摘要？" },
+  "recovery": {
+    "andMore_one": "…另有 {{count}} 个转写片段", "andMore_other": "…另有 {{count}} 个转写片段", "description_one": "发现 {{count}} 个中断的会议。选择该会议即可预览并恢复。", "description_other": "发现 {{count}} 个中断的会议。请选择一个会议进行预览和恢复。", "noTranscriptsToPreview": "没有可预览的转写内容", "selectMeetingToPreview": "请选择要预览的会议", "showingPreview": "正在显示前 {{visible}} 个转写片段（共 {{total}} 个）", "title": "恢复中断的会议"
+  },
+  "status": {
+    "deleting": "正在删除…", "detectingDatabase": "正在检测数据库…", "importing": "正在导入…", "importingAudio": "正在导入音频…", "loadingPreview": "正在加载预览…", "processingAudio": "正在处理音频…", "recovering": "正在恢复…", "selecting": "正在选择…", "success": "成功！", "validating": "正在验证…",
+    "stages": { "complete": "完成", "copying": "正在准备音频", "decoding": "正在解码音频", "resampling": "正在转换音频", "saving": "正在保存会议", "transcribing": "正在转写语音", "unknown": "正在处理音频", "vad": "正在检测语音" }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "accessibility": {
+    "clearSearch": "Clear search",
+    "collapseSidebar": "Collapse sidebar",
+    "deleteMeeting": "Delete meeting",
+    "editMeetingTitle": "Edit meeting title",
+    "expandSidebar": "Expand sidebar",
+    "meetingNotes": "Meeting Notes",
+    "newCall": "+ New Call"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "editMeetingTitle": "Edit Meeting Title",
+    "importAudio": "Import Audio",
+    "save": "Save",
+    "startRecording": "Start Recording"
+  },
+  "descriptions": {
+    "allAssociatedDataHasBeenRemoved": "All associated data has been removed",
+    "confirmDeleteMeeting": "Are you sure you want to delete this meeting? This action cannot be undone."
+  },
+  "errors": {
+    "failedToDeleteMeeting": "Failed to delete meeting",
+    "failedToUpdateMeetingTitle": "Failed to update meeting title",
+    "meetingTitleCannotBeEmpty": "Meeting title cannot be empty"
+  },
+  "labels": {
+    "home": "Home",
+    "match": "Match:",
+    "meetingNotes": "Meeting Notes",
+    "meetingTitle": "Meeting Title",
+    "settings": "Settings",
+    "transcriptCountValue": "{{count}} segments"
+  },
+  "messages": {
+    "meetingDeletedSuccessfully": "Meeting deleted successfully",
+    "meetingTitleUpdatedSuccessfully": "Meeting title updated successfully"
+  },
+  "placeholders": {
+    "enterMeetingTitle": "Enter meeting title",
+    "searchMeetingContent": "Search meeting content..."
+  },
+  "status": {
+    "noSearchMatches": "No matching meetings (searched titles and transcripts)",
+    "recordingInProgress": "Recording in progress...",
+    "searching": "Searching..."
+  }
+}

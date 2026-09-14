@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "stage": "MOSS_V3___REQUIRED_STAGE_P0_TO_P5__",
+  "status": "NOT RUN",
+  "source_commit": "__REQUIRED_FULL_40_HEX_STAGE_COMMIT__",
+  "rule": "A stage may be changed to PASS only after every listed evidence file exists, has the recorded byte count and SHA-256, and source_commit is merged into release HEAD. Final release additionally requires the Git ancestry chain P2 -> P3 -> P4 -> P5 -> P6 HEAD.",
+  "files": [
+    {
+      "path": "__REQUIRED_EVIDENCE_PATH_RELATIVE_TO_THIS_GATE__",
+      "bytes": "__REQUIRED_INTEGER__",
+      "sha256": "__REQUIRED_SHA256__"
+    }
+  ]
+}

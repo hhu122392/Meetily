@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "phase": "15.3 / Phase 0 - Freeze English baseline",
+  "generatedAt": "2026-08-22T18:56:26.673Z",
+  "sourceCommit": "0281737d87d26352fb0adc78c8c0975f691b23d1",
+  "counts": {
+    "catalogEntries": 1354,
+    "confirmedFrontendEntries": 696,
+    "manualFrontendReviewEntries": 62,
+    "nativeReviewEntries": 447,
+    "legacyEntries": 45,
+    "templateContentEntries": 104,
+    "formalSourceMappings": 745,
+    "formalTranslationKeys": 710,
+    "namespaces": 12,
+    "complexPlaceholderPlans": 24,
+    "allPlaceholderKeys": 57
+  },
+  "namespaces": [
+    "analytics",
+    "common",
+    "import",
+    "meetings",
+    "models",
+    "navigation",
+    "onboarding",
+    "recording",
+    "settings",
+    "summary",
+    "transcription",
+    "updates"
+  ],
+  "generatedFiles": [
+    "baseline/locales/en/*.json",
+    "baseline/source-map.json",
+    "baseline/disposition.json",
+    "baseline/placeholder-migration.json",
+    "baseline/placeholders.json",
+    "baseline/native-visibility-matrix.json",
+    "baseline/template-content-inventory.json",
+    "baseline/do-not-translate.json",
+    "baseline/glossary.en-zh-CN.json"
+  ]
+}

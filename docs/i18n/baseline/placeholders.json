@@ -1,0 +1,411 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "key": "common.status.downloadingValue",
+      "en": "Downloading {{modelName}}",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "import.descriptions.supportedFormats",
+      "en": "Supported formats: {{formats}}",
+      "variables": [
+        "formats"
+      ]
+    },
+    {
+      "key": "import.errors.importFailedValue",
+      "en": "Import failed: {{error}}",
+      "variables": [
+        "error"
+      ]
+    },
+    {
+      "key": "import.errors.initializationFailedValue",
+      "en": "Initialization failed: {{error}}",
+      "variables": [
+        "error"
+      ]
+    },
+    {
+      "key": "import.messages.importComplete_one",
+      "en": "Import complete! {{count}} segment created.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "import.messages.importComplete_other",
+      "en": "Import complete! {{count}} segments created.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "meetings.descriptions.usingValueTemplateForSummaryGeneration",
+      "en": "Using \"{{templateName}}\" template for summary generation",
+      "variables": [
+        "templateName"
+      ]
+    },
+    {
+      "key": "models.errors.downloadFailedValue",
+      "en": "Download failed: {{modelName}}",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.errors.failedToDeleteValue",
+      "en": "Failed to delete {{modelName}}",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.errors.failedToDownloadValue",
+      "en": "Failed to download {{modelName}}",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.messages.downloadOfValueCancelled",
+      "en": "Download of {{modelName}} cancelled",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.messages.modelValueDeleted",
+      "en": "Model {{modelName}} deleted",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.messages.modelValueDownloaded",
+      "en": "Model {{modelName}} downloaded!",
+      "variables": [
+        "modelName"
+      ]
+    },
+    {
+      "key": "models.messages.modelValueDownloadedSuccessfully",
+      "en": "Model {{model}} downloaded successfully",
+      "variables": [
+        "model"
+      ]
+    },
+    {
+      "key": "models.messages.valueIsAlreadyDownloading",
+      "en": "{{recommendedModel}} is already downloading",
+      "variables": [
+        "recommendedModel"
+      ]
+    },
+    {
+      "key": "models.status.downloadingModel",
+      "en": "Downloading {{model}}",
+      "variables": [
+        "model"
+      ]
+    },
+    {
+      "key": "models.status.downloadingModelEllipsis",
+      "en": "Downloading {{model}}...",
+      "variables": [
+        "model"
+      ]
+    },
+    {
+      "key": "models.status.downloadProgress",
+      "en": "{{model}} is downloading ({{progress}}%). Please wait until download completes.",
+      "variables": [
+        "model",
+        "progress"
+      ]
+    },
+    {
+      "key": "models.status.progressPercent",
+      "en": "Progress: {{progress}}%",
+      "variables": [
+        "progress"
+      ]
+    },
+    {
+      "key": "recording.accessibility.deviceActive",
+      "en": "{{deviceName}} - Active",
+      "variables": [
+        "deviceName"
+      ]
+    },
+    {
+      "key": "recording.accessibility.deviceInactive",
+      "en": "{{deviceName}} - Inactive",
+      "variables": [
+        "deviceName"
+      ]
+    },
+    {
+      "key": "recording.descriptions.microphoneValueSystemAudioValue",
+      "en": "Microphone: {{micDevice}}, System Audio: {{systemDevice}}",
+      "variables": [
+        "micDevice",
+        "systemDevice"
+      ]
+    },
+    {
+      "key": "recording.errors.audioContextInvalidState",
+      "en": "Audio context is in invalid state: {{state}}",
+      "variables": [
+        "state"
+      ]
+    },
+    {
+      "key": "recording.messages.transcriptSegmentsSaved_one",
+      "en": "{{count}} transcript segment saved.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "recording.messages.transcriptSegmentsSaved_other",
+      "en": "{{count}} transcript segments saved.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "recording.status.processingRemainingChunks_one",
+      "en": "Processing {{count}} remaining chunk...",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "recording.status.processingRemainingChunks_other",
+      "en": "Processing {{count}} remaining chunks...",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "settings.descriptions.microphoneValueSystemAudioValue",
+      "en": "Microphone: {{micDevice}}, System Audio: {{systemDevice}}",
+      "variables": [
+        "micDevice",
+        "systemDevice"
+      ]
+    },
+    {
+      "key": "summary.accessibility.language",
+      "en": "Summary language: {{language}}",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.accessibility.languageLocalFallback",
+      "en": "Summary language: {{language}} (saved on this device)",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.accessibility.pinLanguageAsDefault",
+      "en": "Pin {{language}} as default",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.accessibility.removeLanguage",
+      "en": "Remove {{language}}",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.accessibility.unpinLanguageAsDefault",
+      "en": "Unpin {{language}} as default",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.descriptions.defaultLanguage",
+      "en": "Default: {{language}} - click it again to unset. Max 5 quick-switch options.",
+      "variables": [
+        "language"
+      ]
+    },
+    {
+      "key": "summary.descriptions.valueFileIsCorruptedPleaseDeleteAndReDownload",
+      "en": "{{selectedModel}} file is corrupted. Please delete and re-download.",
+      "variables": [
+        "selectedModel"
+      ]
+    },
+    {
+      "key": "summary.descriptions.valueNeedsToBeDownloadedPleaseDownloadItInModel",
+      "en": "{{selectedModel}} needs to be downloaded. Please download it in model settings.",
+      "variables": [
+        "selectedModel"
+      ]
+    },
+    {
+      "key": "summary.descriptions.valuePleaseCheckModelSettings",
+      "en": "{{errorDesc}}. Please check model settings.",
+      "variables": [
+        "errorDesc"
+      ]
+    },
+    {
+      "key": "summary.descriptions.valueYourPreviousSummaryHasBeenRestored",
+      "en": "{{errorMessage}}. Your previous summary has been restored.",
+      "variables": [
+        "errorMessage"
+      ]
+    },
+    {
+      "key": "summary.errors.couldNotFindInformationForModelValue",
+      "en": "Could not find information for model: {{selectedModel}}",
+      "variables": [
+        "selectedModel"
+      ]
+    },
+    {
+      "key": "summary.labels.selectedBlocks_one",
+      "en": "{{count}} block",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "summary.labels.selectedBlocks_other",
+      "en": "{{count}} blocks",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "summary.status.usingModel",
+      "en": "Using {{provider}}/{{model}}",
+      "variables": [
+        "provider",
+        "model"
+      ]
+    },
+    {
+      "key": "summary.status.valueNeedsToBeDownloadedBeforeUseOpeningModelSettings",
+      "en": "{{selectedModel}} needs to be downloaded before use. Opening model settings...",
+      "variables": [
+        "selectedModel"
+      ]
+    },
+    {
+      "key": "transcription.accessibility.transcriptionConfidenceValue",
+      "en": "Transcription confidence: {{confidencePercent}}%",
+      "variables": [
+        "confidencePercent"
+      ]
+    },
+    {
+      "key": "transcription.accessibility.valueConfidenceValue",
+      "en": "{{confidencePercent}}% confidence - {{label}}",
+      "variables": [
+        "confidencePercent",
+        "label"
+      ]
+    },
+    {
+      "key": "transcription.descriptions.transcriptionLanguageSetToValue",
+      "en": "Transcription language set to {{languageName}}",
+      "variables": [
+        "languageName"
+      ]
+    },
+    {
+      "key": "transcription.errors.failedToDeleteValue",
+      "en": "Failed to delete {{displayName}}",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.errors.failedToDownloadValue",
+      "en": "Failed to download {{displayName}}",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.messages.downloadingValue",
+      "en": "Downloading {{displayName}}...",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.messages.parakeetModelReady",
+      "en": "{{icon}} {{model}} ready!",
+      "variables": [
+        "icon",
+        "model"
+      ]
+    },
+    {
+      "key": "transcription.messages.retranscriptionComplete_one",
+      "en": "Retranscription complete! {{count}} segment created.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "transcription.messages.retranscriptionComplete_other",
+      "en": "Retranscription complete! {{count}} segments created.",
+      "variables": [
+        "count"
+      ]
+    },
+    {
+      "key": "transcription.messages.switchedToValue",
+      "en": "Switched to {{displayName}}",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.messages.valueDeleted",
+      "en": "{{displayName}} deleted",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.messages.valueDownloadCancelled",
+      "en": "{{displayName}} download cancelled",
+      "variables": [
+        "displayName"
+      ]
+    },
+    {
+      "key": "transcription.messages.whisperModelReady",
+      "en": "{{icon}} {{model}} ready!",
+      "variables": [
+        "icon",
+        "model"
+      ]
+    },
+    {
+      "key": "updates.messages.newVersionAvailable",
+      "en": "A new version ({{version}}) is available",
+      "variables": [
+        "version"
+      ]
+    }
+  ]
+}

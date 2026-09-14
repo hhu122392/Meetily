@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meetily.local/schemas/summary-template-v2.schema.json",
+  "title": "Meetily Summary Template v2",
+  "description": "Canonical file format for user-editable Meetily meeting-summary templates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "description",
+    "version",
+    "locale",
+    "source",
+    "created_at",
+    "updated_at",
+    "sections"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80,
+      "pattern": "^[a-z0-9][a-z0-9_-]*[a-z0-9]$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "version": { "type": "integer", "minimum": 1 },
+    "locale": {
+      "type": ["string", "null"],
+      "maxLength": 35,
+      "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 40 },
+      "default": []
+    },
+    "source": { "$ref": "#/$defs/source" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Reserved namespace for explicitly named future or third-party extensions.",
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": {
+              "type": { "enum": ["json_import", "docx_import", "doc_import"] }
+            },
+            "required": ["type"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": ["original_file_name", "original_file_sha256", "imported_at"],
+            "properties": {
+              "original_file_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[^/\\\\\\u0000]+$"
+              },
+              "original_file_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "imported_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": { "type": { "enum": ["builtin_copy", "duplicate"] } },
+            "required": ["type"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": ["copied_from_template_id"],
+            "properties": {
+              "copied_from_template_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 80,
+                "pattern": "^[a-z0-9][a-z0-9_-]*[a-z0-9]$"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "builtin",
+            "manual",
+            "json_import",
+            "docx_import",
+            "doc_import",
+            "builtin_copy",
+            "duplicate",
+            "legacy_migration"
+          ]
+        },
+        "original_file_name": {
+          "type": ["string", "null"],
+          "maxLength": 255,
+          "pattern": "^[^/\\\\\\u0000]+$"
+        },
+        "original_file_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "imported_at": { "type": ["string", "null"], "format": "date-time" },
+        "copied_from_template_id": { "type": ["string", "null"], "maxLength": 80 }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "instruction", "format", "required", "empty_behavior"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "instruction": { "type": "string", "minLength": 1, "maxLength": 10000 },
+        "format": { "enum": ["paragraph", "list", "string"] },
+        "item_format": { "type": ["string", "null"], "maxLength": 5000 },
+        "example_item_format": { "type": ["string", "null"], "maxLength": 5000 },
+        "required": { "type": "boolean" },
+        "empty_behavior": { "enum": ["omit", "show_not_mentioned"] }
+      }
+    }
+  }
+}

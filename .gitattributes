@@ -1,0 +1,17 @@
+# SQLx stores a checksum of each applied migration. These migrations were
+# created and first applied with LF bytes even on Windows, so keep only these
+# two files stable. Older migrations intentionally retain the repository's
+# platform-default checkout behavior for compatibility with existing databases.
+frontend/src-tauri/migrations/20260824000000_add_summary_generation_history.sql text eol=lf
+frontend/src-tauri/migrations/20260825000000_add_manual_summary_revisions.sql text eol=lf
+
+# R3 public evidence is byte-hashed by adjacent SHA-256 sidecars.
+target/release/docs/方案/MOSS-R3复评证据-20260831/** -text
+
+# Formal Q00 truth is checked by exact byte count and SHA-256 on Windows.
+target/release/docs/方案/MOSS功能修复计划-20260902/Q00-FROZEN-TRUTH-MANIFEST.json -text
+target/release/docs/方案/MOSS功能修复计划-20260902/Q00-NEGATIVE-TRUTH.json -text
+
+# Preserve the exact migration bytes used by this release. SQLx checksums must
+# not change when another Windows checkout has a different core.autocrlf value.
+frontend/src-tauri/migrations/*.sql -text

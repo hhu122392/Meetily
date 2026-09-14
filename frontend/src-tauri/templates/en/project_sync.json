@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "id": "project_sync",
+  "name": "Project Sync / Status Update",
+  "description": "Weekly or bi-weekly project status meeting focusing on milestones and risks.",
+  "version": 1,
+  "locale": "en",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "meeting_date_time",
+      "title": "Meeting Date & Time",
+      "instruction": "Date, start/end time, facilitator name",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "attendees",
+      "title": "Attendees",
+      "instruction": "List attendees and their roles",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "milestones_status",
+      "title": "Milestones & Status",
+      "instruction": "Current milestones with status and estimated completion date",
+      "format": "list",
+      "item_format": "| **Milestone** | **Status** | **ETA** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "progress_summary",
+      "title": "Progress Summary",
+      "instruction": "Short paragraph summarizing progress since last sync meeting",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "top_risks_mitigations",
+      "title": "Top Risks & Mitigations",
+      "instruction": "List top risks with impact level, mitigation plan, and owner",
+      "format": "list",
+      "item_format": "| **Risk** | **Impact** | **Mitigation** | **Owner** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "key_decisions",
+      "title": "Key Decisions",
+      "instruction": "Decisions made in this meeting with rationale and timestamp",
+      "format": "list",
+      "item_format": "| **Decision** | **Rationale** | **Timestamp** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "action_items",
+      "title": "Action Items",
+      "instruction": "Tasks with owners, due dates, priority, and status",
+      "format": "list",
+      "item_format": "| **Owner** | **Task** | **Due Date** | **Priority** | **Status** |\n| --- | --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "related_documents",
+      "title": "Related Documents",
+      "instruction": "Links to relevant documents, tickets, or designs discussed",
+      "format": "list",
+      "item_format": "| **Document Title** | **URL** | **Type** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 1
+  }
+}

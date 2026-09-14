@@ -1,0 +1,77 @@
+{
+  "actions": {
+    "confirmDisable": "Confirm: Disable Analytics",
+    "copy": "Copy",
+    "copyUserID": "Copy User ID",
+    "enableAnalytics": "Enable Analytics",
+    "keepEnabled": "Keep Analytics Enabled",
+    "viewPrivacyPolicy": "View Privacy Policy"
+  },
+  "accessibility": {
+    "closeTransparencyDialog": "Close analytics transparency dialog",
+    "toggleAnalytics": "Enable usage analytics"
+  },
+  "descriptions": {
+    "anonymousOnlySuffix": "No meeting content, names, file paths, or personal information is ever collected.",
+    "usageAnalyticsIsOffByDefaultYouCanTurnIt": "Usage analytics is off by default. You can turn it on to share anonymous product and performance data; no personal content is collected."
+  },
+  "errors": {
+    "copyUserIdFailed": "Could not copy the user ID. Please try again.",
+    "openPrivacyPolicyFailed": "Could not open the privacy policy. Please try again.",
+    "updatePreferenceFailed": "Could not update the analytics preference. Your previous setting was restored."
+  },
+  "labels": {
+    "analyticsIsOffByDefaultIfYouEnableItWe": "Analytics is off by default. If you enable it, we collect",
+    "anonymousUsageDataOnly": "anonymous usage data only",
+    "anyIdentifiableData": "• ❌ Any identifiable data",
+    "appStartedStoppedEvents": "• App started/stopped events",
+    "appVersionAutomaticallyIncludedInAllEvents": "• App version (automatically included in all events)",
+    "architectureEGX8664Aarch64": "• Architecture (e.g., \"x86_64\", \"aarch64\")",
+    "audioRecordings": "• ❌ Audio recordings",
+    "confirmDisableAnalytics": "Confirm: Disable Analytics",
+    "copied": "Copied!",
+    "dataWeCollectWhenEnabled": "Data We Collect When Enabled:",
+    "deviceNamesOnlyTypesBluetoothWired": "• ❌ Device names (only types: Bluetooth/Wired)",
+    "errorOccurrencesHelpsUsFixBugs": "• Error occurrences (helps us fix bugs)",
+    "exampleEvent": "Example Event:",
+    "featureUsageEGSettingsChanged": "• Feature usage (e.g., \"settings changed\")",
+    "fileNamesFilePathsOrMeetingFolders": "• ❌ File names, file paths, or meeting folders",
+    "helpsUsImproveCompatibilityNOTTheActualDeviceNames": "Helps us improve compatibility, NOT the actual device names",
+    "helpsUsImproveUserExperience": "Helps us improve user experience",
+    "helpsUsOptimizePerformanceAndUnderstandUsagePatterns": "Helps us optimize performance and understand usage patterns",
+    "helpsUsPrioritizePlatformSupport": "Helps us prioritize platform support",
+    "helpsUsUnderstandWhichModelsUsersPrefer": "Helps us understand which models users prefer",
+    "keepAnalyticsEnabled": "Keep Analytics Enabled",
+    "meetingNamesOrTitles": "• ❌ Meeting names or titles",
+    "meetingTranscriptsOrContent": "• ❌ Meeting transcripts or content",
+    "microphoneTypeBluetoothOrWiredOrUnknown": "• Microphone type: \"Bluetooth\" or \"Wired\" or \"Unknown\"",
+    "modelProviderEGLocalOllamaOpenRouter": "• Model provider (e.g., \"Local\", \"Ollama\", \"OpenRouter\")",
+    "numberOfAudioChunksProcessed": "• Number of audio chunks processed",
+    "numberOfTranscriptSegments": "• Number of transcript segments",
+    "offUnlessYouChooseToEnableIt": "Off unless you choose to enable it",
+    "operatingSystemEGMacOSWindows": "• Operating system (e.g., \"macOS\", \"Windows\")",
+    "pauseDurationEG5Seconds": "• Pause duration (e.g., \"5 seconds\")",
+    "personalInformation": "• ❌ Personal information",
+    "recordingDurationEG125Seconds": "• Recording duration (e.g., \"125 seconds\")",
+    "sessionDuration": "• Session duration",
+    "shareThisIDWhenReportingIssuesToHelpUsInvestigate": "Share this ID when reporting issues to help us investigate your issue logs",
+    "summaryModelEGLlama32ClaudeSonnet": "• Summary model (e.g., \"Llama 3.2\", \"Claude Sonnet\")",
+    "systemAudioTypeBluetoothOrWiredOrUnknown": "• System audio type: \"Bluetooth\" or \"Wired\" or \"Unknown\"",
+    "text1ModelPreferences": "1. Model Preferences",
+    "text2AnonymousMeetingMetrics": "2. Anonymous Meeting Metrics",
+    "text3DeviceTypesNotNames": "3. Device Types (Not Names)",
+    "text4AppUsagePatterns": "4. App Usage Patterns",
+    "text5PlatformInformation": "5. Platform Information",
+    "transcriptionModelEGWhisperLargeV3Parakeet": "• Transcription model (e.g., \"Whisper large-v3\", \"Parakeet\")",
+    "usageAnalytics": "Usage Analytics",
+    "viewPrivacyPolicy": "View Privacy Policy",
+    "whatAnalyticsCollects": "What Analytics Collects",
+    "whatWeDONTCollect": "What We DON'T Collect:",
+    "yourMeetingsTranscriptsAndRecordingsRemainCompletelyPrivateAndLocal": "Your meetings, transcripts, and recordings remain completely private and local.",
+    "yourPrivacyIsProtected": "Your Privacy is Protected",
+    "yourUserID": "Your User ID"
+  },
+  "status": {
+    "updating": "Updating..."
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "accessibility": {
+    "closeNotification": "关闭通知",
+    "gettingThingsReady": "正在进行初始设置",
+    "intelligentSummariesAndInsights": "智能摘要与洞察",
+    "nextStep": "前往下一个设置步骤",
+    "notifications": "通知",
+    "previousStep": "返回上一个设置步骤",
+    "setupOverview": "设置概览",
+    "stepProgress": "初始设置第 {{step}} 步，共 {{total}} 步",
+    "welcomeToMeetily": "欢迎使用 Meetily",
+    "worksOfflineNoCloudRequired": "离线运行，无需云服务",
+    "yourDataNeverLeavesYourDevice": "数据始终留在你的设备上"
+  },
+  "actions": {
+    "checking": "正在检查…",
+    "continue": "继续",
+    "downloadError": "下载错误",
+    "downloadSummarizationEngine": "下载摘要引擎",
+    "downloadTranscriptionEngine": "下载转录引擎",
+    "downloadWillContinueInTheBackground": "下载将在后台继续。",
+    "enable": "启用",
+    "finishSetup": "完成设置",
+    "getStarted": "开始设置",
+    "grantPermissions": "授予权限",
+    "iLlDoThisLater": "稍后再设置",
+    "letSGo": "开始下载",
+    "openMicrophoneSettings": "打开麦克风设置",
+    "openScreenRecordingSettings": "打开屏幕录制设置",
+    "openSettings": "打开设置",
+    "recheck": "重新检查",
+    "reportIssuesOnGitHub": "在 GitHub 上报告问题",
+    "tryAgain": "重试"
+  },
+  "descriptions": {
+    "clickEnableToGrantAudioCapturePermission": "点击“启用”以授予音频捕获权限",
+    "configureAudioRouting": "在“音频 MIDI 设置”中配置音频路由",
+    "downloadStillRunning": "下载将在后台继续。",
+    "finishOnboardingBeforeRecording": "完成初始设置后才能开始录音。",
+    "grantScreenRecordingPermission": "向 Meetily 授予屏幕录制权限",
+    "installVirtualAudioDevice": "安装虚拟音频设备（例如 BlackHole 2ch）",
+    "meetilyNeedsAccessToYourMicrophoneAndSystemAudioTo": "Meetily 需要访问麦克风和系统音频才能录制会议。",
+    "meetilyNeedsMicrophoneNoDevices": "Meetily 需要访问麦克风才能录制会议，但当前未检测到麦克风设备。",
+    "meetilyRequiresThatYouDownloadTheTranscriptionAndSummarizationAI": "Meetily 需要下载转录和摘要 AI 模型后才能正常工作。",
+    "microphoneConnected": "麦克风已连接并已开启",
+    "microphoneNotExclusive": "没有其他应用独占麦克风",
+    "microphonePermissionGranted": "已在系统设置中授予麦克风权限",
+    "pleaseCheckYourConnectionAndTryAgain": "请检查网络连接后重试。",
+    "pleaseEnableAudioCaptureInSystemSettingsPrivacyAndSecurity": "请在“系统设置 → 隐私与安全性 → 音频捕获”中启用音频捕获权限。",
+    "pleaseEnableMicrophoneAccessInSystemPreferencesSecurityAndPrivacy": "请在“系统设置 → 隐私与安全性 → 麦克风”中授予麦克风权限。",
+    "pleaseRetryTheDownloadBeforeContinuing": "请先重试下载，再继续操作。",
+    "pleaseTryAgain": "请重试。",
+    "recordTranscribeSummarizeAllOnYourDevice": "录音、转录、生成摘要，全都在你的设备上完成。",
+    "requiredToCaptureYourVoiceDuringMeetings": "用于在会议中采集你的声音",
+    "systemAudioAlsoUnavailable": "系统音频捕获也不可用。",
+    "systemAudioUnavailableMicrophoneWorks": "系统音频捕获不可用。你仍可使用麦克风录音，但不会录入电脑播放的声音。",
+    "youCanAlsoSelectExternalAIProvidersLikeOpenAIClaude": "你也可以在设置中选择 OpenAI、Claude 或 Ollama 等外部 AI 服务提供方来生成摘要。",
+    "youCanStartUsingMeetilyAfterDownloadingTheTranscriptionEngine": "下载转录引擎后即可开始使用 Meetily。",
+    "youCanStartUsingTheAppRecordingWillBeAvailable": "你现在可以开始使用应用；语音识别就绪后即可录音。"
+  },
+  "errors": {
+    "completeSetupBeforeRecording": "请先完成初始设置",
+    "downloadRetryFailed": "重试下载失败",
+    "failedToCompleteSetup": "无法完成初始设置",
+    "summaryModelDownloadRetryFailed": "重试下载摘要模型失败",
+    "summaryModelRecommendationIsNotReadyYet": "摘要模型推荐尚未就绪",
+    "transcriptionEngineRequired": "需要转录引擎"
+  },
+  "downloadErrors": {
+    "generic": "下载失败，请重试。",
+    "network": "网络错误 — 请检查网络连接。",
+    "server": "服务器错误 — 暂时无法下载。",
+    "storage": "存储错误 — 请检查可用磁盘空间。",
+    "validation": "文件校验失败 — 请重新下载。"
+  },
+  "labels": {
+    "accessDeniedPleaseGrantInSystemSettings": "访问被拒绝 — 请在系统设置中授予权限",
+    "accessGranted": "已授予访问权限",
+    "completed": "已完成",
+    "failed": "失败",
+    "microphone": "麦克风",
+    "microphonePermissionRequired": "需要麦克风权限",
+    "permissionsRequired": "需要授予权限",
+    "pleaseCheck": "请检查：",
+    "summaryEngine": "摘要引擎",
+    "systemAudio": "系统音频",
+    "systemAudioPermissionRequired": "需要系统音频权限",
+    "takesLessThan3Minutes": "用时不到 3 分钟",
+    "toEnableSystemAudioOnMacos": "要在 macOS 上启用系统音频：",
+    "transcriptionEngine": "转录引擎",
+    "transcriptionModelParakeet": "转录模型（Parakeet）",
+    "waiting": "等待中…",
+    "youCanContinueWhileThisFinishes": "下载期间可以继续使用"
+  },
+  "messages": {
+    "downloadsWillContinueInTheBackground": "下载将在后台继续",
+    "summaryModel": "摘要模型（{{model}}）",
+    "stepWithTitle": "第 {{step}} 步：{{title}}"
+  },
+  "progress": {
+    "approximateSize": "约 {{size}} {{unit}}",
+    "downloaded": "{{downloaded}} {{unit}} / {{total}} {{unit}}",
+    "speed": "{{speed}} {{unit}}/秒"
+  },
+  "status": {
+    "downloadCancelled": "下载已取消",
+    "downloadComplete": "下载完成",
+    "loadingSetup": "正在加载初始设置…",
+    "recordingWonTWorkWithoutPermissionsYouCanGrantThem": "未授予权限时无法录音，你可以稍后在设置中授予权限。"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "actions": {
+    "confirmDisable": "确认停用分析",
+    "copy": "复制",
+    "copyUserID": "复制用户 ID",
+    "enableAnalytics": "启用使用情况分析",
+    "keepEnabled": "保持启用分析",
+    "viewPrivacyPolicy": "查看隐私政策"
+  },
+  "accessibility": {
+    "closeTransparencyDialog": "关闭分析数据说明",
+    "toggleAnalytics": "启用使用情况分析"
+  },
+  "descriptions": {
+    "anonymousOnlySuffix": "绝不会收集会议内容、姓名、文件路径或个人信息。",
+    "usageAnalyticsIsOffByDefaultYouCanTurnIt": "使用情况分析默认关闭。你可以主动启用，以共享匿名的产品与性能数据；不会收集个人内容。"
+  },
+  "errors": {
+    "copyUserIdFailed": "无法复制用户 ID，请重试。",
+    "openPrivacyPolicyFailed": "无法打开隐私政策，请重试。",
+    "updatePreferenceFailed": "无法更新分析偏好，已恢复之前的设置。"
+  },
+  "labels": {
+    "analyticsIsOffByDefaultIfYouEnableItWe": "分析功能默认关闭。启用后，我们只会收集",
+    "anonymousUsageDataOnly": "匿名使用数据",
+    "anyIdentifiableData": "• ❌ 任何可识别个人身份的数据",
+    "appStartedStoppedEvents": "• 应用启动/停止事件",
+    "appVersionAutomaticallyIncludedInAllEvents": "• 应用版本（自动包含在所有事件中）",
+    "architectureEGX8664Aarch64": "• 系统架构（例如“x86_64”“aarch64”）",
+    "audioRecordings": "• ❌ 音频录音",
+    "confirmDisableAnalytics": "确认：停用分析",
+    "copied": "已复制！",
+    "dataWeCollectWhenEnabled": "启用后收集的数据：",
+    "deviceNamesOnlyTypesBluetoothWired": "• ❌ 设备名称（仅记录蓝牙/有线等类型）",
+    "errorOccurrencesHelpsUsFixBugs": "• 错误发生情况（帮助我们修复问题）",
+    "exampleEvent": "示例事件：",
+    "featureUsageEGSettingsChanged": "• 功能使用情况（例如“设置已更改”）",
+    "fileNamesFilePathsOrMeetingFolders": "• ❌ 文件名、文件路径或会议文件夹",
+    "helpsUsImproveCompatibilityNOTTheActualDeviceNames": "用于改善兼容性，不会记录实际设备名称",
+    "helpsUsImproveUserExperience": "用于改善用户体验",
+    "helpsUsOptimizePerformanceAndUnderstandUsagePatterns": "用于优化性能并了解使用模式",
+    "helpsUsPrioritizePlatformSupport": "用于确定平台支持优先级",
+    "helpsUsUnderstandWhichModelsUsersPrefer": "用于了解用户偏好的模型",
+    "keepAnalyticsEnabled": "保持启用分析",
+    "meetingNamesOrTitles": "• ❌ 会议名称或标题",
+    "meetingTranscriptsOrContent": "• ❌ 会议转写或内容",
+    "microphoneTypeBluetoothOrWiredOrUnknown": "• 麦克风类型：“蓝牙”“有线”或“未知”",
+    "modelProviderEGLocalOllamaOpenRouter": "• 模型提供方（例如“本地”“Ollama”“OpenRouter”）",
+    "numberOfAudioChunksProcessed": "• 已处理的音频分块数量",
+    "numberOfTranscriptSegments": "• 转写片段数量",
+    "offUnlessYouChooseToEnableIt": "除非你主动启用，否则保持关闭",
+    "operatingSystemEGMacOSWindows": "• 操作系统（例如“macOS”“Windows”）",
+    "pauseDurationEG5Seconds": "• 暂停时长（例如“5 秒”）",
+    "personalInformation": "• ❌ 个人信息",
+    "recordingDurationEG125Seconds": "• 录音时长（例如“125 秒”）",
+    "sessionDuration": "• 会话时长",
+    "shareThisIDWhenReportingIssuesToHelpUsInvestigate": "报告问题时可提供此 ID，帮助我们调查相关日志",
+    "summaryModelEGLlama32ClaudeSonnet": "• 摘要模型（例如“Llama 3.2”“Claude Sonnet”）",
+    "systemAudioTypeBluetoothOrWiredOrUnknown": "• 系统音频类型：“蓝牙”“有线”或“未知”",
+    "text1ModelPreferences": "1. 模型偏好",
+    "text2AnonymousMeetingMetrics": "2. 匿名会议指标",
+    "text3DeviceTypesNotNames": "3. 设备类型（不含名称）",
+    "text4AppUsagePatterns": "4. 应用使用模式",
+    "text5PlatformInformation": "5. 平台信息",
+    "transcriptionModelEGWhisperLargeV3Parakeet": "• 转写模型（例如“Whisper large-v3”“Parakeet”）",
+    "usageAnalytics": "使用情况分析",
+    "viewPrivacyPolicy": "查看隐私政策",
+    "whatAnalyticsCollects": "分析功能会收集什么",
+    "whatWeDONTCollect": "我们不会收集：",
+    "yourMeetingsTranscriptsAndRecordingsRemainCompletelyPrivateAndLocal": "你的会议、转写和录音始终完全私密并保存在本地。",
+    "yourPrivacyIsProtected": "你的隐私受到保护",
+    "yourUserID": "你的用户 ID"
+  },
+  "status": {
+    "updating": "正在更新…"
+  }
+}

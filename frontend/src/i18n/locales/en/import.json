@@ -1,0 +1,35 @@
+{
+  "accessibility": { "audioAvailable": "Audio available", "noAudio": "No audio" },
+  "actions": {
+    "browseForDatabase": "Browse for Database", "cancel": "Cancel", "chooseDifferentFile": "Choose Different File", "close": "Close", "delete": "Delete", "import": "Import",
+    "importAnAudioFileToCreateANewMeetingWith": "Import an audio file to create a new meeting with transcripts", "importAudioFile": "Import Audio File", "importComplete": "Import Complete", "importDatabase": "Import Database", "importFailed": "Import Failed", "recover": "Recover", "selectAudioFile": "Select Audio File",
+    "selectYourPreviousMeetilyFolderBackendDirectoryOrDatabaseFile": "Select your previous Meetily folder, backend directory, or database file:", "startFreshNoImport": "Start Fresh (No Import)", "tryAgain": "Try Again", "yesImport": "Yes, Import"
+  },
+  "confirmations": { "deleteMeeting": "Are you sure you want to delete this meeting? This cannot be undone." },
+  "descriptions": {
+    "audioImport": "Import an audio file to create a new meeting with transcripts", "enableBetaImportFeature": "Enable \"Import Audio & Retranscribe\" in Settings > Beta to use this feature.", "importError": "An error occurred during import", "parakeetAutomaticLanguage": "Language selection isn't supported for Parakeet. It always uses automatic detection.",
+    "recoveredMeetingSummaryLanguageWarning": "The recovered meeting was saved, but the default summary language was not applied.", "supportedFormats": "Supported formats: {{formats}}", "theImportedMeetingWasSavedButTheDefaultSummaryLanguage": "The imported meeting was saved, but the default summary language was not applied.",
+    "supportedFormatsNote": "That list mixes containers and codecs (an MP4 container may hold AAC, for example); the file contents decide what is actually used.",
+    "localProcessingNote": "Transcription runs on this machine and the audio is not uploaded; only summary generation sends text to the model you picked."
+  },
+  "errors": {
+    "betaFeatureDisabled": "Beta feature disabled", "cancelFailed": "The import could not be cancelled. It may still be running; please try again.", "couldNotApplyDefaultSummaryLanguage": "Could not apply default summary language", "databaseBrowseFailed": "The database location could not be opened or checked. Please try again.", "dropAudioFileRequired": "Please drop an audio file", "recordingInProgress": "Stop the active recording before importing an audio file.",
+    "databaseImportFailed": "The database could not be imported. Your existing data was not changed.", "databaseInitializationFailed": "A new database could not be initialized. Please try again.", "deleteMeetingFailed": "The interrupted meeting could not be deleted. Please try again.", "importFailed": "Import failed", "importFailedValue": "Import failed: {{error}}", "initializationFailedValue": "Initialization failed: {{error}}",
+    "noDatabaseFoundAtSelectedLocationPleaseSelectTheMeetily": "No database found at selected location. Please select the Meetily folder, backend folder, or the database file directly.", "previewLoadFailed": "The transcript preview could not be loaded. Your recovery data was not changed.", "processingFailed": "The audio could not be imported. Please verify the file and try again.", "recoveryFailed": "The meeting could not be recovered. Your recovery data was kept so you can try again.", "startFailed": "The audio import could not be started. Please try again.", "validationFailed": "The selected audio file could not be validated. Choose a supported, readable file."
+  },
+  "labels": {
+    "advancedOptions": "Advanced Options", "anErrorOccurredDuringImport": "An error occurred during import", "audioAvailable": "Audio available", "chooseDifferentFile": "Choose Different File", "databaseFound": "Database found!", "dropAudioFileToImport": "Drop audio file to import", "interruptedMeetings": "Interrupted Meetings", "language": "Language",
+    "languageSelectionIsnTSupportedForParakeetItAlwaysUses": "Language selection isn't supported for Parakeet. It always uses automatic detection.", "mb": "MB)", "meetingTitle": "Meeting Title", "model": "Model", "mp4WAVMP3FLACOGGMKVWebMWMA": "MP4, WAV, MP3, FLAC, OGG, MKV, WebM, WMA", "noAudio": "No audio", "noBrowseManually": "No, Browse Manually", "or": "or", "preview": "Preview",
+    "modelSizeValue": "({{size}} MB)", "previousMeetilyInstallationDetected": "Previous Meetily Installation Detected!", "sizeValue": "Size: {{size}}", "startedValue": "Started {{date}}", "transcriptCount_one": "{{count}} transcript", "transcriptCount_other": "{{count}} transcripts", "weFoundAnExistingDatabaseFromYourPreviousMeetilyInstallation": "We found an existing database from your previous Meetily installation (Python backend version).", "welcomeToMeetily": "Welcome to Meetily!"
+  },
+  "messages": { "databaseImportedSuccessfullyReloading": "Database imported successfully! Reloading...", "databaseInitializedSuccessfullyStartingApp": "Database initialized successfully! Starting app...", "importCancelled": "Import cancelled", "importComplete_one": "Import complete! {{count}} segment created.", "importComplete_other": "Import complete! {{count}} segments created." },
+  "placeholders": { "enterMeetingTitle": "Enter meeting title", "loadingModels": "Loading models...", "selectLanguage": "Select language", "selectModel": "Select model" },
+  "prompts": { "doYouHaveDataFromAPreviousMeetilyInstallation": "Do you have data from a previous Meetily installation?", "wouldYouLikeToImportYourPreviousMeetingsTranscriptsAnd": "Would you like to import your previous meetings, transcripts, and summaries?" },
+  "recovery": {
+    "andMore_one": "… and {{count}} more transcript", "andMore_other": "… and {{count}} more transcripts", "description_one": "We found {{count}} interrupted meeting. Select it to preview and recover it.", "description_other": "We found {{count}} interrupted meetings. Select a meeting to preview and recover it.", "noTranscriptsToPreview": "No transcripts to preview", "selectMeetingToPreview": "Select a meeting to preview", "showingPreview": "Showing the first {{visible}} transcript segments (of {{total}} total)", "title": "Recover Interrupted Meetings"
+  },
+  "status": {
+    "deleting": "Deleting...", "detectingDatabase": "Detecting database...", "importing": "Importing...", "importingAudio": "Importing Audio...", "loadingPreview": "Loading preview...", "processingAudio": "Processing audio...", "recovering": "Recovering...", "selecting": "Selecting...", "success": "Success!", "validating": "Validating...",
+    "stages": { "complete": "Complete", "copying": "Preparing audio", "decoding": "Decoding audio", "resampling": "Converting audio", "saving": "Saving meeting", "transcribing": "Transcribing speech", "unknown": "Processing audio", "vad": "Detecting speech" }
+  }
+}

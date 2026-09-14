@@ -1,0 +1,123 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+/experiments
+
+# dependencies
+/node_modules
+**/models
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+*.mp4
+
+# testing
+/coverage
+/dist
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+__pycache__/
+*.py[cod]
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Audio files
+*.wav
+
+# Large media files
+docs/demo.mov
+docs/demo.gif
+
+
+meeting_minutes.db
+
+# Added by Task Master AI
+# Logs
+logs
+*.log
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+.env
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+experiments/
+.cursor/
+target/
+
+frontend/src-tauri/binaries/
+frontend/src-tauri/runtime/webview2-fixed/
+
+# Local i18n audit and isolated Tauri build outputs
+/target-phase*/
+/target-tools/
+/target-phase*.zip
+/target-phase*.zip.sha256
+/frontend/.next.corrupt-*/
+
+# Local build, probe, and recovery outputs. Keep release inputs under
+# frontend/src-tauri/runtime versioned; only repository-root target-* outputs
+# belong here.
+/target-*/
+/target-*.zip
+/target-*.zip.sha256
+/.tools/
+/downloads/
+
+# Local QA interpreter caches
+**/__pycache__/
+*.pyc
+
+# Isolated development worktrees; never include local recordings or test outputs.
+/.worktrees/
+/方案/验收记录/录音修复/PI调度/*/
+.env.*
+!.env.example
+!.env.sample
+*.sqlite
+*.sqlite-*
+*.db-wal
+*.db-shm
+
+# Release-local artifacts and private data
+/release-artifacts/
+/方案/
+*.pfx
+*.p12
+*.key
+*.env
+/scripts/qa/proofread-regression-out*/
+**/.pnpm-patches/

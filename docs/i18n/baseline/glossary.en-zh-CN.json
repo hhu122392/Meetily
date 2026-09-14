@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "locale": "zh-CN",
+  "entries": [
+    {
+      "en": "Meeting",
+      "zhCN": "会议",
+      "note": "Do not use 会面 in the product UI.",
+      "approved": true
+    },
+    {
+      "en": "Meeting Notes",
+      "zhCN": "会议笔记",
+      "note": "Navigation and saved notes.",
+      "approved": true
+    },
+    {
+      "en": "Recording",
+      "zhCN": "录音",
+      "note": "Use 录制中 only for an active status.",
+      "approved": true
+    },
+    {
+      "en": "Start recording",
+      "zhCN": "开始录音",
+      "note": "Action label.",
+      "approved": true
+    },
+    {
+      "en": "Stop recording",
+      "zhCN": "停止录音",
+      "note": "Action label.",
+      "approved": true
+    },
+    {
+      "en": "Pause recording",
+      "zhCN": "暂停录音",
+      "note": "Action label.",
+      "approved": true
+    },
+    {
+      "en": "Resume recording",
+      "zhCN": "继续录音",
+      "note": "Action label.",
+      "approved": true
+    },
+    {
+      "en": "Transcript",
+      "zhCN": "转录文本",
+      "note": "Use 转录 in compact navigation or as a process noun.",
+      "approved": true
+    },
+    {
+      "en": "Transcription",
+      "zhCN": "转录",
+      "note": "Do not use 听写.",
+      "approved": true
+    },
+    {
+      "en": "Retranscribe",
+      "zhCN": "重新转录",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Enhance",
+      "zhCN": "增强转录",
+      "note": "When the feature specifically reprocesses a transcript.",
+      "approved": true
+    },
+    {
+      "en": "Summary",
+      "zhCN": "摘要",
+      "note": "AI Summary is AI 摘要.",
+      "approved": true
+    },
+    {
+      "en": "Generate summary",
+      "zhCN": "生成摘要",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Regenerate summary",
+      "zhCN": "重新生成摘要",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Action Items",
+      "zhCN": "行动项",
+      "note": "Team collaboration context.",
+      "approved": true
+    },
+    {
+      "en": "Key Points",
+      "zhCN": "要点",
+      "note": "Summary section.",
+      "approved": true
+    },
+    {
+      "en": "Decisions",
+      "zhCN": "决策",
+      "note": "Summary section.",
+      "approved": true
+    },
+    {
+      "en": "Main Topics",
+      "zhCN": "主要议题",
+      "note": "Summary section.",
+      "approved": true
+    },
+    {
+      "en": "Speaker",
+      "zhCN": "发言人",
+      "note": "Never translate as 扬声器.",
+      "approved": true
+    },
+    {
+      "en": "Microphone",
+      "zhCN": "麦克风",
+      "note": "Audio input device.",
+      "approved": true
+    },
+    {
+      "en": "System Audio",
+      "zhCN": "系统音频",
+      "note": "Computer playback audio.",
+      "approved": true
+    },
+    {
+      "en": "Audio Device",
+      "zhCN": "音频设备",
+      "note": "Generic device term.",
+      "approved": true
+    },
+    {
+      "en": "Model",
+      "zhCN": "模型",
+      "note": "AI or transcription model; retain the actual model name.",
+      "approved": true
+    },
+    {
+      "en": "Provider",
+      "zhCN": "服务提供方",
+      "note": "Use 服务商 only if space is constrained and approved.",
+      "approved": true
+    },
+    {
+      "en": "Built-in AI",
+      "zhCN": "内置 AI",
+      "note": "Keep AI uppercase.",
+      "approved": true
+    },
+    {
+      "en": "Template",
+      "zhCN": "模板",
+      "note": "Summary template.",
+      "approved": true
+    },
+    {
+      "en": "Language",
+      "zhCN": "语言",
+      "note": "Qualify as 显示语言、转录语言、摘要语言 when ambiguity exists.",
+      "approved": true
+    },
+    {
+      "en": "Display Language",
+      "zhCN": "显示语言",
+      "note": "Controls UI only.",
+      "approved": true
+    },
+    {
+      "en": "Transcription Language",
+      "zhCN": "转录语言",
+      "note": "Controls speech recognition.",
+      "approved": true
+    },
+    {
+      "en": "Summary Language",
+      "zhCN": "摘要语言",
+      "note": "Controls generated summary output.",
+      "approved": true
+    },
+    {
+      "en": "Auto Detect",
+      "zhCN": "自动检测",
+      "note": "Special language option.",
+      "approved": true
+    },
+    {
+      "en": "Auto Detect (Original Language)",
+      "zhCN": "自动检测（保留原语言）",
+      "note": "Do not imply translation.",
+      "approved": true
+    },
+    {
+      "en": "Auto Detect (Translate to English)",
+      "zhCN": "自动检测（翻译为英语）",
+      "note": "Explicitly indicates English output.",
+      "approved": true
+    },
+    {
+      "en": "Confidence",
+      "zhCN": "置信度",
+      "note": "Explain as recognition confidence in help text.",
+      "approved": true
+    },
+    {
+      "en": "Settings",
+      "zhCN": "设置",
+      "note": "Navigation and page title.",
+      "approved": true
+    },
+    {
+      "en": "Preferences",
+      "zhCN": "偏好设置",
+      "note": "User preferences section.",
+      "approved": true
+    },
+    {
+      "en": "Onboarding",
+      "zhCN": "初始设置",
+      "note": "Do not expose the engineering term 引导流程 to users.",
+      "approved": true
+    },
+    {
+      "en": "Import Audio",
+      "zhCN": "导入音频",
+      "note": "Action and navigation label.",
+      "approved": true
+    },
+    {
+      "en": "Release Notes",
+      "zhCN": "更新说明",
+      "note": "Prefer over 发行说明.",
+      "approved": true
+    },
+    {
+      "en": "Update Available",
+      "zhCN": "有可用更新",
+      "note": "Status title.",
+      "approved": true
+    },
+    {
+      "en": "Beta Features",
+      "zhCN": "测试功能",
+      "note": "If retaining Beta as a brand tone, use Beta 功能 consistently.",
+      "approved": true
+    },
+    {
+      "en": "Analytics",
+      "zhCN": "使用情况分析",
+      "note": "Privacy-sensitive feature; avoid ambiguous 数据分析.",
+      "approved": true
+    },
+    {
+      "en": "Privacy",
+      "zhCN": "隐私",
+      "note": "Legal/privacy context requires human review.",
+      "approved": true
+    },
+    {
+      "en": "Download",
+      "zhCN": "下载",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Install",
+      "zhCN": "安装",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Retry",
+      "zhCN": "重试",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Cancel",
+      "zhCN": "取消",
+      "note": "Action.",
+      "approved": true
+    },
+    {
+      "en": "Delete",
+      "zhCN": "删除",
+      "note": "Destructive action; confirmation must state the target.",
+      "approved": true
+    }
+  ]
+}

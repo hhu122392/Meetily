@@ -1,0 +1,48 @@
+{
+  "accessibility": {
+    "clearSearch": "清除搜索",
+    "collapseSidebar": "收起侧边栏",
+    "deleteMeeting": "删除会议",
+    "editMeetingTitle": "编辑会议标题",
+    "expandSidebar": "展开侧边栏",
+    "meetingNotes": "会议记录",
+    "newCall": "+ 新建通话"
+  },
+  "actions": {
+    "cancel": "取消",
+    "editMeetingTitle": "编辑会议标题",
+    "importAudio": "导入音频",
+    "save": "保存",
+    "startRecording": "开始录音"
+  },
+  "descriptions": {
+    "allAssociatedDataHasBeenRemoved": "所有关联数据均已移除",
+    "confirmDeleteMeeting": "确定要删除此会议吗？此操作无法撤销。"
+  },
+  "errors": {
+    "failedToDeleteMeeting": "删除会议失败",
+    "failedToUpdateMeetingTitle": "更新会议标题失败",
+    "meetingTitleCannotBeEmpty": "会议标题不能为空"
+  },
+  "labels": {
+    "home": "首页",
+    "match": "匹配内容：",
+    "meetingNotes": "会议记录",
+    "meetingTitle": "会议标题",
+    "settings": "设置",
+    "transcriptCountValue": "{{count}} 段"
+  },
+  "messages": {
+    "meetingDeletedSuccessfully": "会议已成功删除",
+    "meetingTitleUpdatedSuccessfully": "会议标题已成功更新"
+  },
+  "placeholders": {
+    "enterMeetingTitle": "输入会议标题",
+    "searchMeetingContent": "搜索会议内容…"
+  },
+  "status": {
+    "noSearchMatches": "没有找到匹配的会议（标题和转写内容都试过了）",
+    "recordingInProgress": "正在录音…",
+    "searching": "正在搜索…"
+  }
+}

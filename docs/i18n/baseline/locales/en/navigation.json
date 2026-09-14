@@ -1,0 +1,36 @@
+{
+  "accessibility": {
+    "deleteMeeting": "Delete meeting",
+    "editMeetingTitle": "Edit meeting title",
+    "meetingNotes": "Meeting Notes",
+    "newCall": "+ New Call"
+  },
+  "actions": {
+    "editMeetingTitle": "Edit Meeting Title",
+    "importAudio": "Import Audio",
+    "startRecording": "Start Recording"
+  },
+  "descriptions": {
+    "allAssociatedDataHasBeenRemoved": "All associated data has been removed"
+  },
+  "errors": {
+    "failedToDeleteMeeting": "Failed to delete meeting",
+    "failedToUpdateMeetingTitle": "Failed to update meeting title",
+    "meetingTitleCannotBeEmpty": "Meeting title cannot be empty"
+  },
+  "labels": {
+    "meetingNotes": "Meeting Notes",
+    "meetingTitle": "Meeting Title"
+  },
+  "messages": {
+    "meetingDeletedSuccessfully": "Meeting deleted successfully",
+    "meetingTitleUpdatedSuccessfully": "Meeting title updated successfully"
+  },
+  "placeholders": {
+    "enterMeetingTitle": "Enter meeting title",
+    "searchMeetingContent": "Search meeting content..."
+  },
+  "status": {
+    "recordingInProgress": "Recording in progress..."
+  }
+}

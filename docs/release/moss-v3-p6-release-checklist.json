@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "name": "Meetily MOSS 持续开发与可验证落地计划 v3.0",
+    "sha256": "8EF5FDBE5A896077D2879FBDA41AC08547C11269CECAB03DC74C4A087A8F0A39",
+    "p6_lines": "395-430",
+    "evidence_lines": "455-475",
+    "rollback_lines": "531-539"
+  },
+  "tooling_baseline_commit": "197a1756a63f307419a868f2b5f18361a56cacab",
+  "p6_status": "NOT RUN",
+  "l2_release_status": "BLOCKED",
+  "accuracy_status": "NOT SCORABLE UNTIL HUMAN-APPROVED FULL REFERENCE EXISTS",
+  "release_dependency_chain": "P2 -> P3 -> P4 -> P5 -> P6 release HEAD",
+  "scope": "P6 parallel build, package, lifecycle, acceptance and evidence tooling only",
+  "items": [
+    {
+      "id": "BUILD-01",
+      "area": "build",
+      "requirement": "All Tauri build workflows build and stage llama-helper and moss-helper before packaging.",
+      "tool": "scripts/qa/moss_v3_p6_release.py build-wiring",
+      "required_evidence": "build-wiring.json with status PASS",
+      "requires_p3_p5_merge": false,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "PKG-01",
+      "area": "package",
+      "requirement": "Windows x86_64 Vulkan installer, signature, installed application and Authenticode report are hash-bound to one release commit.",
+      "tool": "scripts/qa/moss_v3_p6_release.py package",
+      "required_evidence": "release-manifest.json roles installer, installer_signature, application and authenticode_report",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "PKG-02",
+      "area": "package",
+      "requirement": "moss-helper, llama-helper and ffmpeg are present in the installed payload and have recorded byte counts and SHA-256 values.",
+      "tool": "scripts/qa/moss_v3_p6_release.py package",
+      "required_evidence": "release-manifest.json roles moss_helper, llama_helper and ffmpeg",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "PKG-03",
+      "area": "package",
+      "requirement": "Database migration source is included in the release inventory; the final evidence manifest is generated afterward so it can hash the release manifest and final audit without a circular hash dependency.",
+      "tool": "scripts/qa/moss_v3_p6_release.py package",
+      "required_evidence": "release-manifest.json role database_migration, followed by 07-evidence-manifest.json manifest_status PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "ASSET-01",
+      "area": "model",
+      "requirement": "The Q8 model file name, byte count, revision and SHA-256 match the frozen P1 lock.",
+      "tool": "scripts/qa/moss_v3_p6_release.py assets",
+      "required_evidence": "asset-integrity.json model checks all true",
+      "requires_p3_p5_merge": false,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "ASSET-02",
+      "area": "runtime",
+      "requirement": "The transcribe.cpp 0.2.2 CPU/Vulkan runtime has the exact locked top-level file set and hashes.",
+      "tool": "scripts/qa/moss_v3_p6_release.py assets",
+      "required_evidence": "asset-integrity.json runtime_file_set_matches_lock and runtime_hashes_match_lock",
+      "requires_p3_p5_merge": false,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "ASSET-03",
+      "area": "licenses",
+      "requirement": "Model, runtime, ggml and miniz license files exist and match their pinned sources.",
+      "tool": "scripts/qa/moss_v3_p6_release.py assets",
+      "required_evidence": "asset-integrity.json license checks and bundled license manifest",
+      "requires_p3_p5_merge": false,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "ASSET-04",
+      "area": "placement",
+      "requirement": "MOSS model and runtime deploy under D:\\MeetilyData and no identical model/runtime payload appears in the application or installer staging roots.",
+      "tool": "scripts/qa/moss_v3_p6_release.py assets and package",
+      "required_evidence": "D-drive deployment checks PASS and no application/package hash collision",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "LIFE-01",
+      "area": "fresh install",
+      "requirement": "Fresh install leaves protected recordings, settings and existing model data intact and creates the expected application payload.",
+      "tool": "scripts/qa/moss_v3_p6_lifecycle.py snapshot and verify",
+      "required_evidence": "install transition PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "LIFE-02",
+      "area": "upgrade",
+      "requirement": "Upgrade preserves protected files, JSON values and configured SQLite row sets while allowing additive MOSS tables and keys.",
+      "tool": "scripts/qa/moss_v3_p6_lifecycle.py snapshot and verify",
+      "required_evidence": "upgrade transition PASS with exact/preserve/json_preserve/sqlite_preserve assertions",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "LIFE-03",
+      "area": "uninstall",
+      "requirement": "Uninstall removes the application payload, follows the explicit MOSS-data retention policy, and does not remove Whisper, Parakeet, Qwen, Gemma, recordings, database or templates.",
+      "tool": "scripts/qa/moss_v3_p6_lifecycle.py snapshot and verify",
+      "required_evidence": "uninstall transition PASS and every protected root covered by a strong assertion",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "LIFE-04",
+      "area": "rollback",
+      "requirement": "Approved version rollback keeps old meetings, edits, templates, settings and existing models readable and unchanged.",
+      "tool": "scripts/qa/moss_v3_p6_lifecycle.py snapshot and verify",
+      "required_evidence": "rollback transition PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-01",
+      "area": "real-time baseline",
+      "requirement": "Real-time bubbles, stop convergence and manual edit persistence pass on the frozen real meeting.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "live-bubbles, stop-convergence and manual-edit-persistence scenarios PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-02",
+      "area": "MOSS candidate",
+      "requirement": "Progress, cancel, candidate review, timestamps and anonymous speakers pass without overwriting active text.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "moss-progress, moss-cancel and candidate-review scenarios PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-03",
+      "area": "terms and people",
+      "requirement": "Positive aliases are corrected, unspoken terms are not inserted, people are bound and segment corrections persist after restart.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "term/person/restart scenarios PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-04",
+      "area": "activation and summary",
+      "requirement": "Activation, Qwen 3.5 2B summary, template binding, source traceability and 需检查 conflict handling pass.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "activate-moss, qwen-2b-summary and needs-review-conflict scenarios PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-05",
+      "area": "bidirectional rollback",
+      "requirement": "Whisper rollback and MOSS reactivation both preserve data.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "rollback-to-whisper and reactivate-moss scenarios PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-06",
+      "area": "offline",
+      "requirement": "The installed release completes the main chain offline, with independent network-blocked checks before and after the scenario.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "offline-release-chain PASS with network-blocked-before and network-blocked-after",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-07",
+      "area": "negative paths",
+      "requirement": "Forced exit, network failure, corrupt model and summary failure do not damage original recording, transcript or manual edits.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py and lifecycle hashes",
+      "required_evidence": "four negative scenarios PASS plus protected data hashes",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "E2E-08",
+      "area": "process release",
+      "requirement": "moss-helper has no remaining process before Qwen starts.",
+      "tool": "scripts/qa/moss_v3_p6_acceptance.py",
+      "required_evidence": "process-release-before-summary scenario PASS and residual count 0",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "METRIC-01",
+      "area": "accuracy",
+      "requirement": "737.728-second raw MOSS CER is at most 20% and no worse than Whisper on the same scored window.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "human-approved full reference hash, separate reviewer approval record hash, hash-bound raw MOSS/Whisper transcripts, moss_raw_cer and whisper_same_window_cer",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "METRIC-02",
+      "area": "corrected accuracy",
+      "requirement": "Corrected CER is at most 15%, spoken-term accuracy is at least 95%, and unspoken-term insertions equal 0.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "human-scored metrics bound to the frozen audio hash",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "METRIC-03",
+      "area": "speaker and timestamp",
+      "requirement": "Raw speaker error rates are recorded, corrected scored speaker errors are 0, and timestamps parse 100%, are monotonic and stay in bounds.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "metrics.json speaker/timestamp fields and human reference hash",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "METRIC-04",
+      "area": "performance",
+      "requirement": "737.728-second RTF is at most 1.0 and 3096.62-second audio reaches the tail within 0.5 seconds.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "metrics.json business_rtf, long_audio_complete and tail timestamp",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "FINAL-01",
+      "area": "prerequisites",
+      "requirement": "P0-P5 normalized stage gates are PASS, every listed evidence hash still matches, and Git ancestry is P2 -> P3 -> P4 -> P5 -> P6 release HEAD.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "P0=P1=P2=P3=P4=P5=PASS stage gate files",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "FINAL-02",
+      "area": "final audit",
+      "requirement": "Release manifest, frozen-asset-to-release binding, asset integrity, build wiring, lifecycle, acceptance and human-grounded metrics are all PASS on one clean release commit.",
+      "tool": "scripts/qa/moss_v3_p6_release.py final-audit",
+      "required_evidence": "final-audit.json p6_status PASS and l2_release_status PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    },
+    {
+      "id": "FINAL-03",
+      "area": "evidence",
+      "requirement": "The fixed eight evidence files exist and 07-evidence-manifest.json records every evidence file hash.",
+      "tool": "scripts/qa/moss_v3_p6_release.py evidence-manifest",
+      "required_evidence": "07-evidence-manifest.json manifest_status PASS",
+      "requires_p3_p5_merge": true,
+      "status": "NOT RUN"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "phase": "15.8-stage-5-chinese-qa-release-and-rollback",
+  "generatedAt": "2026-08-23T17:18:34+08:00",
+  "overallDecision": "FAIL_PRODUCTION_NO_GO",
+  "automatedWindowsAudit": "PASS",
+  "version": "0.4.0",
+  "git": {
+    "head": "0281737d87d26352fb0adc78c8c0975f691b23d1",
+    "dirtyEntryCount": 171,
+    "cleanReleaseCommit": false
+  },
+  "candidate": {
+    "productName": "Meetily Phase 5 Audit",
+    "identifier": "com.meetily.ai.phase5audit",
+    "auditOnly": true,
+    "signed": false,
+    "executable": {
+      "path": "target-phase5-release/release/meetily.exe",
+      "bytes": 65631232,
+      "sha256": "A58EAB4B3076D520A732197AD4CDBE5EEB8732C9A85433509A94FB097B75D94B"
+    },
+    "installer": {
+      "path": "target-phase5-release/release/bundle/nsis/Meetily Phase 5 Audit_0.4.0_x64-setup.exe",
+      "bytes": 43979110,
+      "sha256": "71777BAA1EC9F0DBAD2643638B884DC3DF6706AFFDF61EBF9CECFBED133A4101"
+    },
+    "buildInputsChecked": 416,
+    "buildInputsNewerThanExecutable": 0
+  },
+  "protectedFormalArtifacts": {
+    "overwritten": false,
+    "executableSha256": "1873D2CCA9B06EEBE8B2D42DC8530B6888BCB91C4267BBD6E6724F6A78257823",
+    "installerSha256": "C6A5BD12F947AEDECAC890C33A48FDEA94E4C11C29FCA03EEF753C25AEE30434"
+  },
+  "automatedEvidence": {
+    "staticChecks": "13/13",
+    "frontendI18n": "54/54",
+    "frontendLibrary": "41/41",
+    "rust": "278 passed / 0 failed / 2 ignored",
+    "typescriptErrors": 0,
+    "nextStaticPages": "13/13",
+    "runtimeChecks": "16/16",
+    "windowsInstallChecks": "17/17",
+    "releaseIntegrityChecks": "6/6"
+  },
+  "openProductionBlockers": [
+    "P5-UPSTREAM-001",
+    "P5-GOV-001",
+    "P5-GOV-002",
+    "P5-SIGN-001",
+    "P5-PLAT-001",
+    "P5-HW-001",
+    "P5-AI-001",
+    "P5-UPG-001",
+    "P5-PERF-001",
+    "P5-A11Y-001",
+    "P5-NATIVE-001",
+    "P5-REL-001"
+  ],
+  "openToolingLimitations": [
+    "P5-TOOL-001",
+    "P5-TOOL-002"
+  ]
+}

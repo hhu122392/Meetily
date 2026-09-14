@@ -1,0 +1,22 @@
+[
+  {
+    "file": "onnxruntime.dll",
+    "bytes": 17378304,
+    "sha256": "b9f6713c3602a4742680a7e6a77e3f9ac4a676ad9447bce609e53efcda795d7e"
+  },
+  {
+    "file": "onnxruntime_providers_shared.dll",
+    "bytes": 104960,
+    "sha256": "1f8b8ebfb07aad2c692669ba77c45b5a24e72b9c708bc3f2be4103ff29370c60"
+  },
+  {
+    "file": "sherpa-onnx-c-api.dll",
+    "bytes": 4593664,
+    "sha256": "f80a93e69fda12aaab23581f71097010c70fb8b8c042fec7c0efead04be5c441"
+  },
+  {
+    "file": "sherpa-onnx-cxx-api.dll",
+    "bytes": 258560,
+    "sha256": "019634407ab4ea0f80152ffa988835abecc72f7e27dee4a1ff78c0b7eb1fe81e"
+  }
+]

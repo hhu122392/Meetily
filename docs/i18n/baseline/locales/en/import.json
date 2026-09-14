@@ -1,0 +1,62 @@
+{
+  "actions": {
+    "browseForDatabase": "Browse for Database",
+    "importAnAudioFileToCreateANewMeetingWith": "Import an audio file to create a new meeting with transcripts",
+    "importAudioFile": "Import Audio File",
+    "importComplete": "Import Complete",
+    "importDatabase": "Import Database",
+    "importFailed": "Import Failed",
+    "selectAudioFile": "Select Audio File",
+    "selectYourPreviousMeetilyFolderBackendDirectoryOrDatabaseFile": "Select your previous Meetily folder, backend directory, or database file:",
+    "startFreshNoImport": "Start Fresh (No Import)",
+    "tryAgain": "Try Again",
+    "yesImport": "Yes, Import"
+  },
+  "descriptions": {
+    "supportedFormats": "Supported formats: {{formats}}",
+    "theImportedMeetingWasSavedButTheDefaultSummaryLanguage": "The imported meeting was saved, but the default summary language was not applied."
+  },
+  "errors": {
+    "couldNotApplyDefaultSummaryLanguage": "Could not apply default summary language",
+    "importFailed": "Import failed",
+    "importFailedValue": "Import failed: {{error}}",
+    "initializationFailedValue": "Initialization failed: {{error}}",
+    "noDatabaseFoundAtSelectedLocationPleaseSelectTheMeetily": "No database found at selected location. Please select the Meetily folder, backend folder, or the database file directly."
+  },
+  "labels": {
+    "advancedOptions": "Advanced Options",
+    "anErrorOccurredDuringImport": "An error occurred during import",
+    "chooseDifferentFile": "Choose Different File",
+    "databaseFound": "Database found!",
+    "dropAudioFileToImport": "Drop audio file to import",
+    "languageSelectionIsnTSupportedForParakeetItAlwaysUses": "Language selection isn't supported for Parakeet. It always uses automatic detection.",
+    "mb": "MB)",
+    "meetingTitle": "Meeting Title",
+    "mp4WAVMP3FLACOGGMKVWebMWMA": "MP4, WAV, MP3, FLAC, OGG, MKV, WebM, WMA",
+    "noBrowseManually": "No, Browse Manually",
+    "previousMeetilyInstallationDetected": "Previous Meetily Installation Detected!",
+    "weFoundAnExistingDatabaseFromYourPreviousMeetilyInstallation": "We found an existing database from your previous Meetily installation (Python backend version).",
+    "welcomeToMeetily": "Welcome to Meetily!"
+  },
+  "messages": {
+    "databaseImportedSuccessfullyReloading": "Database imported successfully! Reloading...",
+    "databaseInitializedSuccessfullyStartingApp": "Database initialized successfully! Starting app...",
+    "importCancelled": "Import cancelled",
+    "importComplete_one": "Import complete! {{count}} segment created.",
+    "importComplete_other": "Import complete! {{count}} segments created."
+  },
+  "placeholders": {
+    "enterMeetingTitle": "Enter meeting title",
+    "loadingModels": "Loading models...",
+    "selectLanguage": "Select language",
+    "selectModel": "Select model"
+  },
+  "prompts": {
+    "doYouHaveDataFromAPreviousMeetilyInstallation": "Do you have data from a previous Meetily installation?",
+    "wouldYouLikeToImportYourPreviousMeetingsTranscriptsAnd": "Would you like to import your previous meetings, transcripts, and summaries?"
+  },
+  "status": {
+    "detectingDatabase": "Detecting database...",
+    "importingAudio": "Importing Audio..."
+  }
+}

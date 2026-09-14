@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "stage": "MOSS_V3_P6_HUMAN_REFERENCE_APPROVAL",
+  "status": "NOT APPROVED",
+  "replacement_rule": "A real reviewer completes this record only after checking the entire reference against the full frozen 737.728-second audio. Copy it, remove template_only, replace every placeholder, then record this file's byte count and SHA-256 in metrics.json.",
+  "reference_bytes": "__REQUIRED_REFERENCE_BYTES__",
+  "reference_sha256": "__REQUIRED_REFERENCE_SHA256__",
+  "business_audio_sha256": "__REQUIRED_FROZEN_BUSINESS_AUDIO_SHA256__",
+  "reviewed_duration_seconds": 737.728,
+  "reviewer": "__REQUIRED_REAL_REVIEWER_ID__",
+  "approved_at": "__REQUIRED_UTC_TIMESTAMP_YYYY_MM_DD_T_HH_MM_SS_Z__",
+  "attestation": "I reviewed the complete reference against the full frozen business audio."
+}

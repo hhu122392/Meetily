@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "architecture": "x64",
+  "deployment": "NSIS application-local workaround for Tauri 2.11.1",
+  "files": [
+    {
+      "name": "DirectML.dll",
+      "version": "1.15.4+241025-1615.1.dml-1.15.fac7597",
+      "bytes": 18527776,
+      "sha256": "9C9E6D822561C6C41B90E6994B3E8857CF1D66DBFB1E0C4C799C7C89B4E92DA1",
+      "authenticodeStatus": "Valid",
+      "signer": "Microsoft Windows Publisher"
+    }
+  ]
+}

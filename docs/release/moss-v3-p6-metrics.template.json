@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "stage": "MOSS_V3_P6_METRICS",
+  "template_only": true,
+  "replacement_rule": "This file is not evidence. Copy it, set template_only to false, bind it to release HEAD and measured files, and keep status below HUMAN_APPROVED_FULL_REFERENCE until a person approves the complete reference transcript.",
+  "source_commit": "__REQUIRED_FULL_40_HEX_RELEASE_COMMIT__",
+  "audio": {
+    "business_737s": {
+      "sha256": "__REQUIRED_FROZEN_BUSINESS_AUDIO_SHA256__",
+      "duration_seconds": "__REQUIRED_MEASURED_DURATION_SECONDS__"
+    },
+    "long_3096s": {
+      "sha256": "__REQUIRED_FROZEN_LONG_AUDIO_SHA256__",
+      "duration_seconds": "__REQUIRED_MEASURED_DURATION_SECONDS__"
+    }
+  },
+  "ground_truth": {
+    "status": "__REQUIRED_HUMAN_APPROVAL_STATUS__",
+    "path": "__REQUIRED_REFERENCE_FILE_RELATIVE_TO_THIS_REPORT__",
+    "bytes": "__REQUIRED_REFERENCE_BYTES__",
+    "sha256": "__REQUIRED_REFERENCE_SHA256__",
+    "approval_path": "__REQUIRED_APPROVAL_JSON_RELATIVE_TO_THIS_REPORT__",
+    "approval_bytes": "__REQUIRED_APPROVAL_BYTES__",
+    "approval_sha256": "__REQUIRED_APPROVAL_SHA256__"
+  },
+  "measurement_evidence": [
+    { "role": "moss_raw_transcript", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "whisper_same_window_transcript", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "corrected_transcript", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "term_scoring", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "speaker_scoring", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "timestamp_scoring", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "performance", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" },
+    { "role": "process_ordering", "path": "__REQUIRED_RELATIVE_PATH__", "bytes": "__REQUIRED_BYTES__", "sha256": "__REQUIRED_SHA256__" }
+  ],
+  "metrics": {
+    "moss_raw_cer": "__REQUIRED_RATIO__",
+    "whisper_same_window_cer": "__REQUIRED_RATIO__",
+    "corrected_cer": "__REQUIRED_RATIO__",
+    "spoken_term_accuracy": "__REQUIRED_RATIO__",
+    "unspoken_term_insertions": "__REQUIRED_INTEGER__",
+    "raw_speaker_segment_error_rate": "__REQUIRED_RATIO__",
+    "raw_speaker_duration_error_rate": "__REQUIRED_RATIO__",
+    "claims_automatic_speaker_accuracy": false,
+    "corrected_speaker_error_count": "__REQUIRED_INTEGER__",
+    "timestamp_parse_rate": "__REQUIRED_RATIO__",
+    "timestamps_monotonic": "__REQUIRED_BOOLEAN__",
+    "timestamps_in_bounds": "__REQUIRED_BOOLEAN__",
+    "business_rtf": "__REQUIRED_RATIO__",
+    "long_audio_complete": "__REQUIRED_BOOLEAN__",
+    "long_audio_last_timestamp_seconds": "__REQUIRED_SECONDS__",
+    "moss_residual_process_count": "__REQUIRED_INTEGER__",
+    "qwen_started_after_moss_exit": "__REQUIRED_BOOLEAN__"
+  }
+}

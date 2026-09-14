@@ -1,0 +1,4 @@
+d10a-wasapi-probe.cpp -text
+New-D10AFixedAudio.ps1 -text
+Invoke-D10AIsolatedRecognition.ps1 -text
+Test-D10AWindowsEvidence.ps1 -text

@@ -1,0 +1,49 @@
+{
+  "actions": {
+    "checkForUpdates": "检查更新",
+    "checking": "正在检查…",
+    "close": "关闭",
+    "copySummary": "复制摘要",
+    "downloadAndInstall": "下载并安装",
+    "later": "稍后",
+    "saveChanges": "保存更改",
+    "updateAvailable": "有可用更新",
+    "updateError": "更新错误",
+    "viewReleases": "查看发布版本"
+  },
+  "errors": {
+    "checkFailed": "无法检查更新，请重试。",
+    "downloadInstallFailed": "无法下载或安装更新，请重试。",
+    "prepareFailed": "无法准备更新，请重试。",
+    "updateCheckAlreadyInProgress": "正在检查更新",
+    "updateNoLongerAvailable": "此更新已不再可用",
+    "updateNotAvailable": "没有可用更新"
+  },
+  "labels": {
+    "anErrorOccurredWhileUpdating": "更新过程中发生错误",
+    "complete": "% 已完成",
+    "currentVersion": "当前版本：",
+    "isNowAvailable": "现已可用",
+    "newVersion": "新版本：",
+    "releaseDate": "发布日期：",
+    "theAppWillRestartAutomaticallyAfterInstallation": "安装完成后应用将自动重启",
+    "viewDetails": "查看详情"
+  },
+  "messages": {
+    "newVersionAvailable": "发现新版本（{{version}}）",
+    "runningLatestVersion": "当前已是最新版本",
+    "updateAvailableValue": "有可用更新：v{{version}}",
+    "updateInstalledSuccessfullyTheAppWillRestart": "更新安装成功，应用即将重启…",
+    "versionIsNowAvailable": "版本 {{version}} 现已可用"
+  },
+  "status": {
+    "downloadingTheLatestVersion": "正在下载最新版本…",
+    "downloadingUpdate": "正在下载更新"
+  },
+  "units": {
+    "bytes": "字节",
+    "gb": "GB",
+    "kb": "KB",
+    "mb": "MB"
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meetily.local/schemas/portable-template-package-manifest-v1.schema.json",
+  "title": "Meetily Portable Template Package Manifest v1",
+  "description": "Manifest stored as manifest.json at the root of a .meetily-template-pack ZIP archive.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package_schema_version",
+    "package_type",
+    "package_id",
+    "created_at",
+    "created_by",
+    "hash_algorithm",
+    "semantic_hash_algorithm",
+    "template_count",
+    "templates"
+  ],
+  "properties": {
+    "package_schema_version": { "const": 1 },
+    "package_type": { "const": "meetily.template-pack" },
+    "package_id": {
+      "type": "string",
+      "pattern": "^pack_[a-f0-9]{32}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": { "$ref": "#/$defs/created_by" },
+    "hash_algorithm": { "const": "sha256" },
+    "semantic_hash_algorithm": { "const": "meetily-template-semantic-v1" },
+    "template_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/template_entry" }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Explicitly named, non-sensitive future extensions. Unknown root fields are rejected.",
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "$defs": {
+    "created_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "application_version"],
+      "properties": {
+        "application": { "const": "Meetily" },
+        "application_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9A-Za-z][0-9A-Za-z.+_-]*$"
+        }
+      }
+    },
+    "template_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "path",
+        "byte_size",
+        "file_sha256",
+        "semantic_sha256",
+        "exported_origin",
+        "overrides_builtin"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9][a-z0-9_-]*[a-z0-9]$"
+        },
+        "version": { "type": "integer", "minimum": 1 },
+        "path": {
+          "type": "string",
+          "minLength": 18,
+          "maxLength": 95,
+          "pattern": "^templates/[a-z0-9][a-z0-9_-]*[a-z0-9]\\.json$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "file_sha256": { "$ref": "#/$defs/sha256" },
+        "semantic_sha256": { "$ref": "#/$defs/sha256" },
+        "exported_origin": { "const": "custom" },
+        "overrides_builtin": { "type": "boolean" }
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "feature": {
+    "name": "MOSS post-meeting enhancement",
+    "description": "Internal review flow for MOSS candidates. It is off by default and needs the P3 candidate storage and activation API."
+  },
+  "mode": {
+    "standard": "Standard retranscription",
+    "moss": "MOSS post-meeting enhancement"
+  },
+  "settings": {
+    "title": "MOSS post-meeting enhancement",
+    "description": "Read-only installation and health information from the MOSS backend.",
+    "disabled": "The internal MOSS feature is off. Turn it on under Beta only after the P3 backend is connected.",
+    "installation": "Installation",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "version": "Version",
+    "runtimeHash": "Runtime SHA-256",
+    "modelHash": "Model SHA-256",
+    "modelSize": "Model size",
+    "availableDisk": "Available disk space",
+    "device": "Device",
+    "health": "Health",
+    "nativeHotwords": "Native hotwords",
+    "nativeHotwordsUnsupported": "Not supported",
+    "nativeHotwordsNote": "MOSS v0.2.2 does not provide native hotwords. Meetily may only apply saved, explicit aliases as traceable corrections.",
+    "refresh": "Refresh MOSS status",
+    "loading": "Loading MOSS status"
+  },
+  "availability": {
+    "ready": "Ready",
+    "not_installed": "Not installed",
+    "unhealthy": "Unavailable",
+    "unsupported": "Unsupported on this device"
+  },
+  "health": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "failed": "Failed",
+    "unknown": "Unknown"
+  },
+  "workspace": {
+    "title": "Review MOSS candidate",
+    "description": "MOSS runs after recording. A candidate is saved separately and never replaces the current transcript until you confirm activation.",
+    "nativeHotwordsWarning": "Native hotwords are not supported. Corrections below come only from explicit aliases saved with this meeting and remain reversible.",
+    "loading": "Loading MOSS review data",
+    "noRuns": "No MOSS candidate has been created for this meeting.",
+    "noReview": "This run has no reviewable candidate.",
+    "selectRun": "Candidate run",
+    "runCreated": "Created {{date}}",
+    "debugReference": "Reference: {{debugId}}"
+  },
+  "actions": {
+    "start": "Start MOSS enhancement",
+    "cancelRun": "Cancel MOSS run",
+    "refresh": "Refresh",
+    "saveEdit": "Save candidate edit",
+    "activate": "Activate candidate",
+    "rollback": "Restore previous transcript",
+    "confirmActivate": "Confirm activation",
+    "confirmRollback": "Confirm restore",
+    "keepReviewing": "Keep reviewing",
+    "undoCorrection": "Undo correction",
+    "reapplyCorrection": "Reapply correction"
+  },
+  "runState": {
+    "preparing": "Preparing",
+    "running": "Running",
+    "cancel_requested": "Cancellation requested",
+    "cancelled": "Cancelled",
+    "failed": "Failed",
+    "completed": "Candidate ready"
+  },
+  "runStage": {
+    "queued": "Queued",
+    "validating": "Validating inputs",
+    "decoding": "Decoding audio",
+    "loading_model": "Loading MOSS",
+    "transcribing": "Transcribing audio",
+    "parsing": "Checking timestamps and speakers",
+    "saving_candidate": "Saving candidate",
+    "complete": "Complete"
+  },
+  "tabs": {
+    "comparison": "Current vs candidate",
+    "speakers": "People binding",
+    "terms": "Traceable corrections"
+  },
+  "comparison": {
+    "current": "Current transcript",
+    "candidate": "MOSS candidate",
+    "sourceWhisper": "Whisper/current text",
+    "sourceMoss": "Activated MOSS text",
+    "sourceManual": "Current text with manual edits",
+    "empty": "No transcript segments are available.",
+    "editLabel": "Edit candidate segment starting at {{time}}",
+    "saveLabel": "Save edit for candidate segment starting at {{time}}",
+    "timeSourceRaw": "Time: original MOSS segment · source {{hash}}",
+    "timeSourceAligned": "Time: frozen source transcript ({{count}} anchors, {{confidence}}% match) · source {{hash}}",
+    "timeSourceAudioToken": "Time: Whisper audio tokens {{first}}–{{last}} ({{confidence}}% match) · token track {{hash}}",
+    "alignmentAudit": "{{aligned}} aligned segments · {{fallback}} original MOSS fallbacks · source {{hash}}",
+    "audioTokenAudit": "Audio-token-assisted alignment: {{aligned}} segments · {{fallback}} raw fallbacks · {{coverage}}% global match · track {{hash}}",
+    "audioTokenFallback": "Audio tokens were unavailable, so original boundaries were kept safely · reason {{reason}}",
+    "activityAudit": "Last active audio {{lastActive}} · model last timestamp {{modelLast}} · difference {{delta}} ms",
+    "activityAuditSilent": "No active audio was detected at -50 dBFS · model last timestamp {{modelLast}}",
+    "activeBadge": "Active",
+    "activeLocked": "This activated candidate is read-only. Restore the previous transcript before changing it.",
+    "textLayers": {
+      "current_transcript": "Text source: current transcript",
+      "raw_moss": "Text source: original MOSS",
+      "context_correction": "Text source: saved meeting-context alias",
+      "audio_token_context": "Text source: audio-token evidence and meeting context",
+      "human_edit": "Text source: human edit"
+    }
+  },
+  "speakers": {
+    "title": "Bind anonymous speakers",
+    "description": "MOSS labels stay anonymous until you select a person from this meeting. Meetily never guesses a name.",
+    "bulkTitle": "Speaker-wide binding",
+    "segmentTitle": "Per-segment correction",
+    "unbound": "Keep {{speaker}} anonymous",
+    "inherit": "Use speaker-wide binding",
+    "resolvedAs": "Shown as {{name}}",
+    "anonymous": "Anonymous",
+    "noParticipants": "This meeting has no saved participants. Anonymous labels will be kept.",
+    "selectPersonForSpeaker": "Person for {{speaker}}",
+    "selectOverrideForSegment": "Person override for {{speaker}} at {{time}}"
+  },
+  "terms": {
+    "title": "Traceable term corrections",
+    "description": "Corrections may use saved explicit aliases or meeting-context terms uniquely located by real Whisper audio tokens. Every correction keeps its source and remains reversible.",
+    "none": "No traceable context-term correction was recorded for this candidate.",
+    "before": "Before",
+    "after": "After",
+    "matchedAlias": "Matched alias",
+    "canonical": "Saved term",
+    "rule": "Rule",
+    "source": "Text source",
+    "audioTokens": "Audio token indexes",
+    "machineEvidence": "Machine-source evidence",
+    "sources": {
+      "context_alias": "Saved meeting-context alias",
+      "audio_token_context": "Audio tokens and meeting context"
+    },
+    "applied": "Applied",
+    "reverted": "Undone"
+  },
+  "activation": {
+    "title": "Activation and restore",
+    "ready": "Activation will save a snapshot of the current transcript before switching to this candidate.",
+    "active": "This MOSS candidate is the active transcript.",
+    "confirmActivate": "Activate this candidate? The backend must first verify that the current transcript has not changed.",
+    "confirmRollback": "Restore the snapshot from before MOSS activation? The current transcript must still match the active version.",
+    "blockers": {
+      "CURRENT_TRANSCRIPT_CHANGED": "The current transcript changed after this candidate was created. Refresh and review the conflict.",
+      "CANDIDATE_STALE": "This candidate revision is stale. Refresh before activation.",
+      "CANDIDATE_INCOMPLETE": "This candidate is incomplete and cannot be activated."
+    }
+  },
+  "errors": {
+    "integrationUnavailable": "The MOSS command integration is unavailable in this desktop build. No candidate change or activation was completed.",
+    "invalidResponse": "The MOSS backend returned data that does not match the P4 contract.",
+    "featureDisabled": "The internal MOSS feature is disabled.",
+    "notInstalled": "MOSS is not installed.",
+    "unhealthy": "MOSS is installed but not healthy.",
+    "runAlreadyActive": "A MOSS run is already active for this meeting.",
+    "runNotFound": "The selected MOSS run no longer exists.",
+    "candidateNotReady": "The candidate is not ready for review.",
+    "candidateConflict": "The candidate conflicts with the current transcript.",
+    "candidateStale": "The candidate changed. Refresh before saving again.",
+    "invalidBinding": "The speaker binding was rejected. No previous binding was changed.",
+    "invalidOverride": "The segment override was rejected. No previous assignment was changed.",
+    "correctionNotFound": "The correction no longer exists.",
+    "activationConflict": "Activation was blocked because the current transcript changed. Existing text was kept.",
+    "rollbackConflict": "Restore was blocked because the active transcript changed. Existing text was kept.",
+    "cancelFailed": "Cancellation could not be confirmed. The run may still be active; refresh its status.",
+    "qwenBusy": "AI summary generation is running. Wait for it to finish or cancel it before starting MOSS enhancement.",
+    "operationFailed": "The MOSS operation failed. Existing audio and transcript data were kept.",
+    "audioTooLong": "MOSS currently supports recordings up to 20 minutes per run. Transcription did not start, and the existing audio and transcript were kept."
+  }
+}

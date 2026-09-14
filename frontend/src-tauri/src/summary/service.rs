@@ -1,0 +1,1410 @@
+use crate::database::repositories::{
+    meeting::MeetingsRepository, setting::SettingsRepository, summary::SummaryProcessesRepository,
+};
+use crate::meeting_context::{
+    sanitize_generated_summary_with_transcript, validate_summary_markdown_with_source,
+    SummaryFactValidation, SummaryMeetingContext,
+};
+use crate::ollama::metadata::ModelMetadataCache;
+use crate::summary::language_detection::detect_summary_language;
+use crate::summary::llm_client::LLMProvider;
+use crate::summary::measurement::{self, MeasurementOutcome};
+use crate::summary::metadata::read_detected_summary_language_from_metadata;
+use crate::summary::processor::{generate_meeting_summary, language_name_from_code};
+use crate::summary::source_binding::TranscriptVersionSnapshot;
+use crate::summary::template_snapshot::{snapshot_link_json, GenerationSnapshotLink};
+use crate::summary::templates::Template;
+use crate::transcript_normalization::normalize_simplified_chinese_script;
+use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Manager};
+use tokio_util::sync::CancellationToken;
+use tracing::{error, info, warn};
+
+// Global cache for model metadata (5 minute TTL)
+static METADATA_CACHE: Lazy<ModelMetadataCache> =
+    Lazy::new(|| ModelMetadataCache::new(Duration::from_secs(300)));
+
+// Global registry for cancellation tokens (thread-safe)
+#[derive(Clone)]
+struct RegisteredCancellation {
+    generation_id: String,
+    token: CancellationToken,
+}
+
+static CANCELLATION_REGISTRY: Lazy<Arc<Mutex<HashMap<String, RegisteredCancellation>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+/// Strips the first `#` heading line; returns "" if no `#` is found.
+fn strip_leading_title(markdown: &str) -> String {
+    if let Some(hash_pos) = markdown.find('#') {
+        let body_start = markdown[hash_pos..]
+            .find('\n')
+            .map_or(markdown.len(), |line_end| hash_pos + line_end);
+        markdown[body_start..].trim_start().to_string()
+    } else {
+        String::new()
+    }
+}
+
+/// Strips the leading H1 (`# Title\n...`) only when the markdown starts with one.
+/// No-op on already-stripped values, values starting with `## Subheading`, or values
+/// without any heading. Avoids the silent-empty-return case where `strip_leading_title`
+/// returns "" for input lacking a leading `#`.
+fn strip_title_if_present(markdown: &str) -> String {
+    if markdown.trim_start().starts_with("# ") {
+        strip_leading_title(markdown)
+    } else {
+        markdown.to_string()
+    }
+}
+
+const ENGLISH_CACHE_FIELD: &str = "english_cache";
+const SUMMARY_PIPELINE_VERSION: u32 = 2026091306;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct SummaryCacheSource {
+    #[serde(default)]
+    pipeline_version: u32,
+    transcript_fingerprint: String,
+    custom_prompt_fingerprint: String,
+    template_id: String,
+    template_fingerprint: String,
+    token_threshold: usize,
+    model_provider: String,
+    model_name: String,
+    ollama_endpoint: Option<String>,
+    custom_openai_endpoint: Option<String>,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    summary_context_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct EnglishSummaryCache {
+    markdown: String,
+    source: SummaryCacheSource,
+    output_language: Option<String>,
+}
+
+fn stable_text_fingerprint(text: &str) -> String {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in text.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{:016x}:{}", hash, text.len())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_summary_cache_source_with_context(
+    text: &str,
+    custom_prompt: &str,
+    template_id: &str,
+    template_fingerprint: &str,
+    token_threshold: usize,
+    model_provider: &str,
+    model_name: &str,
+    ollama_endpoint: Option<&str>,
+    custom_openai_endpoint: Option<&str>,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    summary_context_sha256: Option<&str>,
+) -> SummaryCacheSource {
+    SummaryCacheSource {
+        pipeline_version: SUMMARY_PIPELINE_VERSION,
+        transcript_fingerprint: stable_text_fingerprint(text),
+        custom_prompt_fingerprint: stable_text_fingerprint(custom_prompt),
+        template_id: template_id.to_string(),
+        template_fingerprint: template_fingerprint.to_string(),
+        token_threshold,
+        model_provider: model_provider.to_string(),
+        model_name: model_name.to_string(),
+        ollama_endpoint: ollama_endpoint.map(str::to_string),
+        custom_openai_endpoint: custom_openai_endpoint.map(str::to_string),
+        max_tokens,
+        temperature,
+        top_p,
+        summary_context_sha256: summary_context_sha256.map(str::to_owned),
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn build_summary_cache_source(
+    text: &str,
+    custom_prompt: &str,
+    template_id: &str,
+    template_fingerprint: &str,
+    token_threshold: usize,
+    model_provider: &str,
+    model_name: &str,
+    ollama_endpoint: Option<&str>,
+    custom_openai_endpoint: Option<&str>,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+) -> SummaryCacheSource {
+    build_summary_cache_source_with_context(
+        text,
+        custom_prompt,
+        template_id,
+        template_fingerprint,
+        token_threshold,
+        model_provider,
+        model_name,
+        ollama_endpoint,
+        custom_openai_endpoint,
+        max_tokens,
+        temperature,
+        top_p,
+        None,
+    )
+}
+
+#[cfg(test)]
+fn template_cache_fingerprint(template: &Template) -> String {
+    let rendered_template = format!(
+        "{}\n---SECTION-INSTRUCTIONS---\n{}",
+        template.to_markdown_structure(),
+        template.to_section_instructions()
+    );
+    stable_text_fingerprint(&rendered_template)
+}
+
+fn normalise_summary_language_for_cache(summary_language: Option<&str>) -> Option<String> {
+    language_name_from_code(summary_language?.trim()).map(str::to_string)
+}
+
+fn build_summary_result_json(
+    final_markdown: &str,
+    english_markdown: &str,
+    source: SummaryCacheSource,
+    output_language: Option<&str>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "markdown": strip_title_if_present(final_markdown),
+        ENGLISH_CACHE_FIELD: EnglishSummaryCache {
+            markdown: english_markdown.to_string(),
+            source,
+            output_language: normalise_summary_language_for_cache(output_language),
+        },
+    })
+}
+
+fn build_summary_result_json_with_snapshot(
+    final_markdown: &str,
+    english_markdown: &str,
+    source: SummaryCacheSource,
+    output_language: Option<&str>,
+    snapshot_link: &GenerationSnapshotLink,
+    fact_validation: &SummaryFactValidation,
+) -> serde_json::Value {
+    let mut result =
+        build_summary_result_json(final_markdown, english_markdown, source, output_language);
+    if let Some(object) = result.as_object_mut() {
+        object.insert(
+            "template_snapshot".to_owned(),
+            snapshot_link_json(snapshot_link),
+        );
+        object.insert(
+            "factValidation".to_owned(),
+            serde_json::to_value(fact_validation).unwrap_or(serde_json::Value::Null),
+        );
+    }
+    result
+}
+
+/// Persist a completed summary without taking ownership of meeting metadata.
+/// Meeting titles are changed only by the explicit user-edit command.
+async fn persist_completed_summary(
+    pool: &SqlitePool,
+    meeting_id: &str,
+    generation_id: &str,
+    result: serde_json::Value,
+    chunk_count: i64,
+    processing_time: f64,
+) -> Result<bool, sqlx::Error> {
+    SummaryProcessesRepository::update_process_completed_for_generation(
+        pool,
+        meeting_id,
+        generation_id,
+        result,
+        chunk_count,
+        processing_time,
+    )
+    .await
+}
+
+/// Parses a `summary_processes.result` JSON blob and extracts a cached English
+/// summary only when it was produced from exactly the same source inputs and
+/// the user is switching to a different non-English target language.
+fn extract_cached_english_markdown(
+    raw: &str,
+    expected_source: &SummaryCacheSource,
+    requested_language: Option<&str>,
+) -> Result<Option<String>, serde_json::Error> {
+    let requested_language = match normalise_summary_language_for_cache(requested_language) {
+        Some(language) if language != "English" => language,
+        _ => return Ok(None),
+    };
+
+    let value: serde_json::Value = serde_json::from_str(raw)?;
+    let Some(cache_value) = value.get(ENGLISH_CACHE_FIELD) else {
+        return Ok(None);
+    };
+
+    let cache: EnglishSummaryCache = match serde_json::from_value(cache_value.clone()) {
+        Ok(cache) => cache,
+        Err(_) => return Ok(None),
+    };
+
+    if cache.source != *expected_source {
+        return Ok(None);
+    }
+
+    if cache.output_language.as_deref() == Some(requested_language.as_str()) {
+        return Ok(None);
+    }
+
+    let markdown = cache.markdown.trim();
+    if markdown.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(cache.markdown))
+    }
+}
+
+/// Summary service - handles all summary generation logic
+pub struct SummaryService;
+
+impl SummaryService {
+    /// Registers a new cancellation token for a meeting
+    pub fn register_summary_generation(meeting_id: &str, generation_id: &str) -> CancellationToken {
+        let token = CancellationToken::new();
+        if let Ok(mut registry) = CANCELLATION_REGISTRY.lock() {
+            let registered = RegisteredCancellation {
+                generation_id: generation_id.to_owned(),
+                token: token.clone(),
+            };
+            if let Some(previous) = registry.insert(meeting_id.to_string(), registered) {
+                previous.token.cancel();
+                info!(
+                    "Cancelled superseded generation {} for meeting {}",
+                    previous.generation_id, meeting_id
+                );
+            }
+            info!(
+                "Registered cancellation token for meeting {} generation {}",
+                meeting_id, generation_id
+            );
+        }
+        token
+    }
+
+    /// Cancels the summary generation for a meeting
+    pub fn cancel_summary(meeting_id: &str) -> Option<String> {
+        if let Ok(registry) = CANCELLATION_REGISTRY.lock() {
+            if let Some(registered) = registry.get(meeting_id) {
+                info!(
+                    "Cancelling summary generation {} for meeting {}",
+                    registered.generation_id, meeting_id
+                );
+                registered.token.cancel();
+                return Some(registered.generation_id.clone());
+            }
+        }
+        warn!(
+            "No active summary generation found for meeting: {}",
+            meeting_id
+        );
+        None
+    }
+
+    /// Cleans up the cancellation token after processing completes
+    fn cleanup_cancellation_token(meeting_id: &str, generation_id: &str) {
+        if let Ok(mut registry) = CANCELLATION_REGISTRY.lock() {
+            let is_current = registry
+                .get(meeting_id)
+                .is_some_and(|registered| registered.generation_id == generation_id);
+            if is_current {
+                registry.remove(meeting_id);
+                info!(
+                    "Cleaned up cancellation token for meeting {} generation {}",
+                    meeting_id, generation_id
+                );
+            }
+        }
+    }
+
+    async fn read_detected_summary_language(pool: &SqlitePool, meeting_id: &str) -> Option<String> {
+        let meeting = match MeetingsRepository::get_meeting_metadata(pool, meeting_id).await {
+            Ok(Some(meeting)) => meeting,
+            Ok(None) => {
+                warn!(
+                    "Meeting not found while reading detected summary language: {}",
+                    meeting_id
+                );
+                return None;
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to read meeting metadata for detected summary language (meeting_id={}): {}",
+                    meeting_id, e
+                );
+                return None;
+            }
+        };
+
+        let Some(folder_path) = meeting.folder_path.filter(|p| !p.trim().is_empty()) else {
+            return None;
+        };
+
+        match read_detected_summary_language_from_metadata(Path::new(&folder_path)) {
+            Ok(language) => language,
+            Err(e) => {
+                warn!(
+                    "Failed to read detected summary language metadata for meeting_id={}: {}",
+                    meeting_id, e
+                );
+                None
+            }
+        }
+    }
+
+    fn detect_summary_language_from_text(text: &str) -> Option<String> {
+        let transcript_texts = [text.to_string()];
+        let detection = detect_summary_language(&transcript_texts);
+        match &detection.language {
+            Some(language) => {
+                info!(
+                    "Detected transcript summary language for normalization: {}",
+                    language
+                );
+            }
+            None => {
+                info!(
+                    "Transcript summary language unknown for normalization: {:?}",
+                    detection.reason
+                );
+            }
+        }
+        detection.language
+    }
+
+    /// Processes transcript in the background and generates summary
+    ///
+    /// This function is designed to be spawned as an async task and does not block
+    /// the main thread. It updates the database with progress and results.
+    ///
+    /// # Arguments
+    /// * `_app` - Tauri app handle (for future use)
+    /// * `pool` - SQLx connection pool
+    /// * `meeting_id` - Unique identifier for the meeting
+    /// * `text` - Full transcript text
+    /// * `model_provider` - LLM provider name (e.g., "ollama", "openai")
+    /// * `model_name` - Specific model (e.g., "gpt-4", "llama3.2:latest")
+    /// * `custom_prompt` - Optional user-provided context
+    /// * `template_id` - Template identifier (e.g., "daily_standup", "standard_meeting")
+    pub async fn process_transcript_background<R: tauri::Runtime>(
+        _app: AppHandle<R>,
+        pool: SqlitePool,
+        meeting_id: String,
+        text: String,
+        model_provider: String,
+        model_name: String,
+        custom_prompt: String,
+        template_id: String,
+        template: Template,
+        template_fingerprint: String,
+        snapshot_link: GenerationSnapshotLink,
+        cancellation_token: CancellationToken,
+        summary_language: Option<String>,
+        summary_meeting_context: Option<SummaryMeetingContext>,
+        summary_source: TranscriptVersionSnapshot,
+    ) {
+        let start_time = Instant::now();
+        let generation_id = snapshot_link.generation_id.clone();
+        info!(
+            "Starting background processing for meeting_id: {}",
+            meeting_id
+        );
+
+        // Parse provider
+        let provider = match LLMProvider::from_str(&model_provider) {
+            Ok(p) => p,
+            Err(e) => {
+                Self::update_process_failed(&pool, &meeting_id, &generation_id, &e).await;
+                Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+                return;
+            }
+        };
+
+        // Validate and setup api_key, Flexible for Ollama, BuiltInAI, and CustomOpenAI
+        let api_key = if provider == LLMProvider::Ollama
+            || provider == LLMProvider::BuiltInAI
+            || provider == LLMProvider::CustomOpenAI
+        {
+            // These providers don't require API keys from the standard database column
+            String::new()
+        } else {
+            match SettingsRepository::get_api_key(&pool, &model_provider).await {
+                Ok(Some(key)) if !key.is_empty() => key,
+                Ok(None) | Ok(Some(_)) => {
+                    let err_msg = format!("API key not found for {}", &model_provider);
+                    Self::update_process_failed(&pool, &meeting_id, &generation_id, &err_msg).await;
+                    Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+                    return;
+                }
+                Err(e) => {
+                    let err_msg =
+                        format!("Failed to retrieve API key for {}: {}", &model_provider, e);
+                    Self::update_process_failed(&pool, &meeting_id, &generation_id, &err_msg).await;
+                    Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+                    return;
+                }
+            }
+        };
+
+        // Get Ollama endpoint if provider is Ollama
+        let ollama_endpoint = if provider == LLMProvider::Ollama {
+            match SettingsRepository::get_model_config(&pool).await {
+                Ok(Some(config)) => config.ollama_endpoint,
+                Ok(None) => None,
+                Err(e) => {
+                    info!("Failed to retrieve Ollama endpoint: {}, using default", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // Get CustomOpenAI config if provider is CustomOpenAI
+        let (
+            custom_openai_endpoint,
+            custom_openai_api_key,
+            custom_openai_max_tokens,
+            custom_openai_temperature,
+            custom_openai_top_p,
+        ) = if provider == LLMProvider::CustomOpenAI {
+            match SettingsRepository::get_custom_openai_config(&pool).await {
+                Ok(Some(config)) => {
+                    info!("✓ Using custom OpenAI endpoint: {}", config.endpoint);
+                    (
+                        Some(config.endpoint),
+                        config.api_key,
+                        config.max_tokens.map(|t| t as u32),
+                        config.temperature,
+                        config.top_p,
+                    )
+                }
+                Ok(None) => {
+                    let err_msg = "Custom OpenAI provider selected but no configuration found";
+                    Self::update_process_failed(&pool, &meeting_id, &generation_id, err_msg).await;
+                    Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+                    return;
+                }
+                Err(e) => {
+                    let err_msg = format!("Failed to retrieve custom OpenAI config: {}", e);
+                    Self::update_process_failed(&pool, &meeting_id, &generation_id, &err_msg).await;
+                    Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+                    return;
+                }
+            }
+        } else {
+            (None, None, None, None, None)
+        };
+
+        // For CustomOpenAI, use its API key (if any) instead of the empty string
+        let final_api_key = if provider == LLMProvider::CustomOpenAI {
+            custom_openai_api_key.unwrap_or_default()
+        } else {
+            api_key
+        };
+
+        // Dynamically fetch context size based on provider and model
+        let token_threshold = if provider == LLMProvider::Ollama {
+            match METADATA_CACHE
+                .get_or_fetch(&model_name, ollama_endpoint.as_deref())
+                .await
+            {
+                Ok(metadata) => {
+                    // Reserve 300 tokens for prompt overhead
+                    let optimal = metadata.context_size.saturating_sub(300);
+                    info!(
+                        "✓ Using dynamic context for {}: {} tokens (chunk size: {})",
+                        model_name, metadata.context_size, optimal
+                    );
+                    optimal
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to fetch context for {}: {}. Using default 4000",
+                        model_name, e
+                    );
+                    4000 // Fallback to safe default
+                }
+            }
+        } else if provider == LLMProvider::BuiltInAI {
+            // Get model's context size from registry
+            use crate::summary::summary_engine::models;
+            let model = models::get_model_by_name(&model_name)
+                .ok_or_else(|| format!("Unknown model: {}", model_name));
+
+            match model {
+                Ok(model_def) => {
+                    // Reserve 300 tokens for prompt overhead
+                    let optimal = model_def.context_size.saturating_sub(300) as usize;
+                    info!(
+                        "✓ Using BuiltInAI context size: {} tokens (chunk size: {})",
+                        model_def.context_size, optimal
+                    );
+                    optimal
+                }
+                Err(e) => {
+                    warn!("{}, using default 2048", e);
+                    1748 // 2048 - 300 for overhead
+                }
+            }
+        } else {
+            // Cloud providers (OpenAI, Claude, Groq, CustomOpenAI) handle large contexts automatically
+            100000 // Effectively unlimited for single-pass processing
+        };
+
+        // Built-in summary models must use the same resolved StorageLayout as
+        // Whisper and Parakeet; do not rebuild the model path in this service.
+        let summary_models_dir = _app
+            .state::<crate::storage::StorageLayoutState>()
+            .layout()
+            .summary_models_dir()
+            .to_path_buf();
+
+        if let Some(code) = &summary_language {
+            info!("📝 Summary language preference: {}", code);
+        }
+
+        let detected_summary_language = Self::read_detected_summary_language(&pool, &meeting_id)
+            .await
+            .or_else(|| Self::detect_summary_language_from_text(&text));
+
+        if let Some(code) = &detected_summary_language {
+            info!("📝 Detected transcript summary language: {}", code);
+        }
+
+        let summary_context_sha256 = summary_meeting_context
+            .as_ref()
+            .map(SummaryMeetingContext::sha256);
+        let cache_source = build_summary_cache_source_with_context(
+            &text,
+            &custom_prompt,
+            &template_id,
+            &template_fingerprint,
+            token_threshold,
+            &model_provider,
+            &model_name,
+            ollama_endpoint.as_deref(),
+            custom_openai_endpoint.as_deref(),
+            custom_openai_max_tokens,
+            custom_openai_temperature,
+            custom_openai_top_p,
+            summary_context_sha256.as_deref(),
+        );
+
+        let cached_english = match SummaryProcessesRepository::get_summary_data(&pool, &meeting_id).await {
+            Err(e) => {
+                warn!(
+                    "Failed to load prior summary row for cache lookup (meeting_id={}): {}. Falling back to full pass-1 generation.",
+                    meeting_id, e
+                );
+                None
+            }
+            Ok(None) => None,
+            Ok(Some(process)) => process.result.and_then(|raw| {
+                match extract_cached_english_markdown(
+                    &raw,
+                    &cache_source,
+                    summary_language.as_deref(),
+                ) {
+                    Ok(opt) => opt,
+                    Err(e) => {
+                        warn!(
+                            "Cached summary result for meeting_id={} is not valid JSON ({}); ignoring cache.",
+                            meeting_id, e
+                        );
+                        None
+                    }
+                }
+            }),
+        };
+
+        let client = reqwest::Client::new();
+        let result = generate_meeting_summary(
+            &client,
+            &provider,
+            &model_name,
+            &final_api_key,
+            &text,
+            &custom_prompt,
+            summary_meeting_context.as_ref(),
+            &template_id,
+            &template,
+            token_threshold,
+            ollama_endpoint.as_deref(),
+            custom_openai_endpoint.as_deref(),
+            custom_openai_max_tokens,
+            custom_openai_temperature,
+            custom_openai_top_p,
+            Some(&summary_models_dir),
+            Some(&cancellation_token),
+            summary_language.as_deref(),
+            detected_summary_language.as_deref(),
+            cached_english.as_deref(),
+        )
+        .await;
+
+        let duration = start_time.elapsed().as_secs_f64();
+
+        // Clean up cancellation token regardless of outcome
+        Self::cleanup_cancellation_token(&meeting_id, &generation_id);
+
+        match result {
+            Ok((final_markdown, english_markdown, num_chunks)) => {
+                let final_markdown = normalize_simplified_chinese_script(
+                    &final_markdown,
+                    summary_language.as_deref(),
+                );
+                // Older recordings can predate meeting-context capture. A local
+                // model must not turn a transcript guess into official meeting
+                // name/time/attendance metadata in that case.
+                let final_markdown = summary_meeting_context
+                    .is_none()
+                    .then(|| sanitize_generated_summary_with_transcript(&final_markdown, &text))
+                    .unwrap_or(final_markdown);
+                // Store the draft before application cleanup so generation errors and
+                // application changes can be distinguished during review.
+                // Validate the exact persisted body, with its title already removed.
+                let final_markdown = strip_title_if_present(&final_markdown);
+                let validated_summary = match validate_summary_markdown_with_source(
+                    &final_markdown,
+                    summary_meeting_context.as_ref(),
+                    &summary_source,
+                ) {
+                    Ok(validated) => validated,
+                    Err(error) => {
+                        let message = format!("Summary source evidence is invalid: {error}");
+                        Self::update_process_failed(&pool, &meeting_id, &generation_id, &message)
+                            .await;
+                        return;
+                    }
+                };
+                let final_markdown = validated_summary.markdown;
+                let fact_validation = validated_summary.validation;
+                info!(
+                    "✓ Successfully processed {} chunks for meeting_id: {}. Duration: {:.2}s",
+                    num_chunks, meeting_id, duration
+                );
+                info!("Final markdown generated ({} chars)", final_markdown.len());
+
+                let mut result_json = build_summary_result_json_with_snapshot(
+                    &final_markdown,
+                    &english_markdown,
+                    cache_source,
+                    summary_language.as_deref(),
+                    &snapshot_link,
+                    &fact_validation,
+                );
+                result_json["generationDraft"] = serde_json::json!({
+                    "markdown": english_markdown,
+                    "pipelineVersion": SUMMARY_PIPELINE_VERSION,
+                });
+
+                // Update database with completed status
+                let database_body = result_json
+                    .get("markdown")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let save_stage = measurement::stage_guard("save");
+                let save_result = persist_completed_summary(
+                    &pool,
+                    &meeting_id,
+                    &generation_id,
+                    result_json,
+                    num_chunks,
+                    duration,
+                )
+                .await;
+                save_stage.finish();
+                match save_result {
+                    Err(e) => {
+                        let _ = measurement::finish_non_success(
+                            &generation_id,
+                            MeasurementOutcome::SaveFailed,
+                            Some("database_save_failed".to_string()),
+                        );
+                        error!(
+                            "Failed to save completed process for {} generation {}: {}",
+                            meeting_id, generation_id, e
+                        );
+                    }
+                    Ok(false) => {
+                        let _ = measurement::finish_non_success(
+                            &generation_id,
+                            MeasurementOutcome::Failed,
+                            Some("stale_generation_not_saved".to_string()),
+                        );
+                        warn!(
+                            "Ignored stale completed generation {} for meeting {}",
+                            generation_id, meeting_id
+                        );
+                    }
+                    Ok(true) => {
+                        measurement::record_database_completed_body(&generation_id, &database_body);
+                        info!(
+                            "Summary saved successfully for meeting {} generation {}",
+                            meeting_id, generation_id
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                // Check if error is due to cancellation
+                if e.contains("cancelled") {
+                    info!(
+                        "Summary generation was cancelled for meeting_id: {}",
+                        meeting_id
+                    );
+                    match SummaryProcessesRepository::update_process_cancelled_for_generation(
+                        &pool,
+                        &meeting_id,
+                        &generation_id,
+                    )
+                    .await
+                    {
+                        Err(db_err) => error!(
+                            "Failed to update DB status to cancelled for {} generation {}: {}",
+                            meeting_id, generation_id, db_err
+                        ),
+                        Ok(false) => warn!(
+                            "Ignored stale cancellation for meeting {} generation {}",
+                            meeting_id, generation_id
+                        ),
+                        Ok(true) => {}
+                    }
+                    let _ = measurement::finish_non_success(
+                        &generation_id,
+                        MeasurementOutcome::Cancelled,
+                        Some("summary_generation_cancelled".to_string()),
+                    );
+                } else {
+                    Self::update_process_failed(&pool, &meeting_id, &generation_id, &e).await;
+                }
+            }
+        }
+    }
+
+    /// Updates the summary process status to failed with error message
+    ///
+    /// # Arguments
+    /// * `pool` - SQLx connection pool
+    /// * `meeting_id` - Meeting identifier
+    /// * `error_msg` - Error message to store
+    async fn update_process_failed(
+        pool: &SqlitePool,
+        meeting_id: &str,
+        generation_id: &str,
+        error_msg: &str,
+    ) {
+        error!(
+            "Processing failed for meeting_id {}: {}",
+            meeting_id, error_msg
+        );
+        match SummaryProcessesRepository::update_process_failed_for_generation(
+            pool,
+            meeting_id,
+            generation_id,
+            error_msg,
+        )
+        .await
+        {
+            Err(e) => error!(
+                "Failed to update DB status to failed for {}: {}",
+                meeting_id, e
+            ),
+            Ok(false) => warn!(
+                "Ignored stale failure for meeting {} generation {}",
+                meeting_id, generation_id
+            ),
+            Ok(true) => {}
+        }
+        let _ = measurement::finish_non_success(
+            generation_id,
+            MeasurementOutcome::Failed,
+            Some("summary_generation_failed".to_string()),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    async fn title_ownership_pool() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        for statement in [
+            r#"CREATE TABLE meetings (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )"#,
+            r#"CREATE TABLE summary_processes (
+                meeting_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                error TEXT,
+                result TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                chunk_count INTEGER DEFAULT 0,
+                processing_time REAL DEFAULT 0.0,
+                metadata TEXT,
+                result_backup TEXT,
+                result_backup_timestamp TEXT
+            )"#,
+            r#"CREATE TABLE summary_generation_history (
+                generation_id TEXT PRIMARY KEY,
+                meeting_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                completed_at TEXT,
+                error_category TEXT
+            )"#,
+        ] {
+            sqlx::query(statement).execute(&pool).await.unwrap();
+        }
+        pool
+    }
+
+    async fn insert_title_ownership_fixture(
+        pool: &SqlitePool,
+        meeting_id: &str,
+        generation_id: &str,
+        title: &str,
+    ) {
+        sqlx::query(
+            "INSERT INTO meetings (id, title, created_at, updated_at) VALUES (?, ?, '2026-09-02T00:00:00Z', '2026-09-02T00:00:00Z')",
+        )
+        .bind(meeting_id)
+        .bind(title)
+        .execute(pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO summary_processes (meeting_id, status, created_at, updated_at, metadata) VALUES (?, 'PENDING', 'now', 'now', ?)",
+        )
+        .bind(meeting_id)
+        .bind(serde_json::json!({"generationId": generation_id}).to_string())
+        .execute(pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO summary_generation_history (generation_id, meeting_id, status, updated_at) VALUES (?, ?, 'pending', 'now')",
+        )
+        .bind(generation_id)
+        .bind(meeting_id)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    async fn meeting_title_and_updated_at(pool: &SqlitePool, meeting_id: &str) -> (String, String) {
+        sqlx::query_as("SELECT title, updated_at FROM meetings WHERE id = ?")
+            .bind(meeting_id)
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn summary_completion_does_not_update_meeting_name() {
+        let pool = title_ownership_pool().await;
+        insert_title_ownership_fixture(
+            &pool,
+            "meeting-title-owner",
+            "generation-1",
+            "Manual title",
+        )
+        .await;
+        let before = meeting_title_and_updated_at(&pool, "meeting-title-owner").await;
+
+        let saved = persist_completed_summary(
+            &pool,
+            "meeting-title-owner",
+            "generation-1",
+            serde_json::json!({"markdown": "## Decisions\nKeep the manual title."}),
+            1,
+            0.25,
+        )
+        .await
+        .unwrap();
+
+        assert!(saved);
+        assert_eq!(
+            meeting_title_and_updated_at(&pool, "meeting-title-owner").await,
+            before
+        );
+        let (status, raw_result): (String, String) =
+            sqlx::query_as("SELECT status, result FROM summary_processes WHERE meeting_id = ?")
+                .bind("meeting-title-owner")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(status, "completed");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&raw_result).unwrap()["markdown"],
+            "## Decisions\nKeep the manual title."
+        );
+    }
+
+    #[tokio::test]
+    async fn stale_recording_context_cannot_replace_manual_title() {
+        let pool = title_ownership_pool().await;
+        insert_title_ownership_fixture(
+            &pool,
+            "meeting-stale-context",
+            "generation-stale",
+            "Frozen recording title",
+        )
+        .await;
+        assert!(MeetingsRepository::update_meeting_title(
+            &pool,
+            "meeting-stale-context",
+            "Manual title saved later",
+        )
+        .await
+        .unwrap());
+        let after_manual_edit = meeting_title_and_updated_at(&pool, "meeting-stale-context").await;
+
+        let saved = persist_completed_summary(
+            &pool,
+            "meeting-stale-context",
+            "generation-stale",
+            serde_json::json!({
+                "MeetingName": "Frozen recording title",
+                "markdown": "## Summary\nCompleted from the frozen context."
+            }),
+            1,
+            0.5,
+        )
+        .await
+        .unwrap();
+
+        assert!(saved);
+        assert_eq!(after_manual_edit.0, "Manual title saved later");
+        assert_eq!(
+            meeting_title_and_updated_at(&pool, "meeting-stale-context").await,
+            after_manual_edit
+        );
+    }
+
+    #[test]
+    fn test_strip_leading_title_with_body() {
+        let input = "# Meeting Title\nThis is the body.\nMore content.";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "This is the body.\nMore content.");
+    }
+
+    #[test]
+    fn test_strip_leading_title_only() {
+        let input = "# Meeting Title";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_strip_leading_title_no_heading() {
+        let input = "No heading here.\nJust body.";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_strip_leading_title_multiline_body() {
+        let input = "# Title\n## Subheading\nParagraph 1\n\nParagraph 2";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "## Subheading\nParagraph 1\n\nParagraph 2");
+    }
+
+    #[test]
+    fn test_strip_leading_title_empty_after_heading() {
+        let input = "# Title\n";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_strip_leading_title_whitespace_after_heading() {
+        let input = "# Title\n   \n Body with leading spaces";
+        let result = strip_leading_title(input);
+        assert_eq!(result, "Body with leading spaces");
+    }
+
+    #[test]
+    fn test_strip_title_if_present_preserves_already_stripped() {
+        assert_eq!(
+            strip_title_if_present("## Action Items\nfoo"),
+            "## Action Items\nfoo"
+        );
+    }
+
+    #[test]
+    fn test_strip_title_if_present_strips_leading_h1() {
+        assert_eq!(
+            strip_title_if_present("# Meeting Title\n## Action Items\nfoo"),
+            "## Action Items\nfoo"
+        );
+    }
+
+    #[test]
+    fn test_strip_title_if_present_no_heading_preserved() {
+        // Distinct from strip_leading_title which returns "" — this preserves input.
+        assert_eq!(strip_title_if_present("Just body text"), "Just body text");
+    }
+
+    #[test]
+    fn test_strip_title_if_present_hash_no_space_preserved() {
+        // `#NoSpace` is not a markdown H1 — preserve.
+        assert_eq!(strip_title_if_present("#NoSpace\nbody"), "#NoSpace\nbody");
+    }
+
+    #[test]
+    fn test_strip_title_if_present_mid_document_h1_preserved() {
+        // H1 after body content must NOT be stripped — guards the asymmetry where
+        // extract_meeting_name_from_markdown scans every line for "# ".
+        let input = "Some paragraph\n\n# H1 on line 3\n## Section\nbody";
+        assert_eq!(strip_title_if_present(input), input);
+    }
+
+    #[test]
+    fn test_strip_title_if_present_leading_whitespace_h1_stripped() {
+        assert_eq!(
+            strip_title_if_present("  # Title\n## Section\nbody"),
+            "## Section\nbody"
+        );
+    }
+
+    fn sample_cache_source() -> SummaryCacheSource {
+        let template_fingerprint = stable_text_fingerprint("standard template prompt");
+        build_summary_cache_source(
+            "transcript body",
+            "custom prompt",
+            "standard_meeting",
+            &template_fingerprint,
+            3700,
+            "ollama",
+            "gemma3:1b",
+            Some("http://localhost:11434"),
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn test_template(section_title: &str) -> Template {
+        Template {
+            name: "Test".to_string(),
+            description: "Test template".to_string(),
+            sections: vec![crate::summary::templates::TemplateSection {
+                title: section_title.to_string(),
+                instruction: "Summarize this section".to_string(),
+                format: "paragraph".to_string(),
+                item_format: None,
+                example_item_format: None,
+            }],
+        }
+    }
+
+    #[test]
+    fn test_template_cache_fingerprint_changes_with_rendered_template() {
+        assert_ne!(
+            template_cache_fingerprint(&test_template("Summary")),
+            template_cache_fingerprint(&test_template("Decisions"))
+        );
+    }
+
+    #[test]
+    fn test_legacy_english_markdown_field_is_cache_miss() {
+        let raw = serde_json::json!({
+            "markdown": "translated",
+            "english_markdown": "# Old English\nBody"
+        })
+        .to_string();
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &sample_cache_source(), Some("de")).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_matching_source_changed_translation_target_reuses_cache() {
+        let source = sample_cache_source();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source.clone(),
+            Some("fr"),
+        )
+        .to_string();
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &source, Some("de")).unwrap(),
+            Some("# Meeting\n## Points\nHello".to_string())
+        );
+    }
+
+    #[test]
+    fn test_same_language_regeneration_rejects_cache() {
+        let source = sample_cache_source();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source.clone(),
+            Some("fr"),
+        )
+        .to_string();
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &source, Some("fr")).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_changed_summary_inputs_reject_cache() {
+        let source = sample_cache_source();
+        let template_fingerprint = source.template_fingerprint.clone();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source,
+            Some("fr"),
+        )
+        .to_string();
+
+        let changed_sources = [
+            build_summary_cache_source(
+                "changed transcript",
+                "custom prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "gemma3:1b",
+                Some("http://localhost:11434"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "changed prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "gemma3:1b",
+                Some("http://localhost:11434"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "custom prompt",
+                "daily_standup",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "gemma3:1b",
+                Some("http://localhost:11434"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "custom prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "openai",
+                "gemma3:1b",
+                Some("http://localhost:11434"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "custom prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "qwen2.5:3b",
+                Some("http://localhost:11434"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "custom prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "gemma3:1b",
+                Some("http://localhost:11500"),
+                None,
+                None,
+                None,
+                None,
+            ),
+            build_summary_cache_source(
+                "transcript body",
+                "custom prompt",
+                "standard_meeting",
+                &template_fingerprint,
+                3700,
+                "ollama",
+                "gemma3:1b",
+                Some("http://localhost:11434"),
+                Some("https://custom.example/v1"),
+                Some(2048),
+                Some(0.2),
+                Some(0.9),
+            ),
+        ];
+
+        for changed_source in changed_sources {
+            assert_eq!(
+                extract_cached_english_markdown(&raw, &changed_source, Some("de")).unwrap(),
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn test_changed_template_content_rejects_cache() {
+        let source = sample_cache_source();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source.clone(),
+            Some("fr"),
+        )
+        .to_string();
+
+        let changed_template = SummaryCacheSource {
+            template_fingerprint: stable_text_fingerprint("changed template prompt"),
+            ..source
+        };
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &changed_template, Some("de")).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_changed_token_threshold_rejects_cache() {
+        let source = sample_cache_source();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source.clone(),
+            Some("fr"),
+        )
+        .to_string();
+
+        let changed_threshold = SummaryCacheSource {
+            token_threshold: 8192,
+            ..source
+        };
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &changed_threshold, Some("de")).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_result_json_strips_display_markdown_but_keeps_cache_title() {
+        let result = build_summary_result_json(
+            "# Translated Title\n## Decisions\nDone",
+            "# English Title\n## Decisions\nDone",
+            sample_cache_source(),
+            Some("fr"),
+        );
+
+        assert_eq!(result["markdown"], "## Decisions\nDone");
+        assert_eq!(
+            result["english_cache"]["markdown"],
+            "# English Title\n## Decisions\nDone"
+        );
+    }
+
+    #[test]
+    fn test_extract_cached_english_from_malformed_json_errors() {
+        let raw = r#"{ not valid json"#;
+        assert!(extract_cached_english_markdown(raw, &sample_cache_source(), Some("de")).is_err());
+    }
+
+    #[test]
+    fn test_changed_summary_context_rejects_english_cache() {
+        let mut original = sample_cache_source();
+        original.summary_context_sha256 = Some("a".repeat(64));
+        let raw = build_summary_result_json(
+            "# Reunion\nBonjour",
+            "# Meeting\nHello",
+            original.clone(),
+            Some("fr"),
+        )
+        .to_string();
+        let changed = SummaryCacheSource {
+            summary_context_sha256: Some("b".repeat(64)),
+            ..original
+        };
+
+        assert_eq!(
+            extract_cached_english_markdown(&raw, &changed, Some("de")).unwrap(),
+            None
+        );
+    }
+}

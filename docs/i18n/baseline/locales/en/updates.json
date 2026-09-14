@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "copySummary": "Copy Summary",
+    "downloadAndInstall": "Download & Install",
+    "saveChanges": "Save Changes",
+    "updateAvailable": "Update Available",
+    "updateError": "Update Error"
+  },
+  "errors": {
+    "updateCheckAlreadyInProgress": "Update check already in progress",
+    "updateNoLongerAvailable": "Update no longer available",
+    "updateNotAvailable": "Update not available"
+  },
+  "labels": {
+    "anErrorOccurredWhileUpdating": "An error occurred while updating",
+    "complete": "% complete",
+    "currentVersion": "Current Version:",
+    "isNowAvailable": "is now available",
+    "newVersion": "New Version:",
+    "releaseDate": "Release Date:",
+    "theAppWillRestartAutomaticallyAfterInstallation": "The app will restart automatically after installation",
+    "viewDetails": "View Details"
+  },
+  "messages": {
+    "newVersionAvailable": "A new version ({{version}}) is available",
+    "updateInstalledSuccessfullyTheAppWillRestart": "Update installed successfully. The app will restart..."
+  },
+  "status": {
+    "downloadingTheLatestVersion": "Downloading the latest version...",
+    "downloadingUpdate": "Downloading Update"
+  }
+}

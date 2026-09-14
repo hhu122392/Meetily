@@ -1,0 +1,36 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 6a7edc70205b79298aede196940be73562ee25f2..6bf636a5bd2e76389c676435c0849265469c3ab5 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -316,6 +316,7 @@ function mergeAttributes(...objects) {
+         .reduce((items, item) => {
+         const mergedAttributes = { ...items };
+         Object.entries(item).forEach(([key, value]) => {
++            if (key === '__proto__') return;
+             const exists = mergedAttributes[key];
+             if (!exists) {
+                 mergedAttributes[key] = value;
+diff --git a/dist/index.js b/dist/index.js
+index 8efbf7f4d2a2fe1693b148e7b1ccc6ca228496f2..9e47ad9719417f873e0ef948ccfb3cc0b33565a9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -314,6 +314,7 @@ function mergeAttributes(...objects) {
+         .reduce((items, item) => {
+         const mergedAttributes = { ...items };
+         Object.entries(item).forEach(([key, value]) => {
++            if (key === '__proto__') return;
+             const exists = mergedAttributes[key];
+             if (!exists) {
+                 mergedAttributes[key] = value;
+diff --git a/src/utilities/mergeAttributes.ts b/src/utilities/mergeAttributes.ts
+index b98dc510391199e8c06c25ae945f2b350913e41a..6abd07ad5466a4287e31925c1f0c5363d9e616e2 100644
+--- a/src/utilities/mergeAttributes.ts
++++ b/src/utilities/mergeAttributes.ts
+@@ -5,6 +5,7 @@ export function mergeAttributes(...objects: Record<string, any>[]): Record<strin
+       const mergedAttributes = { ...items }
+ 
+       Object.entries(item).forEach(([key, value]) => {
++        if (key === '__proto__') return
+         const exists = mergedAttributes[key]
+ 
+         if (!exists) {

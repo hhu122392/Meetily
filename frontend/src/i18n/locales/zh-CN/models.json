@@ -1,0 +1,161 @@
+{
+  "config": {
+    "title": "模型设置", "summaryModel": "摘要模型", "transcriptModel": "转写模型",
+    "selectProvider": "选择服务提供方", "selectModel": "选择模型", "searchModels": "搜索模型…",
+    "availableOllama": "可用的 Ollama 模型", "builtInModels": "内置 AI 模型",
+    "using": "当前使用：", "endpointUrl": "端点 URL *", "endpointDescription": "OpenAI 兼容 API 的基础 URL",
+    "modelName": "模型名称 *", "modelDescription": "请求中使用的模型标识符",
+    "apiKey": "API 密钥", "apiKeyOptional": "API 密钥（可选）", "apiKeyPlaceholder": "输入 API 密钥",
+    "optionalKeyPlaceholder": "不需要时请留空", "advanced": "高级选项",
+    "maxTokens": "最大令牌数", "temperature": "温度（0.0–2.0）", "topP": "Top P（0.0–1.0）",
+    "customEndpoint": "自定义端点（可选）", "customEndpointDescription": "可留空，也可输入自定义端点，例如 http://x.yy.zz:11434",
+    "endpointChangedBeforeSave": "端点已更改，请先从新端点获取模型再保存。",
+    "endpointChanged": "端点已更改，请获取模型以加载新端点中的模型。",
+    "noModels": "未找到模型。",
+    "noBuiltInModels": "未找到内置 AI 模型，请先下载一个模型。",
+    "noMatchingModels": "没有与“{{query}}”匹配的模型，请尝试其他关键词。",
+    "noOllamaModels": "未找到模型。请下载推荐模型，或获取可用的 Ollama 模型。",
+    "ollamaUnavailable": "Ollama 未安装或未运行。请安装 Ollama 后使用本地模型。",
+    "ollamaAfterInstall": "安装 Ollama 后，请重新启动此应用并再次获取模型。",
+    "modelSize": "大小：{{size}}", "modelModified": "修改时间：{{modified}}"
+  },
+  "providers": {
+    "builtIn": "内置 AI（离线运行，无需 API）", "builtInShort": "内置 AI",
+    "customOpenAI": "自定义服务器（兼容 OpenAI）", "claude": "Claude", "groq": "Groq",
+    "ollama": "Ollama", "openAI": "OpenAI", "openRouter": "OpenRouter",
+    "parakeet": "Parakeet（推荐，实时且准确）",
+    "localWhisper": "本地 Whisper（高准确度）",
+    "sensevoice": "SenseVoice（中文优先，本地）"
+  },
+  "sensevoice": {
+    "ready": "已安装 · 可用",
+    "empty": "未检测到 SenseVoice 模型",
+    "help": "默认本地转写模型，支持中文、英文、粤语、日语和韩语。下载约 228.5 MiB；录音在本机处理。",
+    "checking": "正在检查",
+    "missing": "未下载",
+    "partial": "下载未完成",
+    "downloading": "正在下载",
+    "available": "已下载",
+    "error": "下载失败，请重试",
+    "download": "下载 SenseVoice",
+    "retry": "重试下载",
+    "selected": "已选用",
+    "select": "使用此模型"
+  },
+  "actions": {
+    "save": "保存", "download": "下载", "downloadOllama": "下载 Ollama", "fetchModels": "获取模型",
+    "testConnection": "测试连接", "delete": "删除", "deleteModel": "删除模型",
+    "deleteToFreeSpace": "删除模型以释放空间", "retry": "重试", "cancel": "取消",
+    "cancelDownload": "取消下载", "redownload": "重新下载", "unlock": "解锁以编辑",
+    "lock": "锁定以防止编辑", "showApiKey": "显示 API 密钥", "hideApiKey": "隐藏 API 密钥",
+    "downloadRecommended": "下载 gemma3:1b（推荐，约 800 MB）",
+    "downloadGemma31bRecommended800MB": "下载 gemma3:1b（推荐，约 800 MB）"
+  },
+  "status": {
+    "loadingModels": "正在加载模型…", "fetching": "正在获取…", "testing": "正在测试连接…",
+    "downloading": "正在下载…", "downloadingModel": "正在下载 {{model}}", "downloadingModelEllipsis": "正在下载 {{model}}…", "finalizing": "正在完成…",
+    "progress": "已完成 {{progress}}%", "progressLabel": "进度：{{progress}}%",
+    "completedLoading": "下载完成，正在加载模型…", "ready": "可用", "selected": "已选择",
+    "corrupted": "文件损坏", "error": "错误", "recommended": "推荐",
+    "usingForTranscription": "正在使用 {{model}} 进行转写", "active": "已启用", "inactive": "未启用",
+    "downloadProgress": "{{model}} 正在下载（{{progress}}%），请等待下载完成。",
+    "progressPercent": "进度：{{progress}}%", "testingConnection": "正在测试连接…"
+  },
+  "messages": {
+    "connectionSuccess": "连接成功。", "downloadStarted": "正在下载 {{model}}，可能需要几分钟。",
+    "alreadyDownloading": "{{model}} 已在下载。", "downloaded": "{{model}} 已下载并可使用。",
+    "downloadCancelled": "已取消下载 {{model}}。", "switched": "已切换到 {{model}}。",
+    "deleted": "已删除 {{model}}。", "deletedToFreeSpace": "已移除 {{model}} 并释放空间。",
+    "modelReady": "模型已可使用。",
+    "downloadOfValueCancelled": "已取消下载 {{modelName}}",
+    "modelValueDeleted": "已删除模型 {{modelName}}", "modelValueDownloaded": "模型 {{modelName}} 已下载！",
+    "modelValueDownloadedSuccessfully": "模型 {{model}} 下载成功",
+    "valueIsAlreadyDownloading": "{{recommendedModel}} 已在下载"
+  },
+  "errors": {
+    "generic": "发生错误。", "loadModels": "无法加载模型。",
+    "loadTranscriptionModels": "无法加载转写模型。", "loadBuiltInModels": "无法加载内置 AI 模型。",
+    "loadOpenRouterModels": "无法加载 OpenRouter 模型。", "saveCustomConfig": "无法保存自定义 OpenAI 配置。",
+    "endpointAndModelRequired": "请先输入端点 URL 和模型名称。",
+    "ollamaNotInstalled": "尚未安装 Ollama。", "ollamaInstallDescription": "请先安装 Ollama，再下载其模型。",
+    "download": "无法下载 {{model}}。", "cancelDownload": "无法取消下载。",
+    "delete": "无法删除 {{model}}。", "corrupted": "文件已损坏，请重新下载或删除。",
+    "connection": "无法使用当前配置建立连接。",
+    "invalidOllamaEndpoint": "请输入以 http:// 或 https:// 开头的有效 Ollama 端点。",
+    "downloadFailedValue": "下载失败：{{modelName}}", "failedToDeleteValue": "无法删除 {{modelName}}",
+    "failedToDownloadValue": "无法下载 {{modelName}}", "failedToLoadBuiltInAIModels": "无法加载内置 AI 模型",
+    "failedToLoadModels": "无法加载模型", "failedToLoadOpenRouterModels": "无法加载 OpenRouter 模型",
+    "failedToSaveCustomOpenAIConfiguration": "无法保存自定义 OpenAI 配置",
+    "ollamaIsNotInstalled": "尚未安装 Ollama",
+    "pleaseEnterEndpointURLAndModelNameFirst": "请先输入端点 URL 和模型名称"
+  },
+  "download": {
+    "modelsAvailable": "{{total}} 个模型中已有 {{downloaded}} 个可用", "total": "总计 {{size}}",
+    "offlineDescription": "模型在本机运行，转写无需互联网连接。",
+    "bytesProgress": "{{downloaded}} / {{total}}", "speed": "{{speed}} MiB/秒",
+    "tokenCount": "{{count}} 个令牌", "sizeDescription": "{{name}}，大小 {{size}}"
+  },
+  "transcription": {
+    "advancedModels": "高级模型", "accuracy": "准确度", "processing": "处理速度",
+    "failedToLoad": "无法加载模型。", "modelDownloaded": "模型已下载并可使用",
+    "downloadMayTakeTime": "可能需要几分钟", "modelRemoved": "模型已移除并释放空间"
+  },
+  "builtIn": {
+    "qwen2bName": "Qwen 3.5 2B（均衡）",
+    "qwen2bDescription": "适合内置摘要的均衡型 Qwen 3.5 模型，本地资源要求适中且质量较高。",
+    "qwen4bName": "Qwen 3.5 4B（高质量）",
+    "qwen4bDescription": "适合内置摘要的高质量 Qwen 3.5 模型，是当前系列中效果最好的本地 Qwen 选项。",
+    "gemma4bName": "Gemma 3 4B（均衡）",
+    "gemma4bDescription": "质量和速度较为均衡，约需 3.5 GB 内存。",
+    "gemma1bName": "Gemma 3 1B（快速）",
+    "gemma1bDescription": "速度最快，约 1 GB 内存即可在多数硬件上运行，适合快速生成摘要。"
+  },
+  "parakeet": {
+    "lightningName": "闪电版", "lightningTagline": "实时处理，速度优先且准确度出色",
+    "compactName": "精简版", "compactTagline": "实时处理，下载体积更小",
+    "preciseName": "精确版", "preciseTagline": "约 20 倍实时速度，精度更高"
+  },
+  "whisper": {
+    "small": "小型", "medium": "中型", "largeCompressed": "Large V3 压缩版",
+    "largeTurbo": "Large V3 Turbo", "large": "Large V3", "advancedName": "Whisper {{model}}",
+    "q5_1": "Q5_1 量化", "q5_0": "Q5_0 量化", "quantized": "量化模型",
+    "attribute": "{{speed}} · {{accuracy}}", "accuracySpec": "{{accuracy}}准确度",
+    "speedSpec": "{{speed}}处理"
+  },
+  "values": {
+    "accuracyHigh": "高", "accuracyGood": "良好", "accuracyDecent": "基础",
+    "speedSlow": "较慢", "speedMedium": "中等速度", "speedFast": "快速",
+    "speedVeryFast": "非常快", "speedUltraFast": "极速"
+  },
+  "accessibility": { "lockToPreventEditing": "锁定以防止编辑", "unlockToEdit": "解锁以编辑" },
+  "descriptions": {
+    "modelIsNowReadyToUse": "模型现已可用",
+    "noModelsFoundDownloadARecommendedModelOrClickFetch": "未找到模型。请下载推荐模型，或点击“获取模型”加载可用的 Ollama 模型。",
+    "pleaseDownloadAndInstallOllamaBeforeDownloadingModels": "请先下载并安装 Ollama，再下载模型。"
+  },
+  "labels": {
+    "advancedOptions": "高级选项",
+    "afterInstallingOllamaRestartThisApplicationAndClickFetchModels": "安装 Ollama 后，请重新启动此应用并点击“获取模型”继续。",
+    "andNbsp": "不间断空格", "anErrorOccurred": "发生错误", "apiKey": "API 密钥", "apiKeyOptional": "API 密钥（可选）",
+    "availableOllamaModels": "可用的 Ollama 模型", "baseURLOfTheOpenAICompatibleAPI": "OpenAI 兼容 API 的基础 URL",
+    "builtInAIModels": "内置 AI 模型", "builtInAIOfflineNoAPINeeded": "内置 AI（离线运行，无需 API）",
+    "customEndpointOptional": "自定义端点（可选）", "customServerOpenAI": "自定义服务器（兼容 OpenAI）",
+    "endpointChangedClickFetchModelsToLoadModelsFromThe": "端点已更改，请点击“获取模型”加载新端点中的模型。",
+    "endpointChangedPleaseClickFetchModelsToLoadModelsFrom": "端点已更改，请先点击“获取模型”加载新端点中的模型再保存。",
+    "endpointURL": "端点 URL *", "fetchModels": "获取模型",
+    "fileIsCorruptedRetryDownloadOrDelete": "文件已损坏，请重试下载或删除。",
+    "leaveEmptyOrEnterACustomEndpointEGHttp": "可留空，也可输入自定义端点，例如 http://x.yy.zz:11434",
+    "maxTokens": "最大令牌数", "mib": "MiB /", "mibS": "MiB/秒）",
+    "modelIdentifierToUseForRequests": "请求中使用的模型标识符", "modelName": "模型名称 *", "modelSettings": "模型设置",
+    "noModelsFound": "未找到模型。", "noModelsFoundDownloadAModelToGetStartedWith": "未找到模型，请先下载一个内置 AI 模型。",
+    "noModelsFoundMatching": "没有匹配“", "ollamaIsNotInstalledOrNotRunningPleaseDownloadAnd": "Ollama 未安装或未运行。请安装 Ollama 后使用本地模型。",
+    "summarizationModel": "摘要模型", "temperature0020": "温度（0.0-2.0）", "topP0010": "Top P（0.0-1.0）",
+    "tryADifferentSearchTerm": "”的模型，请尝试其他关键词。", "withASizeOf": "大小为"
+  },
+  "placeholders": {
+    "modelName": "例如 gpt-4、llama-3-70b", "maxTokens": "例如 4096", "temperature": "例如 0.7", "topP": "例如 0.9",
+    "eG07": "例如 0.7", "eG09": "例如 0.9", "eG4096": "例如 4096",
+    "enterYourAPIKey": "输入 API 密钥", "gpt4Llama370bEtc": "例如 gpt-4、llama-3-70b",
+    "leaveEmptyIfNotRequired": "不需要时请留空", "searchModels": "搜索模型…", "selectProvider": "选择服务提供方"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "product": "Microsoft WebView2 Fixed Version Runtime",
+  "version": "152.0.4191.53",
+  "architecture": "x64",
+  "archive_file": "Microsoft.WebView2.FixedVersionRuntime.152.0.4191.53.x64.cab",
+  "archive_bytes": 371824512,
+  "archive_sha256": "f8f200b57d6a7a71d380f777f5c0ea0f71f520048add21e15737121de9ba4f68",
+  "download_url": "https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/f8ecb2c5-f486-4df5-994f-1eec63f1de23/Microsoft.WebView2.FixedVersionRuntime.152.0.4191.53.x64.cab",
+  "extracted_directory": "Microsoft.WebView2.FixedVersionRuntime.152.0.4191.53.x64",
+  "runtime_executable": "msedgewebview2.exe",
+  "excluded_paths": [
+    "undocked_copilot"
+  ]
+}

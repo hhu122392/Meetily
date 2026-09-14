@@ -1,0 +1,181 @@
+{
+  "feature": {
+    "name": "MOSS 会后增强",
+    "description": "用于审核 MOSS 候选的内部功能。默认关闭，需要先接通 P3 的候选存储和激活接口。"
+  },
+  "mode": {
+    "standard": "常规重新转写",
+    "moss": "MOSS 会后增强"
+  },
+  "settings": {
+    "title": "MOSS 会后增强",
+    "description": "只读显示 MOSS 后端返回的安装与健康信息。",
+    "disabled": "MOSS 内部功能目前关闭。只有接通 P3 后端后，才应在 Beta 设置中开启。",
+    "installation": "安装状态",
+    "installed": "已安装",
+    "notInstalled": "未安装",
+    "version": "版本",
+    "runtimeHash": "运行库 SHA-256",
+    "modelHash": "模型 SHA-256",
+    "modelSize": "模型大小",
+    "availableDisk": "可用磁盘空间",
+    "device": "运行设备",
+    "health": "健康状态",
+    "nativeHotwords": "原生热词",
+    "nativeHotwordsUnsupported": "不支持",
+    "nativeHotwordsNote": "MOSS v0.2.2 不提供原生热词。Meetily 只能使用本次会议已保存的明确别名做可追踪修正。",
+    "refresh": "刷新 MOSS 状态",
+    "loading": "正在加载 MOSS 状态"
+  },
+  "availability": {
+    "ready": "可用",
+    "not_installed": "未安装",
+    "unhealthy": "不可用",
+    "unsupported": "当前设备不支持"
+  },
+  "health": {
+    "healthy": "正常",
+    "degraded": "部分异常",
+    "failed": "失败",
+    "unknown": "未知"
+  },
+  "workspace": {
+    "title": "审核 MOSS 候选",
+    "description": "MOSS 在录音结束后运行。候选会单独保存，只有确认激活后才会替换现行转写。",
+    "nativeHotwordsWarning": "原生热词目前不受支持。下方修正只能来自本次会议已保存的明确别名，并且可以撤销。",
+    "loading": "正在加载 MOSS 审核数据",
+    "noRuns": "这场会议还没有 MOSS 候选。",
+    "noReview": "该任务没有可审核的候选。",
+    "selectRun": "候选任务",
+    "runCreated": "创建于 {{date}}",
+    "debugReference": "参考编号：{{debugId}}"
+  },
+  "actions": {
+    "start": "开始 MOSS 增强",
+    "cancelRun": "取消 MOSS 任务",
+    "refresh": "刷新",
+    "saveEdit": "保存候选编辑",
+    "activate": "激活候选",
+    "rollback": "恢复原转写",
+    "confirmActivate": "确认激活",
+    "confirmRollback": "确认恢复",
+    "keepReviewing": "继续审核",
+    "undoCorrection": "撤销修正",
+    "reapplyCorrection": "重新应用修正"
+  },
+  "runState": {
+    "preparing": "准备中",
+    "running": "运行中",
+    "cancel_requested": "正在请求取消",
+    "cancelled": "已取消",
+    "failed": "失败",
+    "completed": "候选已就绪"
+  },
+  "runStage": {
+    "queued": "等待中",
+    "validating": "正在校验输入",
+    "decoding": "正在解码音频",
+    "loading_model": "正在加载 MOSS",
+    "transcribing": "正在转写音频",
+    "parsing": "正在检查时间戳和说话人",
+    "saving_candidate": "正在保存候选",
+    "complete": "完成"
+  },
+  "tabs": {
+    "comparison": "现行与候选对比",
+    "speakers": "人员绑定",
+    "terms": "可追踪修正"
+  },
+  "comparison": {
+    "current": "现行转写",
+    "candidate": "MOSS 候选",
+    "sourceWhisper": "Whisper／现行文字",
+    "sourceMoss": "已激活的 MOSS 文字",
+    "sourceManual": "包含人工编辑的现行文字",
+    "empty": "没有可显示的转写片段。",
+    "editLabel": "编辑从 {{time}} 开始的候选片段",
+    "saveLabel": "保存从 {{time}} 开始的候选片段编辑",
+    "timeSourceRaw": "时间：MOSS 原始句段 · 来源 {{hash}}",
+    "timeSourceAligned": "时间：冻结的原转录句段（{{count}} 个锚点，匹配度 {{confidence}}%）· 来源 {{hash}}",
+    "timeSourceAudioToken": "时间：Whisper 音频词元 {{first}}–{{last}}（匹配度 {{confidence}}%）· 词元轨道 {{hash}}",
+    "alignmentAudit": "{{aligned}} 个对齐句段 · {{fallback}} 个 MOSS 原始回退 · 来源 {{hash}}",
+    "audioTokenAudit": "音频词元辅助对齐：{{aligned}} 个句段 · {{fallback}} 个原始回退 · 全局匹配 {{coverage}}% · 轨道 {{hash}}",
+    "audioTokenFallback": "音频词元不可用，已安全回退到原始边界 · 原因 {{reason}}",
+    "activityAudit": "最后有效声音 {{lastActive}} · 模型末尾 {{modelLast}} · 差值 {{delta}} 毫秒",
+    "activityAuditSilent": "按 -50 dBFS 未检测到有效声音 · 模型末尾 {{modelLast}}",
+    "activeBadge": "现行",
+    "activeLocked": "这个已激活候选为只读。需要修改时，请先恢复激活前的转写。",
+    "textLayers": {
+      "current_transcript": "文字来源：现行转写",
+      "raw_moss": "文字来源：原始 MOSS",
+      "context_correction": "文字来源：会议上下文别名纠正",
+      "audio_token_context": "文字来源：音频词元证据与会议上下文纠正",
+      "human_edit": "文字来源：人工编辑"
+    }
+  },
+  "speakers": {
+    "title": "绑定匿名说话人",
+    "description": "在你从本次会议参会人中选择前，MOSS 标签会一直保持匿名；Meetily 不会猜姓名。",
+    "bulkTitle": "按说话人批量绑定",
+    "segmentTitle": "按片段纠正",
+    "unbound": "保持 {{speaker}} 匿名",
+    "inherit": "沿用批量绑定",
+    "resolvedAs": "显示为 {{name}}",
+    "anonymous": "匿名",
+    "noParticipants": "这场会议没有已保存的参会人，将保留匿名标签。",
+    "selectPersonForSpeaker": "为 {{speaker}} 选择人员",
+    "selectOverrideForSegment": "为 {{time}} 的 {{speaker}} 选择片段人员"
+  },
+  "terms": {
+    "title": "可追踪术语修正",
+    "description": "修正只能来自已保存的明确别名，或由真实 Whisper 音频词元唯一定位的会议上下文术语；每条修正都保留来源并可撤销。",
+    "none": "这个候选没有记录可追踪的上下文术语修正。",
+    "before": "修改前",
+    "after": "修改后",
+    "matchedAlias": "命中的别名",
+    "canonical": "标准词",
+    "rule": "规则",
+    "source": "文字来源",
+    "audioTokens": "音频词元编号",
+    "machineEvidence": "机器来源证据",
+    "sources": {
+      "context_alias": "会议上下文别名",
+      "audio_token_context": "音频词元与会议上下文"
+    },
+    "applied": "已应用",
+    "reverted": "已撤销"
+  },
+  "activation": {
+    "title": "激活与恢复",
+    "ready": "激活前会先保存现行转写快照，再切换到这个候选。",
+    "active": "这个 MOSS 候选目前是现行转写。",
+    "confirmActivate": "确认激活这个候选吗？后端必须先确认现行转写没有发生变化。",
+    "confirmRollback": "确认恢复到激活 MOSS 前的快照吗？现行转写必须仍与已激活版本一致。",
+    "blockers": {
+      "CURRENT_TRANSCRIPT_CHANGED": "候选生成后，现行转写发生了变化。请刷新并检查冲突。",
+      "CANDIDATE_STALE": "候选版本已经过期，请刷新后再激活。",
+      "CANDIDATE_INCOMPLETE": "候选不完整，不能激活。"
+    }
+  },
+  "errors": {
+    "integrationUnavailable": "当前桌面版本无法使用 MOSS 命令集。本次候选修改或激活没有完成。",
+    "invalidResponse": "MOSS 后端返回的数据不符合 P4 接口约定。",
+    "featureDisabled": "MOSS 内部功能未开启。",
+    "notInstalled": "MOSS 尚未安装。",
+    "unhealthy": "MOSS 已安装，但健康检查未通过。",
+    "runAlreadyActive": "这场会议已有一个 MOSS 任务在运行。",
+    "runNotFound": "所选 MOSS 任务已不存在。",
+    "candidateNotReady": "候选尚未准备好，不能审核。",
+    "candidateConflict": "候选与现行转写发生冲突。",
+    "candidateStale": "候选已经变化，请刷新后再保存。",
+    "invalidBinding": "人员绑定被拒绝，原有绑定没有变化。",
+    "invalidOverride": "片段纠正被拒绝，原有人员分配没有变化。",
+    "correctionNotFound": "该修正记录已不存在。",
+    "activationConflict": "现行转写发生变化，激活已被阻止，原文字保持不变。",
+    "rollbackConflict": "现行转写发生变化，恢复已被阻止，原文字保持不变。",
+    "cancelFailed": "无法确认任务已经取消。任务可能仍在运行，请刷新状态。",
+    "qwenBusy": "AI 摘要正在运行。请等摘要结束或取消后，再开始 MOSS 增强。",
+    "operationFailed": "MOSS 操作失败，原录音和现行转写保持不变。",
+    "audioTooLong": "当前 MOSS 单次最长支持 20 分钟录音。本次没有开始转写，原录音和现行文字均未修改。"
+  }
+}

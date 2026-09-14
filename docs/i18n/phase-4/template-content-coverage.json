@@ -1,0 +1,1468 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-23T04:48:08.933Z",
+  "source": "docs/i18n/baseline/template-content-inventory.json",
+  "summary": {
+    "total": 104,
+    "resolved": 104,
+    "unresolved": 0
+  },
+  "entries": [
+    {
+      "id": "TXT-1251",
+      "en": "Any impediments and owner if known",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/4/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/4/instruction",
+          "chinese": "列出所有阻塞项；如已知，请注明负责人"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1252",
+      "en": "Daily Standup",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/name",
+          "chinese": "每日站会"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1253",
+      "en": "List of participants present",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/1/instruction",
+          "chinese": "列出实际参会人员"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1254",
+      "en": "Optional quick notes or announcements",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/5/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/5/instruction",
+          "chinese": "补充简短备注或通知（可选）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1255",
+      "en": "| **Owner** | **Blocker** | Impact | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/4/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/4/item_format",
+          "chinese": "| **负责人** | **阻塞项** | **影响** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1256",
+      "en": "| **Owner** | **Completed Work** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/2/example_item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/2/example_item_format",
+          "chinese": "| **负责人** | **已完成工作** |\n| --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1257",
+      "en": "| **Owner** | **Planned Work** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/3/example_item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/3/example_item_format",
+          "chinese": "| **负责人** | **计划工作** |\n| --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1258",
+      "en": "Planned work for today (short bullets)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/3/instruction",
+          "chinese": "用简短要点列出今天计划完成的工作"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1259",
+      "en": "Time-boxed daily updates for engineering/product teams.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/description",
+          "chinese": "适用于工程和产品团队的限时每日进展同步。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1260",
+      "en": "What I completed yesterday (short bullets)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/daily_standup.json",
+          "englishTarget": "frontend/src-tauri/templates/en/daily_standup.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/daily_standup.json#/sections/2/instruction",
+          "chinese": "用简短要点列出昨日完成的工作"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1261",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/6/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/6/title",
+          "chinese": "行动项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1262",
+      "en": "Current milestones with status and estimated completion date",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/2/instruction",
+          "chinese": "列出当前里程碑、状态及预计完成日期"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1263",
+      "en": "Date, start/end time, facilitator name",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/0/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/0/instruction",
+          "chinese": "记录日期、开始／结束时间和主持人姓名"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1264",
+      "en": "| **Decision** | **Rationale** | **Timestamp** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/5/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/5/item_format",
+          "chinese": "| **决策** | **理由** | **时间戳** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1265",
+      "en": "Decisions made in this meeting with rationale and timestamp",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/5/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/5/instruction",
+          "chinese": "记录本次会议作出的决策、理由和时间戳"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1266",
+      "en": "| **Document Title** | **URL** | **Type** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/7/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/7/item_format",
+          "chinese": "| **文档标题** | **URL** | **类型** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1267",
+      "en": "Key Decisions",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/5/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/5/title",
+          "chinese": "关键决策"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1268",
+      "en": "Links to relevant documents, tickets, or designs discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/7/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/7/instruction",
+          "chinese": "列出讨论中涉及的相关文档、工单或设计链接"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1269",
+      "en": "List attendees and their roles",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/1/instruction",
+          "chinese": "列出参会人及其角色"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1270",
+      "en": "List top risks with impact level, mitigation plan, and owner",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/4/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/4/instruction",
+          "chinese": "列出主要风险、影响程度、缓解计划和负责人"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1271",
+      "en": "Meeting Date & Time",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/0/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/0/title",
+          "chinese": "会议日期与时间"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1272",
+      "en": "Milestones & Status",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/2/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/2/title",
+          "chinese": "里程碑与状态"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1273",
+      "en": "| **Milestone** | **Status** | **ETA** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/2/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/2/item_format",
+          "chinese": "| **里程碑** | **状态** | **预计完成时间** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1274",
+      "en": "| **Owner** | **Task** | **Due Date** | **Priority** | **Status** | | --- | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/6/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/6/item_format",
+          "chinese": "| **负责人** | **任务** | **截止日期** | **优先级** | **状态** |\n| --- | --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1275",
+      "en": "Progress Summary",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/3/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/3/title",
+          "chinese": "进展摘要"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1276",
+      "en": "Project Sync / Status Update",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/name",
+          "chinese": "项目同步／状态更新"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1277",
+      "en": "Related Documents",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/7/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/7/title",
+          "chinese": "相关文档"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1278",
+      "en": "| **Risk** | **Impact** | **Mitigation** | **Owner** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/4/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/4/item_format",
+          "chinese": "| **风险** | **影响** | **缓解措施** | **负责人** |\n| --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1279",
+      "en": "Short paragraph summarizing progress since last sync meeting",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/3/instruction",
+          "chinese": "用一小段文字概括自上次同步会议以来的进展"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1280",
+      "en": "Tasks with owners, due dates, priority, and status",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/6/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/6/instruction",
+          "chinese": "列出任务、负责人、截止日期、优先级和状态"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1281",
+      "en": "Top Risks & Mitigations",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/sections/4/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/sections/4/title",
+          "chinese": "主要风险与缓解措施"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1282",
+      "en": "Weekly or bi-weekly project status meeting focusing on milestones and risks.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/project_sync.json",
+          "englishTarget": "frontend/src-tauri/templates/en/project_sync.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/project_sync.json#/description",
+          "chinese": "用于每周或双周项目状态会议，重点关注里程碑和风险。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1283",
+      "en": "AI-assisted psychiatric progress note template based on SOAP, with clinical metadata and AI summary.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/description",
+          "chinese": "基于 SOAP 的 AI 辅助精神科进展记录模板，包含临床元数据和 AI 摘要。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1284",
+      "en": "AI Session Summary",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/1/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/1/title",
+          "chinese": "AI 会谈摘要"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1285",
+      "en": "Assessment (A)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/4/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/4/title",
+          "chinese": "评估（A）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1286",
+      "en": "Audit Trail",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/10/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/10/title",
+          "chinese": "审计记录"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1287",
+      "en": "| **Code** | **System** | **Diagnosis** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/7/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/7/item_format",
+          "chinese": "| **编码** | **体系** | **诊断** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1288",
+      "en": "Current medications, doses, changes, and rationale",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/6/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/6/instruction",
+          "chinese": "记录当前药物、剂量、调整情况及理由"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1289",
+      "en": "Date, time and modality of next session",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/9/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/9/instruction",
+          "chinese": "记录下次会谈的日期、时间和形式"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1290",
+      "en": "Diagnoses (DSM/ICD)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/7/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/7/title",
+          "chinese": "诊断（DSM/ICD）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1291",
+      "en": "Diagnostic impression, risk assessment (SI/HI), progress vs treatment goals",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/4/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/4/instruction",
+          "chinese": "记录诊断印象、风险评估（SI/HI）及相对于治疗目标的进展"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1292",
+      "en": "Human review flag, reviewer name and timestamp, AI version",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/10/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/10/instruction",
+          "chinese": "记录人工复核标记、复核人姓名、时间戳和 AI 版本"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1293",
+      "en": "| **Intervention** | **Owner** | **Frequency** | **Follow-up Date** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/5/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/5/item_format",
+          "chinese": "| **干预措施** | **负责人** | **频率** | **随访日期** |\n| --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1294",
+      "en": "Interventions, medication changes, referrals, therapy tasks and follow-up",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/5/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/5/instruction",
+          "chinese": "记录干预措施、药物调整、转诊、治疗任务和随访安排"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1295",
+      "en": "List diagnostic codes and working diagnosis",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/7/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/7/instruction",
+          "chinese": "列出诊断编码和工作诊断"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1296",
+      "en": "| **Medication** | **Dose** | **Route** | **Start/Change Date** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/6/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/6/item_format",
+          "chinese": "| **药物** | **剂量** | **给药途径** | **开始／调整日期** |\n| --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1297",
+      "en": "Next Appointment",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/9/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/9/title",
+          "chinese": "下次预约"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1298",
+      "en": "Objective (O)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/3/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/3/title",
+          "chinese": "客观资料（O）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1299",
+      "en": "Observable findings: affect, speech, behavior, orientation, vitals if relevant",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/3/instruction",
+          "chinese": "记录可观察结果：情感表现、言语、行为、定向力，以及相关生命体征"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1300",
+      "en": "One-line takeaway and one-paragraph executive summary (AI-generated). Include confidence score.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/1/instruction",
+          "chinese": "生成一句话结论和一段式执行摘要（由 AI 生成），并包含置信度。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1301",
+      "en": "Patient initials/ID, session date, provider, session type, duration (HIPAA-sensitive)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/0/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/0/instruction",
+          "chinese": "记录患者姓名首字母／ID、会谈日期、服务提供者、会谈类型和时长（HIPAA 敏感信息）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1302",
+      "en": "Patient's self-reported mood, symptoms, sleep, appetite, stressors",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/2/instruction",
+          "chinese": "记录患者自述的情绪、症状、睡眠、食欲和压力源"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1303",
+      "en": "Plan (P)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/5/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/5/title",
+          "chinese": "计划（P）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1304",
+      "en": "Psychiatric Session Note (SOAP + AI Hybrid)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/name",
+          "chinese": "精神科会谈记录（SOAP + AI 混合）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1305",
+      "en": "Safety & Risk Management",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/8/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/8/title",
+          "chinese": "安全与风险管理"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1306",
+      "en": "Safety plan, emergency contacts, hospitalization considerations",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/8/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/8/instruction",
+          "chinese": "记录安全计划、紧急联系人及住院考量"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1307",
+      "en": "Session Metadata",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/0/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/0/title",
+          "chinese": "会谈元数据"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1308",
+      "en": "Subjective (S)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/psychatric_session.json",
+          "englishTarget": "frontend/src-tauri/templates/en/psychatric_session.json#/sections/2/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/psychatric_session.json#/sections/2/title",
+          "chinese": "主观资料（S）"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1309",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/5/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/5/title",
+          "chinese": "行动项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1310",
+      "en": "Actions or experiments to start next sprint",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/2/instruction",
+          "chinese": "列出下个迭代开始执行的行动或实验"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1311",
+      "en": "Concrete experiments with owners and success metrics",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/5/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/5/instruction",
+          "chinese": "列出具体实验、负责人和成功指标"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1312",
+      "en": "Continue Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/4/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/4/title",
+          "chinese": "继续做"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1313",
+      "en": "| **Idea** | **Proposer** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/2/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/2/item_format",
+          "chinese": "| **想法** | **提出人** |\n| --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1314",
+      "en": "List of participants",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/1/instruction",
+          "chinese": "列出参会人员"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1315",
+      "en": "Notes & Votes",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/6/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/6/title",
+          "chinese": "备注与投票"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1316",
+      "en": "| **Owner** | **Task** | **Due Date** | **Success Metric** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/5/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/5/item_format",
+          "chinese": "| **负责人** | **任务** | **截止日期** | **成功指标** |\n| --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1317",
+      "en": "| **Practice** | **Notes** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/4/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/4/item_format",
+          "chinese": "| **做法** | **备注** |\n| --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1318",
+      "en": "| **Practice** | **Reason** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/3/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/3/item_format",
+          "chinese": "| **做法** | **原因** |\n| --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1319",
+      "en": "Practices to continue",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/4/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/4/instruction",
+          "chinese": "列出需要继续保持的做法"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1320",
+      "en": "Practices to stop",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/3/instruction",
+          "chinese": "列出需要停止的做法"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1321",
+      "en": "Retrospective (Agile)",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/name",
+          "chinese": "敏捷回顾会"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1322",
+      "en": "Sprint name/number and date range",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/0/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/0/instruction",
+          "chinese": "记录迭代名称／编号和日期范围"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1323",
+      "en": "Sprint retrospective template for continuous improvement.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/description",
+          "chinese": "用于持续改进的迭代回顾会模板。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1324",
+      "en": "Start Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/2/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/2/title",
+          "chinese": "开始做"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1325",
+      "en": "Stop Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/3/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/3/title",
+          "chinese": "停止做"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1326",
+      "en": "Summary and top-voted items",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/retrospective.json",
+          "englishTarget": "frontend/src-tauri/templates/en/retrospective.json#/sections/6/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/retrospective.json#/sections/6/instruction",
+          "chinese": "汇总讨论内容和得票最高的事项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1327",
+      "en": "Actions, owners, and due dates",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/6/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/6/instruction",
+          "chinese": "列出行动、负责人和截止日期"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1328",
+      "en": "Agreed Deliverables",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/3/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/3/title",
+          "chinese": "约定交付物"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1329",
+      "en": "Capture client goals, deliverables, and next steps.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/description",
+          "chinese": "记录客户目标、交付物和后续步骤。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1330",
+      "en": "Client and vendor attendees with roles",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/1/instruction",
+          "chinese": "列出客户方与供应方参会人及其角色"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1331",
+      "en": "Client concerns, blockers, or escalation items",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/5/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/5/instruction",
+          "chinese": "记录客户顾虑、阻塞项或需升级处理的事项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1332",
+      "en": "Client Goals & Success Criteria",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/2/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/2/title",
+          "chinese": "客户目标与成功标准"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1333",
+      "en": "Client / Sales Meeting",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/name",
+          "chinese": "客户／销售会议"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1334",
+      "en": "Commercial Terms Discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/4/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/4/title",
+          "chinese": "已讨论的商务条款"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1335",
+      "en": "| **Concern** | **Impact** | **Owner** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/5/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/5/item_format",
+          "chinese": "| **顾虑** | **影响** | **负责人** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1336",
+      "en": "Date, time, location/modality, account manager",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/0/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/0/instruction",
+          "chinese": "记录日期、时间、地点／会议形式和客户经理"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1337",
+      "en": "| **Deliverable** | **Owner** | **Due Date** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/3/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/3/item_format",
+          "chinese": "| **交付物** | **负责人** | **截止日期** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1338",
+      "en": "Deliverables, owners, and due dates",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/3/instruction",
+          "chinese": "列出交付物、负责人和截止日期"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1339",
+      "en": "Meeting Metadata",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/0/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/0/title",
+          "chinese": "会议元数据"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1340",
+      "en": "Next Steps",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/6/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/6/title",
+          "chinese": "后续步骤"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1341",
+      "en": "| **Owner** | **Action** | **Due Date** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/6/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/6/item_format",
+          "chinese": "| **负责人** | **行动** | **截止日期** |\n| --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1342",
+      "en": "Pricing, SLAs, payment terms or contract items discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/4/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/4/instruction",
+          "chinese": "记录已讨论的定价、SLA、付款条款或合同事项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1343",
+      "en": "Risks & Concerns",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/5/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/5/title",
+          "chinese": "风险与顾虑"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1344",
+      "en": "What the client wants to achieve and how success will be measured",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "englishTarget": "frontend/src-tauri/templates/en/sales_marketing_client_call.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/sales_marketing_client_call.json#/sections/2/instruction",
+          "chinese": "记录客户希望达成的目标及成功衡量方式"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1345",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/2/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/2/title",
+          "chinese": "行动项"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1346",
+      "en": "A standard template for general meetings, focusing on key outcomes and actions.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/description",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/description",
+          "chinese": "适用于一般会议的标准模板，重点记录关键成果和行动。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1347",
+      "en": "Discussion Highlights",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/3/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/3/title",
+          "chinese": "讨论要点"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1348",
+      "en": "Key Decisions",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/1/title",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/1/title",
+          "chinese": "关键决策"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1349",
+      "en": "List all assigned tasks with their owners and due date. Always add reference transcript segment and timestamp in the table.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/2/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/2/instruction",
+          "chinese": "列出所有已分配任务、负责人和截止日期，并始终在表格中附上对应的转录片段和时间戳。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1350",
+      "en": "List the most important decisions made during the meeting.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/1/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/1/instruction",
+          "chinese": "列出会议中作出的最重要决策。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1351",
+      "en": "| **Owner** | Task | Due | Reference Transcript Segment | Segment Time stamp | | --- | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/2/item_format",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/2/item_format",
+          "chinese": "| **负责人** | **任务** | **截止时间** | **对应转录片段** | **片段时间戳** |\n| --- | --- | --- | --- | --- |"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1352",
+      "en": "Provide a brief, one-paragraph executive summary of the entire meeting.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/0/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/0/instruction",
+          "chinese": "用一段简短文字概括整场会议的核心内容。"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1353",
+      "en": "Standard Meeting Notes",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/name",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/name",
+          "chinese": "标准会议纪要"
+        }
+      ],
+      "resolved": true
+    },
+    {
+      "id": "TXT-1354",
+      "en": "Summarize the main topics of discussion, key arguments, and important insights.",
+      "disposition": "localize_as_versioned_template_content",
+      "mappings": [
+        {
+          "source": "frontend/src-tauri/templates/standard_meeting.json",
+          "englishTarget": "frontend/src-tauri/templates/en/standard_meeting.json#/sections/3/instruction",
+          "chineseTarget": "frontend/src-tauri/templates/zh-CN/standard_meeting.json#/sections/3/instruction",
+          "chinese": "概括主要讨论主题、关键论点和重要见解。"
+        }
+      ],
+      "resolved": true
+    }
+  ]
+}

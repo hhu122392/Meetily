@@ -1,0 +1,102 @@
+{
+  "accessibility": {
+    "actionItems": "行动项",
+    "audioAvailable": "有可用音频",
+    "noAudio": "无音频",
+    "productReview": "产品评审",
+    "projectIdeas": "项目构想",
+    "teamSyncDec26": "团队同步会 - 12 月 26 日"
+  },
+  "actions": {
+    "copy": "复制",
+    "enhanceTranscript": "增强",
+    "openRecordingFolder": "打开录音文件夹",
+    "save": "保存",
+    "saveChanges": "保存更改",
+    "selectAMeetingToPreview": "选择一个会议以预览",
+    "selectASpecificLanguageToImproveAccuracyOrUseAuto": "选择特定语言以提高准确率，或使用自动检测",
+    "startRetranscription": "开始重新转写",
+    "tryAgain": "重试"
+  },
+  "descriptions": {
+    "addSummaryContext": "补充背景（自由文本）：参与人员、会议概况、目标等。会随本次摘要请求一起使用，不会写入会议记录。",
+    "theRecoveredMeetingWasSavedButTheDefaultSummaryLanguage": "已保存恢复的会议，但未能应用默认摘要语言。",
+    "usingValueTemplateForSummaryGeneration": "正在使用“{{templateName}}”模板生成摘要"
+  },
+  "errors": {
+    "failedToLoadMeeting": "加载会议详情失败",
+    "failedToOpenRecordingFolder": "打开录音文件夹失败",
+    "couldNotApplyDefaultSummaryLanguage": "无法应用默认摘要语言",
+    "failedToCopySummary": "复制摘要失败",
+    "failedToDeleteMeetingPleaseTryAgain": "删除会议失败，请重试。",
+    "failedToFetchTranscriptsForCopying": "获取用于复制的转写内容失败",
+    "failedToRecoverMeetingPleaseTryAgain": "恢复会议失败，请重试。",
+    "failedToSaveChanges": "保存更改失败",
+    "failedToSaveMeetingSummaryUnknownError": "保存会议摘要失败：未知错误",
+    "failedToSaveMeetingTitleUnknownError": "保存会议标题失败：未知错误",
+    "failedToSaveModelConfigUnknownError": "保存模型配置失败：未知错误",
+    "failedToSaveModelSettings": "保存模型设置失败",
+    "failedToSaveSummarySettings": "保存摘要设置失败",
+    "meetingFolderPathNotAvailable": "会议文件夹路径不可用",
+    "meetingMetadataNotFound": "未找到会议元数据",
+    "noMeetingSelected": "未选择会议",
+    "noTranscriptAvailable": "没有可用的转写内容",
+    "noTranscriptsAvailableToCopy": "没有可复制的转写内容",
+    "noSummaryContentAvailableToCopy": "没有可复制的摘要内容",
+    "noTranscriptsFoundForThisMeeting": "未找到此会议的转写内容"
+  },
+  "export": {
+    "copiedOn": "复制时间",
+    "date": "日期",
+    "meetingId": "会议 ID",
+    "summaryTitle": "会议摘要：{{title}}",
+    "transcriptTitle": "会议转写：{{title}}"
+  },
+  "labels": {
+    "anErrorOccurredDuringRetranscription": "重新转写期间发生错误",
+    "areYouSureYouWantToDeleteThisMeetingThis": "确定要删除此会议吗？此操作无法撤销。",
+    "chooseATranscriptionModel": "选择转写模型",
+    "goBack": "返回",
+    "interruptedMeetings": "中断的会议",
+    "interruptedSelectAMeetingToPreviewAndRecoverIt": "个会议中断。请选择一个会议以预览并恢复。",
+    "languageSelectionIsnTSupportedForParakeetItAlwaysUses": "Parakeet 不支持选择语言，始终使用自动检测。",
+    "mb": "MB）",
+    "moreTranscript": "条更多转写",
+    "noFolderPathAvailable": "没有可用的文件夹路径",
+    "noteNotFound": "未找到笔记",
+    "noTranscriptsToPreview": "没有可预览的转写内容",
+    "recording": "录音",
+    "recoverInterruptedMeetings": "恢复中断的会议",
+    "reProcessTheAudioWithDifferentLanguageSettings": "使用不同的语言设置重新处理音频",
+    "retranscribeMeeting": "重新转写会议",
+    "retranscriptionFailed": "重新转写失败",
+    "showingFirst": "当前显示前",
+    "total": "总计）",
+    "transcriptSegmentsOf": "条转写片段（共",
+    "weFound": "发现"
+  },
+  "messages": {
+    "changesSavedSuccessfully": "更改已成功保存",
+    "noChangesToSave": "没有检测到改动，未写入任何内容",
+    "modelSettingsSavedSuccessfully": "模型设置已成功保存",
+    "retranscriptionCancelled": "已取消重新转写",
+    "summaryCopiedToClipboard": "摘要已复制到剪贴板",
+    "summarySettingsSavedSuccessfully": "摘要设置已成功保存",
+    "templateSelected": "已选择模板",
+    "transcriptCopiedToClipboard": "转写内容已复制到剪贴板"
+  },
+  "accessibilityActions": {
+    "copySummary": "复制摘要",
+    "copyTranscript": "复制转写内容",
+    "enhanceRecordedAudio": "重新转写以增强录制的音频",
+    "saveChanges": "保存更改"
+  },
+  "placeholders": {
+    "loadingModels": "正在加载模型...",
+    "selectLanguage": "选择语言",
+    "selectModel": "选择模型"
+  },
+  "status": {
+    "loadingPreview": "正在加载预览..."
+  }
+}

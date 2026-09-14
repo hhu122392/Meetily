@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "replacement_rule": "Copy this file, set template_only to false, and replace every __REQUIRED_* path with the exact isolated Windows test-profile path before taking any snapshot.",
+  "database_rule": "tables='*' hashes every user table inside one read transaction. Required protected tree roots must be non-empty and the required database must contain at least one row. Raw JSON and SQLite values are never written to the snapshot; only paths, counts, structure, and hashes are written.",
+  "roots": [
+    {
+      "id": "recordings",
+      "path": "__REQUIRED_RECORDINGS_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "database",
+      "path": "__REQUIRED_MEETING_SQLITE_FILE__",
+      "kind": "sqlite",
+      "classification": "protected",
+      "required": true,
+      "tables": "*"
+    },
+    {
+      "id": "settings",
+      "path": "__REQUIRED_STORAGE_OR_APPLICATION_SETTINGS_JSON__",
+      "kind": "json",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "templates",
+      "path": "__REQUIRED_USER_TEMPLATE_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "whisper_models",
+      "path": "__REQUIRED_WHISPER_MODEL_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "parakeet_models",
+      "path": "__REQUIRED_PARAKEET_MODEL_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "qwen_models",
+      "path": "__REQUIRED_QWEN_MODEL_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "gemma_models",
+      "path": "__REQUIRED_GEMMA_MODEL_DIRECTORY__",
+      "kind": "tree",
+      "classification": "protected",
+      "required": true
+    },
+    {
+      "id": "moss_data",
+      "path": "D:\\MeetilyData\\__REQUIRED_MOSS_MANIFEST_OWNED_SUBDIRECTORY__",
+      "kind": "tree",
+      "classification": "moss_owned",
+      "required": false
+    },
+    {
+      "id": "application",
+      "path": "__REQUIRED_INSTALLED_APPLICATION_DIRECTORY__",
+      "kind": "tree",
+      "classification": "application",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<Configuration>
+  <VGpu>Disable</VGpu>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>D:\MeetilyBuildScratch\meetily-moss-functional-fixes-20260902</HostFolder>
+      <SandboxFolder>C:\workspace</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\MeetilyData\functional-test\FIX-1B9C29A-20260902-01\vm-exchange</HostFolder>
+      <SandboxFolder>C:\evidence</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\workspace\scripts\qa\moss_functional_fix_sandbox_preflight.ps1 -OutputPath C:\evidence\vm-preflight.json</Command>
+  </LogonCommand>
+  <ClipboardRedirection>Disable</ClipboardRedirection>
+  <PrinterRedirection>Disable</PrinterRedirection>
+  <AudioInput>Disable</AudioInput>
+  <VideoInput>Disable</VideoInput>
+</Configuration>

@@ -1,0 +1,88 @@
+{
+  "accessibility": {
+    "lockToPreventEditing": "Lock to prevent editing",
+    "unlockToEdit": "Unlock to edit"
+  },
+  "actions": {
+    "deleteModel": "Delete model",
+    "downloadGemma31bRecommended800MB": "Download gemma3:1b (Recommended, ~800MB)",
+    "downloadOllama": "Download Ollama",
+    "testConnection": "Test Connection"
+  },
+  "descriptions": {
+    "modelIsNowReadyToUse": "Model is now ready to use",
+    "noModelsFoundDownloadARecommendedModelOrClickFetch": "No models found. Download a recommended model or click \"Fetch Models\" to load available Ollama models.",
+    "pleaseDownloadAndInstallOllamaBeforeDownloadingModels": "Please download and install Ollama before downloading models."
+  },
+  "errors": {
+    "downloadFailedValue": "Download failed: {{modelName}}",
+    "failedToDeleteValue": "Failed to delete {{modelName}}",
+    "failedToDownloadValue": "Failed to download {{modelName}}",
+    "failedToLoadBuiltInAIModels": "Failed to load Built-in AI models",
+    "failedToLoadModels": "Failed to load models",
+    "failedToLoadOpenRouterModels": "Failed to load OpenRouter models",
+    "failedToSaveCustomOpenAIConfiguration": "Failed to save custom OpenAI configuration",
+    "ollamaIsNotInstalled": "Ollama is not installed",
+    "pleaseEnterEndpointURLAndModelNameFirst": "Please enter endpoint URL and model name first"
+  },
+  "labels": {
+    "advancedOptions": "Advanced Options",
+    "afterInstallingOllamaRestartThisApplicationAndClickFetchModels": "After installing Ollama, restart this application and click \"Fetch Models\" to continue.",
+    "andNbsp": "&nbsp;",
+    "anErrorOccurred": "An error occurred",
+    "apiKey": "API Key",
+    "apiKeyOptional": "API Key (optional)",
+    "availableOllamaModels": "Available Ollama Models",
+    "baseURLOfTheOpenAICompatibleAPI": "Base URL of the OpenAI-compatible API",
+    "builtInAIModels": "Built-in AI Models",
+    "builtInAIOfflineNoAPINeeded": "Built-in AI (Offline, No API needed)",
+    "customEndpointOptional": "Custom Endpoint (optional)",
+    "customServerOpenAI": "Custom Server (OpenAI)",
+    "endpointChangedClickFetchModelsToLoadModelsFromThe": "Endpoint changed. Click \"Fetch Models\" to load models from the new endpoint.",
+    "endpointChangedPleaseClickFetchModelsToLoadModelsFrom": "Endpoint changed. Please click \"Fetch Models\" to load models from the new endpoint before saving.",
+    "endpointURL": "Endpoint URL *",
+    "fetchModels": "Fetch Models",
+    "fileIsCorruptedRetryDownloadOrDelete": "File is corrupted. Retry download or delete.",
+    "leaveEmptyOrEnterACustomEndpointEGHttp": "Leave empty or enter a custom endpoint (e.g., http://x.yy.zz:11434)",
+    "maxTokens": "Max Tokens",
+    "mib": "MiB /",
+    "mibS": "MiB/s)",
+    "modelIdentifierToUseForRequests": "Model identifier to use for requests",
+    "modelName": "Model Name *",
+    "modelSettings": "Model Settings",
+    "noModelsFound": "No models found.",
+    "noModelsFoundDownloadAModelToGetStartedWith": "No models found. Download a model to get started with Built-in AI.",
+    "noModelsFoundMatching": "No models found matching \"",
+    "ollamaIsNotInstalledOrNotRunningPleaseDownloadAnd": "Ollama is not installed or not running. Please download and install Ollama to use local models.",
+    "summarizationModel": "Summarization Model",
+    "temperature0020": "Temperature (0.0-2.0)",
+    "topP0010": "Top P (0.0-1.0)",
+    "tryADifferentSearchTerm": "\". Try a different search term.",
+    "withASizeOf": "with a size of"
+  },
+  "messages": {
+    "downloadOfValueCancelled": "Download of {{modelName}} cancelled",
+    "modelValueDeleted": "Model {{modelName}} deleted",
+    "modelValueDownloaded": "Model {{modelName}} downloaded!",
+    "modelValueDownloadedSuccessfully": "Model {{model}} downloaded successfully",
+    "valueIsAlreadyDownloading": "{{recommendedModel}} is already downloading"
+  },
+  "placeholders": {
+    "eG07": "e.g., 0.7",
+    "eG09": "e.g., 0.9",
+    "eG4096": "e.g., 4096",
+    "enterYourAPIKey": "Enter your API key",
+    "gpt4Llama370bEtc": "gpt-4, llama-3-70b, etc.",
+    "leaveEmptyIfNotRequired": "Leave empty if not required",
+    "searchModels": "Search models...",
+    "selectProvider": "Select provider"
+  },
+  "status": {
+    "downloadingModel": "Downloading {{model}}",
+    "downloadingModelEllipsis": "Downloading {{model}}...",
+    "downloadProgress": "{{model}} is downloading ({{progress}}%). Please wait until download completes.",
+    "loadingModels": "Loading models...",
+    "progressPercent": "Progress: {{progress}}%",
+    "testingConnection": "Testing Connection..."
+  }
+}

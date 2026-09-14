@@ -1,0 +1,1357 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "TXT-1251",
+      "en": "Any impediments and owner if known",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1252",
+      "en": "Daily Standup",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1253",
+      "en": "List of participants present",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1254",
+      "en": "Optional quick notes or announcements",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1255",
+      "en": "| **Owner** | **Blocker** | Impact | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1256",
+      "en": "| **Owner** | **Completed Work** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1257",
+      "en": "| **Owner** | **Planned Work** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1258",
+      "en": "Planned work for today (short bullets)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1259",
+      "en": "Time-boxed daily updates for engineering/product teams.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1260",
+      "en": "What I completed yesterday (short bullets)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/daily_standup.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1261",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1262",
+      "en": "Current milestones with status and estimated completion date",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1263",
+      "en": "Date, start/end time, facilitator name",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1264",
+      "en": "| **Decision** | **Rationale** | **Timestamp** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1265",
+      "en": "Decisions made in this meeting with rationale and timestamp",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1266",
+      "en": "| **Document Title** | **URL** | **Type** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1267",
+      "en": "Key Decisions",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1268",
+      "en": "Links to relevant documents, tickets, or designs discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1269",
+      "en": "List attendees and their roles",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1270",
+      "en": "List top risks with impact level, mitigation plan, and owner",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1271",
+      "en": "Meeting Date & Time",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1272",
+      "en": "Milestones & Status",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1273",
+      "en": "| **Milestone** | **Status** | **ETA** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1274",
+      "en": "| **Owner** | **Task** | **Due Date** | **Priority** | **Status** | | --- | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1275",
+      "en": "Progress Summary",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1276",
+      "en": "Project Sync / Status Update",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1277",
+      "en": "Related Documents",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1278",
+      "en": "| **Risk** | **Impact** | **Mitigation** | **Owner** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1279",
+      "en": "Short paragraph summarizing progress since last sync meeting",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1280",
+      "en": "Tasks with owners, due dates, priority, and status",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1281",
+      "en": "Top Risks & Mitigations",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1282",
+      "en": "Weekly or bi-weekly project status meeting focusing on milestones and risks.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/project_sync.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1283",
+      "en": "AI-assisted psychiatric progress note template based on SOAP, with clinical metadata and AI summary.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1284",
+      "en": "AI Session Summary",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1285",
+      "en": "Assessment (A)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1286",
+      "en": "Audit Trail",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1287",
+      "en": "| **Code** | **System** | **Diagnosis** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1288",
+      "en": "Current medications, doses, changes, and rationale",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1289",
+      "en": "Date, time and modality of next session",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1290",
+      "en": "Diagnoses (DSM/ICD)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1291",
+      "en": "Diagnostic impression, risk assessment (SI/HI), progress vs treatment goals",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1292",
+      "en": "Human review flag, reviewer name and timestamp, AI version",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1293",
+      "en": "| **Intervention** | **Owner** | **Frequency** | **Follow-up Date** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1294",
+      "en": "Interventions, medication changes, referrals, therapy tasks and follow-up",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1295",
+      "en": "List diagnostic codes and working diagnosis",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1296",
+      "en": "| **Medication** | **Dose** | **Route** | **Start/Change Date** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1297",
+      "en": "Next Appointment",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1298",
+      "en": "Objective (O)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1299",
+      "en": "Observable findings: affect, speech, behavior, orientation, vitals if relevant",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1300",
+      "en": "One-line takeaway and one-paragraph executive summary (AI-generated). Include confidence score.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1301",
+      "en": "Patient initials/ID, session date, provider, session type, duration (HIPAA-sensitive)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1302",
+      "en": "Patient's self-reported mood, symptoms, sleep, appetite, stressors",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1303",
+      "en": "Plan (P)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1304",
+      "en": "Psychiatric Session Note (SOAP + AI Hybrid)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1305",
+      "en": "Safety & Risk Management",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1306",
+      "en": "Safety plan, emergency contacts, hospitalization considerations",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1307",
+      "en": "Session Metadata",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1308",
+      "en": "Subjective (S)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/psychatric_session.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1309",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1310",
+      "en": "Actions or experiments to start next sprint",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1311",
+      "en": "Concrete experiments with owners and success metrics",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1312",
+      "en": "Continue Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1313",
+      "en": "| **Idea** | **Proposer** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1314",
+      "en": "List of participants",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1315",
+      "en": "Notes & Votes",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1316",
+      "en": "| **Owner** | **Task** | **Due Date** | **Success Metric** | | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1317",
+      "en": "| **Practice** | **Notes** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1318",
+      "en": "| **Practice** | **Reason** | | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1319",
+      "en": "Practices to continue",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1320",
+      "en": "Practices to stop",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1321",
+      "en": "Retrospective (Agile)",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1322",
+      "en": "Sprint name/number and date range",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1323",
+      "en": "Sprint retrospective template for continuous improvement.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1324",
+      "en": "Start Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1325",
+      "en": "Stop Doing",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1326",
+      "en": "Summary and top-voted items",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/retrospective.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1327",
+      "en": "Actions, owners, and due dates",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1328",
+      "en": "Agreed Deliverables",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1329",
+      "en": "Capture client goals, deliverables, and next steps.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1330",
+      "en": "Client and vendor attendees with roles",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1331",
+      "en": "Client concerns, blockers, or escalation items",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1332",
+      "en": "Client Goals & Success Criteria",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1333",
+      "en": "Client / Sales Meeting",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1334",
+      "en": "Commercial Terms Discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1335",
+      "en": "| **Concern** | **Impact** | **Owner** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1336",
+      "en": "Date, time, location/modality, account manager",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1337",
+      "en": "| **Deliverable** | **Owner** | **Due Date** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1338",
+      "en": "Deliverables, owners, and due dates",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1339",
+      "en": "Meeting Metadata",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1340",
+      "en": "Next Steps",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1341",
+      "en": "| **Owner** | **Action** | **Due Date** | | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1342",
+      "en": "Pricing, SLAs, payment terms or contract items discussed",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1343",
+      "en": "Risks & Concerns",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1344",
+      "en": "What the client wants to achieve and how success will be measured",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/sales_marketing_client_call.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1345",
+      "en": "Action Items",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1346",
+      "en": "A standard template for general meetings, focusing on key outcomes and actions.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1347",
+      "en": "Discussion Highlights",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1348",
+      "en": "Key Decisions",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1349",
+      "en": "List all assigned tasks with their owners and due date. Always add reference transcript segment and timestamp in the table.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1350",
+      "en": "List the most important decisions made during the meeting.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1351",
+      "en": "| **Owner** | Task | Due | Reference Transcript Segment | Segment Time stamp | | --- | --- | --- | --- | --- |",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1352",
+      "en": "Provide a brief, one-paragraph executive summary of the entire meeting.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1353",
+      "en": "Standard Meeting Notes",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    },
+    {
+      "id": "TXT-1354",
+      "en": "Summarize the main topics of discussion, key arguments, and important insights.",
+      "disposition": "localize_as_versioned_template_content",
+      "targetFields": "name, description, section headings, explanatory content, or prompt text as indicated by source JSON path",
+      "sources": [
+        {
+          "file": "frontend/src-tauri/templates/standard_meeting.json",
+          "line": null,
+          "kind": "json_string"
+        }
+      ]
+    }
+  ]
+}

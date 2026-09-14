@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "phase": "15.10-stage-5a2-clean-rc-and-installer-audit",
+  "generatedAt": "2026-08-23T20:45:04+08:00",
+  "automatedTechnicalDecision": "PASS",
+  "productionDecision": "FAIL_PRODUCTION_NO_GO",
+  "version": "0.4.0",
+  "git": {
+    "releaseSourceBaseline": "f2eb887bfd0848803c4287d4f2da07f27df111a5",
+    "templateJsonFeatureCommit": "ea4b74fafd41f5932f3c82f410a447685b133e60",
+    "toolingGateCommit": "2f274376a4b772b04dc0919666806714d0cec3e6",
+    "releaseCandidateBuildCommit": "4edc53116b5d5e186d306dccdc5b45729777f487",
+    "syntheticUpgradeFixtureCommit": "dd1cbac21f911df0fdb3fea5d7025132775ef51a",
+    "cleanTrackedEntriesAtBuild": 0,
+    "cleanUntrackedNonIgnoredEntriesAtBuild": 0,
+    "cleanAfterBuild": true
+  },
+  "candidate": {
+    "productName": "Meetily Phase 5A2 RC",
+    "identifier": "com.meetily.ai.phase5a2rc",
+    "auditOnly": true,
+    "signed": false,
+    "buildInputsChecked": 841,
+    "buildInputsNewerThanExecutable": 0,
+    "executable": {
+      "path": "target-phase5a2-rc-build/artifacts/Meetily-Phase-5A2-RC-0.4.0.exe",
+      "bytes": 65776128,
+      "sha256": "D4C8E31D9504B25DC8C77DC30C0C5A506055E2C20BE082347B763901AA640D84",
+      "signatureStatus": "NotSigned"
+    },
+    "installer": {
+      "path": "target-phase5a2-rc-build/artifacts/Meetily Phase 5A2 RC_0.4.0_x64-setup.exe",
+      "bytes": 43996335,
+      "sha256": "5CFE9C41360EC135C407FF8FC8D00EE23BAE46CB2E1E8632DAC51EE91BA61FBE",
+      "signatureStatus": "NotSigned"
+    },
+    "installedPayload": {
+      "bytes": 65776128,
+      "sha256": "72A46EECB9F8E18FEB19ACCE315E02C97BC757B98EE7A74E4C45287B674BD996",
+      "signatureStatus": "NotSigned"
+    }
+  },
+  "sidecars": {
+    "llamaHelper": {
+      "sourceBuilt": true,
+      "lockedReleaseBuild": true,
+      "protocolSmoke": "PASS",
+      "bytes": 3773440,
+      "sha256": "EE4E303B64603DFF8369644EDF3792ADD1948605C62F3BEC66A2549757EF97EC"
+    },
+    "ffmpeg": {
+      "version": "8.0.1-essentials_build-www.gyan.dev",
+      "bytes": 99264000,
+      "sha256": "5AF82A0D4FE2B9EAE211B967332EA97EDFC51C6B328CA35B827E73EAC560DC0D"
+    }
+  },
+  "automatedEvidence": {
+    "eslintErrors": 0,
+    "eslintWarnings": 0,
+    "nodeUnitTests": "51/51",
+    "frontendI18nTests": "54/54",
+    "totalFrontendTests": "105/105",
+    "typescriptErrors": 0,
+    "nextStaticPages": "13/13",
+    "rust": "283 passed / 0 failed / 2 ignored",
+    "rustDocTests": "1/1",
+    "cleanWindowsInstallAssertions": "19/19",
+    "syntheticUpgradeAssertions": "21/21"
+  },
+  "syntheticUpgrade": {
+    "fixture": true,
+    "fromVersion": "0.3.9",
+    "toVersion": "0.4.0",
+    "upgradeExitCode": 0,
+    "downgradeAttemptExitCode": 3,
+    "dataSentinelPreserved": true,
+    "payloadPreservedAfterRejectedDowngrade": true,
+    "closesHistoricalDataMigrationGate": false
+  },
+  "protectedFormalArtifacts": {
+    "overwritten": false,
+    "executableSha256": "1873D2CCA9B06EEBE8B2D42DC8530B6888BCB91C4267BBD6E6724F6A78257823",
+    "installerSha256": "C6A5BD12F947AEDECAC890C33A48FDEA94E4C11C29FCA03EEF753C25AEE30434"
+  },
+  "closedInStage5A2": [
+    "P5-REL-001",
+    "P5-TOOL-001",
+    "P5-TOOL-002"
+  ],
+  "openProductionBlockers": [
+    "P5-UPSTREAM-001",
+    "P5-GOV-001",
+    "P5-GOV-002",
+    "P5-SIGN-001",
+    "P5-PLAT-001",
+    "P5-HW-001",
+    "P5-AI-001",
+    "P5-UPG-001",
+    "P5-PERF-001",
+    "P5-A11Y-001",
+    "P5-NATIVE-001"
+  ]
+}

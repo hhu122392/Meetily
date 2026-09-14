@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "id": "standard_meeting",
+  "name": "标准会议纪要",
+  "description": "适用于一般会议的标准模板，重点记录关键成果和行动。",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "summary",
+      "title": "摘要",
+      "instruction": "用一段简短文字概括整场会议的核心内容。必须保留转写中明确出现的参会人、项目或产品代号（例如 M100）、会议日期与时间、截止日期和主要风险；不得遗漏这些关键信息，也不得编造未出现的人名、代号、数字、决定或完成状态。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "key_decisions",
+      "title": "关键决策",
+      "instruction": "列出会议中作出的最重要决策。",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "action_items",
+      "title": "行动项",
+      "instruction": "列出所有已分配任务、负责人和截止日期，并始终在表格中附上对应的转录片段和时间戳。",
+      "format": "list",
+      "item_format": "| **负责人** | **任务** | **截止时间** | **对应转录片段** | **片段时间戳** |\n| --- | --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "discussion_highlights",
+      "title": "讨论要点",
+      "instruction": "概括主要讨论主题、关键论点和重要见解，并保留转写中明确出现的项目或产品代号及主要风险。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 2
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "actions": {
+    "deleteSection": "Delete section",
+    "downloadCancelled": "Download cancelled",
+    "downloadComplete": "Download complete",
+    "editSectionTitle": "Edit section title",
+    "enableImportAudioAndRetranscribeInSettingsBetaToUse": "Enable \"Import Audio & Retranscribe\" in Settings > Beta to use this feature."
+  },
+  "descriptions": {
+    "aiPoweredMeetingAssistant": "AI-powered meeting assistant",
+    "showOrHideTheDeveloperConsoleWindowOnWindowsThis": "Show or hide the developer console window. On Windows, this controls the console window. On macOS, this opens Terminal with app logs.",
+    "youNeedToFinishOnboardingBeforeYouCanStartRecording": "You need to finish onboarding before you can start recording."
+  },
+  "errors": {
+    "betaFeatureDisabled": "Beta feature disabled",
+    "failedToLoadOllamaModels": "Failed to load Ollama models",
+    "failedToRecoverMeeting": "Failed to recover meeting",
+    "pleaseCompleteSetupFirst": "Please complete setup first",
+    "pleaseDropAnAudioFile": "Please drop an audio file",
+    "unknown": "Unknown error",
+    "useformfieldShouldBeUsedWithinFormField": "useFormField should be used within <FormField>"
+  },
+  "labels": {
+    "aboutMeetily": "About Meetily",
+    "aiSummary": "Ai Summary",
+    "chunksCompleted": "chunks completed",
+    "chunksHaveBeenTranscribed": "chunks have been transcribed.",
+    "complete": "% complete",
+    "confirmDelete": "Confirm Delete",
+    "developerConsole": "Developer Console",
+    "estimatedTimeRemaining": "Estimated time remaining:",
+    "informParticipantsAboutRecording": "Inform participants about recording.",
+    "modelsAvailable": "models available",
+    "modelsRunLocallyNoInternetRequiredForTranscription": "✓ Models run locally - no internet required for transcription",
+    "recentChunks": "Recent Chunks (",
+    "toggleConsole": "Toggle Console",
+    "usComplianceRequired": "US compliance required",
+    "viewMeeting": "View Meeting"
+  },
+  "messages": {
+    "meetingRecoveredSuccessfully": "Meeting recovered successfully!",
+    "modelReadyClosingWindow": "Model ready! Closing window..."
+  },
+  "status": {
+    "downloadCompletedLoadingModel": "✓ Download completed, loading model...",
+    "downloadingValue": "Downloading {{modelName}}",
+    "finalizingTranscription": "Finalizing transcription...",
+    "processing": "processing)",
+    "processingCompletedAll": "Processing completed! All",
+    "processingProgress": "Processing Progress",
+    "recordingNotice": "Recording Notice",
+    "savingTranscript": "Saving transcript...",
+    "success": "Success!"
+  }
+}

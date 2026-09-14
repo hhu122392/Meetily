@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "replacement_rule": "Copy this file and set template_only to false only after all seven named snapshots were captured from the same release commit and snapshot config. The verifier requires exactly before_install, after_install, before_upgrade, after_upgrade, after_uninstall, before_rollback, and after_rollback with the fixed transition mapping below.",
+  "uninstall_policy": "The default verified policy retains MOSS data. Deleting MOSS data is a separate explicit cleanup operation and may remove only files listed in its manifest.",
+  "transitions": [
+    {
+      "id": "install",
+      "before": "before_install",
+      "after": "after_install",
+      "assertions": [
+        { "root": "recordings", "mode": "exact" },
+        { "root": "database", "mode": "sqlite_preserve" },
+        { "root": "settings", "mode": "json_preserve" },
+        { "root": "templates", "mode": "exact" },
+        { "root": "whisper_models", "mode": "exact" },
+        { "root": "parakeet_models", "mode": "exact" },
+        { "root": "qwen_models", "mode": "exact" },
+        { "root": "gemma_models", "mode": "exact" },
+        { "root": "moss_data", "mode": "manifest_exact", "manifest_root": "moss_data" },
+        { "root": "application", "mode": "manifest_exact", "manifest_root": "application" },
+        { "root": "application", "mode": "no_moss_assets" }
+      ]
+    },
+    {
+      "id": "upgrade",
+      "before": "before_upgrade",
+      "after": "after_upgrade",
+      "assertions": [
+        { "root": "recordings", "mode": "exact" },
+        { "root": "database", "mode": "sqlite_preserve" },
+        { "root": "settings", "mode": "json_preserve" },
+        { "root": "templates", "mode": "exact" },
+        { "root": "whisper_models", "mode": "exact" },
+        { "root": "parakeet_models", "mode": "exact" },
+        { "root": "qwen_models", "mode": "exact" },
+        { "root": "gemma_models", "mode": "exact" },
+        { "root": "moss_data", "mode": "manifest_exact", "manifest_root": "moss_data" },
+        { "root": "application", "mode": "manifest_exact", "manifest_root": "application" },
+        { "root": "application", "mode": "no_moss_assets" }
+      ]
+    },
+    {
+      "id": "uninstall",
+      "before": "after_upgrade",
+      "after": "after_uninstall",
+      "assertions": [
+        { "root": "recordings", "mode": "exact" },
+        { "root": "database", "mode": "sqlite_preserve" },
+        { "root": "settings", "mode": "json_preserve" },
+        { "root": "templates", "mode": "exact" },
+        { "root": "whisper_models", "mode": "exact" },
+        { "root": "parakeet_models", "mode": "exact" },
+        { "root": "qwen_models", "mode": "exact" },
+        { "root": "gemma_models", "mode": "exact" },
+        { "root": "moss_data", "mode": "exact" },
+        { "root": "application", "mode": "absent" }
+      ]
+    },
+    {
+      "id": "rollback",
+      "before": "before_rollback",
+      "after": "after_rollback",
+      "assertions": [
+        { "root": "recordings", "mode": "exact" },
+        { "root": "database", "mode": "sqlite_preserve" },
+        { "root": "settings", "mode": "json_preserve" },
+        { "root": "templates", "mode": "exact" },
+        { "root": "whisper_models", "mode": "exact" },
+        { "root": "parakeet_models", "mode": "exact" },
+        { "root": "qwen_models", "mode": "exact" },
+        { "root": "gemma_models", "mode": "exact" },
+        { "root": "moss_data", "mode": "exact" },
+        { "root": "application", "mode": "changed" },
+        { "root": "application", "mode": "nonempty" },
+        { "root": "application", "mode": "no_moss_assets" }
+      ]
+    }
+  ]
+}

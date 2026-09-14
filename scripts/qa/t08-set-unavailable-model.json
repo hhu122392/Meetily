@@ -1,0 +1,10 @@
+{
+  "command": "api_save_model_config",
+  "payload": {
+    "provider": "builtin-ai",
+    "model": "gemma3:1b",
+    "whisperModel": "large-v3-turbo-q5_0",
+    "apiKey": null,
+    "ollamaEndpoint": null
+  }
+}

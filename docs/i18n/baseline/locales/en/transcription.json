@@ -1,0 +1,102 @@
+{
+  "accessibility": {
+    "lockToPreventEditing": "Lock to prevent editing",
+    "noTranscriptAvailable": "No transcript available",
+    "pickSummaryLanguage": "Pick summary language",
+    "retranscribeToEnhanceYourRecordedAudio": "Retranscribe to enhance your recorded audio",
+    "transcriptionConfidenceValue": "Transcription confidence: {{confidencePercent}}%",
+    "unlockToEdit": "Unlock to edit",
+    "valueConfidenceValue": "{{confidencePercent}}% confidence - {{label}}"
+  },
+  "actions": {
+    "cancelDownload": "Cancel download",
+    "copyTranscript": "Copy Transcript",
+    "deleteModelToFreeUpSpace": "Delete model to free up space",
+    "openRecordingFolder": "Open Recording Folder",
+    "startRecordingToSeeLiveTranscription": "Start recording to see live transcription"
+  },
+  "descriptions": {
+    "allAudioWillBeAutomaticallyTranslatedToEnglishBestFor": "All audio will be automatically translated to English. Best for multilingual meetings where you need English output.",
+    "balancedAccuracyAndSpeedGoodForMostUseCases": "Balanced accuracy and speed. Good for most use cases.",
+    "bestAccuracyWithImprovedSpeed": "Best accuracy with improved speed.",
+    "fastestProcessingGoodForRealTimeUse": "Fastest processing, good for real-time use.",
+    "fastProcessingWithGoodQualityGreatForQuickTranscription": "Fast processing with good quality. Great for quick transcription.",
+    "goodBalanceOfSpeedAndAccuracy": "Good balance of speed and accuracy.",
+    "highestAccuracyBestForImportantMeetingsSlowerProcessing": "Highest accuracy, best for important meetings. Slower processing.",
+    "modelDownloadedAndReadyToUse": "Model downloaded and ready to use",
+    "modelRemovedToFreeUpSpace": "Model removed to free up space",
+    "parakeetCurrentlyOnlySupportsAutomaticLanguageDetectionManualLanguageSelection": "Parakeet currently only supports automatic language detection. Manual language selection is not available. Use Whisper if you need to specify a particular language.",
+    "quantizedBaseModelGoodSpeedAccuracyBalance": "Quantized base model, good speed/accuracy balance.",
+    "quantizedLargeModelBestBalanceOfSpeedAndAccuracy": "Quantized large model, best balance of speed and accuracy.",
+    "quantizedLargeTurboModelBestBalance": "Quantized large turbo model, best balance.",
+    "quantizedMediumModelProfessionalQualityWithBetterSpeed": "Quantized medium model, professional quality with better speed.",
+    "quantizedSmallModelFasterThanF16Version": "Quantized small model, faster than f16 version.",
+    "quantizedTinyModel50FasterProcessing": "Quantized tiny model, ~50% faster processing.",
+    "realTimeOnM4MaxOptimizedForSpeed": "Real time on M4 Max, optimized for speed",
+    "text20xRealTimeOnM4MaxHigherPrecision": "20x real-time on M4 Max, higher precision",
+    "text25xRealTimeSmallerSizeWithGoodAccuracy": "25x real-time, smaller size with good accuracy",
+    "thisMayTakeAFewMinutes": "This may take a few minutes",
+    "transcriptionLanguageSetToValue": "Transcription language set to {{languageName}}"
+  },
+  "errors": {
+    "failedToCancelDownload": "Failed to cancel download",
+    "failedToDeleteValue": "Failed to delete {{displayName}}",
+    "failedToDownloadValue": "Failed to download {{displayName}}",
+    "failedToLoadMeetingDetails": "Failed to load meeting details",
+    "failedToLoadModels": "Failed to load models",
+    "failedToLoadTranscriptionModels": "Failed to load transcription models",
+    "failedToLoadTranscripts": "Failed to load transcripts",
+    "failedToSaveLanguagePreference": "Failed to save language preference",
+    "failedToSetupTranscriptListenerCheckConsoleForDetails": "Failed to setup transcript listener. Check console for details."
+  },
+  "labels": {
+    "advancedModels": "Advanced Models",
+    "allLanguages": "All Languages",
+    "apiKey": "API Key",
+    "autoDetectMayProduceIncorrectResults": "⚠️ Auto Detect may produce incorrect results",
+    "autoDetectOriginalLanguage": "Auto Detect (Original Language)",
+    "autoDetectTranslateToEnglish": "Auto Detect (Translate to English)",
+    "balanced": "Balanced+",
+    "clickResumeToContinueRecording": "Click resume to continue recording",
+    "forBestAccuracySelectYourSpecificLanguageEGEnglish": "For best accuracy, select your specific language (e.g., English, Spanish, etc.)",
+    "forTranscription": "for transcription",
+    "fullPrecision": "Full Precision",
+    "int8Quantized": "Int8 Quantized",
+    "localWhisperHighAccuracy": "🏠 Local Whisper (High Accuracy)",
+    "noMatches": "No matches",
+    "otherLanguages": "Other Languages",
+    "parakeetLanguageSupport": "ℹ️ Parakeet Language Support",
+    "parakeetRecommendedRealTimeAccurate": "⚡ Parakeet (Recommended - Real-time / Accurate)",
+    "recentlyUsed": "Recently Used",
+    "speakToSeeLiveTranscription": "Speak to see live transcription",
+    "transcriptionLanguage": "Transcription Language",
+    "transcriptionWillBeOptimizedFor": "Transcription will be optimized for",
+    "transcriptModel": "Transcript Model",
+    "translationModeActive": "🌐 Translation Mode Active",
+    "welcomeToMeetily": "Welcome to meetily!"
+  },
+  "messages": {
+    "downloadingValue": "Downloading {{displayName}}...",
+    "languagePreferenceSaved": "Language preference saved",
+    "parakeetModelReady": "{{icon}} {{model}} ready!",
+    "retranscriptionComplete_one": "Retranscription complete! {{count}} segment created.",
+    "retranscriptionComplete_other": "Retranscription complete! {{count}} segments created.",
+    "switchedToValue": "Switched to {{displayName}}",
+    "transcriptCopiedToClipboard": "Transcript copied to clipboard",
+    "valueDeleted": "{{displayName}} deleted",
+    "valueDownloadCancelled": "{{displayName}} download cancelled",
+    "whisperModelReady": "{{icon}} {{model}} ready!"
+  },
+  "placeholders": {
+    "addContextForAISummaryForExamplePeopleInvolvedMeeting": "Add context for AI summary. For example people involved, meeting overview, objective etc...",
+    "enterYourAPIKey": "Enter your API key",
+    "searchLanguage": "Search language...",
+    "selectModel": "Select model",
+    "selectProvider": "Select provider"
+  },
+  "status": {
+    "listeningForSpeech": "Listening for speech...",
+    "loadingMore": "Loading more...",
+    "recordingPaused": "Recording paused"
+  }
+}

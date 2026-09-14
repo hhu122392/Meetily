@@ -1,0 +1,102 @@
+{
+  "accessibility": {
+    "actionItems": "Action Items",
+    "audioAvailable": "Audio available",
+    "noAudio": "No audio",
+    "productReview": "Product Review",
+    "projectIdeas": "Project Ideas",
+    "teamSyncDec26": "Team Sync - Dec 26"
+  },
+  "actions": {
+    "copy": "Copy",
+    "enhanceTranscript": "Enhance",
+    "openRecordingFolder": "Open recording folder",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "selectAMeetingToPreview": "Select a meeting to preview",
+    "selectASpecificLanguageToImproveAccuracyOrUseAuto": "Select a specific language to improve accuracy, or use auto-detect",
+    "startRetranscription": "Start Retranscription",
+    "tryAgain": "Try Again"
+  },
+  "descriptions": {
+    "addSummaryContext": "Supplementary context (free text): people involved, meeting overview, objective. Used for this summary request only; it is not written into the meeting record.",
+    "theRecoveredMeetingWasSavedButTheDefaultSummaryLanguage": "The recovered meeting was saved, but the default summary language was not applied.",
+    "usingValueTemplateForSummaryGeneration": "Using \"{{templateName}}\" template for summary generation"
+  },
+  "errors": {
+    "failedToLoadMeeting": "Failed to load meeting details",
+    "failedToOpenRecordingFolder": "Failed to open recording folder",
+    "couldNotApplyDefaultSummaryLanguage": "Could not apply default summary language",
+    "failedToCopySummary": "Failed to copy summary",
+    "failedToDeleteMeetingPleaseTryAgain": "Failed to delete meeting. Please try again.",
+    "failedToFetchTranscriptsForCopying": "Failed to fetch transcripts for copying",
+    "failedToRecoverMeetingPleaseTryAgain": "Failed to recover meeting. Please try again.",
+    "failedToSaveChanges": "Failed to save changes",
+    "failedToSaveMeetingSummaryUnknownError": "Failed to save meeting summary: Unknown error",
+    "failedToSaveMeetingTitleUnknownError": "Failed to save meeting title: Unknown error",
+    "failedToSaveModelConfigUnknownError": "Failed to save model config: Unknown error",
+    "failedToSaveModelSettings": "Failed to save model settings",
+    "failedToSaveSummarySettings": "Failed to save summary settings",
+    "meetingFolderPathNotAvailable": "Meeting folder path not available",
+    "meetingMetadataNotFound": "Meeting metadata not found",
+    "noMeetingSelected": "No meeting selected",
+    "noTranscriptAvailable": "No transcript available",
+    "noTranscriptsAvailableToCopy": "No transcripts available to copy",
+    "noSummaryContentAvailableToCopy": "No summary content available to copy",
+    "noTranscriptsFoundForThisMeeting": "No transcripts found for this meeting"
+  },
+  "export": {
+    "copiedOn": "Copied on",
+    "date": "Date",
+    "meetingId": "Meeting ID",
+    "summaryTitle": "Meeting Summary: {{title}}",
+    "transcriptTitle": "Meeting transcript: {{title}}"
+  },
+  "labels": {
+    "anErrorOccurredDuringRetranscription": "An error occurred during retranscription",
+    "areYouSureYouWantToDeleteThisMeetingThis": "Are you sure you want to delete this meeting? This cannot be undone.",
+    "chooseATranscriptionModel": "Choose a transcription model",
+    "goBack": "Go Back",
+    "interruptedMeetings": "Interrupted Meetings",
+    "interruptedSelectAMeetingToPreviewAndRecoverIt": "interrupted. Select a meeting to preview and recover it.",
+    "languageSelectionIsnTSupportedForParakeetItAlwaysUses": "Language selection isn't supported for Parakeet. It always uses automatic detection.",
+    "mb": "MB)",
+    "moreTranscript": "more transcript",
+    "noFolderPathAvailable": "No folder path available",
+    "noteNotFound": "Note not found",
+    "noTranscriptsToPreview": "No transcripts to preview",
+    "recording": "Recording",
+    "recoverInterruptedMeetings": "Recover Interrupted Meetings",
+    "reProcessTheAudioWithDifferentLanguageSettings": "Re-process the audio with different language settings",
+    "retranscribeMeeting": "Retranscribe Meeting",
+    "retranscriptionFailed": "Retranscription Failed",
+    "showingFirst": "Showing first",
+    "total": "total)",
+    "transcriptSegmentsOf": "transcript segments (of",
+    "weFound": "We found"
+  },
+  "messages": {
+    "changesSavedSuccessfully": "Changes saved successfully",
+    "noChangesToSave": "Nothing to save — no changes detected",
+    "modelSettingsSavedSuccessfully": "Model settings saved successfully",
+    "retranscriptionCancelled": "Retranscription cancelled",
+    "summaryCopiedToClipboard": "Summary copied to clipboard",
+    "summarySettingsSavedSuccessfully": "Summary settings Saved successfully",
+    "templateSelected": "Template selected",
+    "transcriptCopiedToClipboard": "Transcript copied to clipboard"
+  },
+  "accessibilityActions": {
+    "copySummary": "Copy summary",
+    "copyTranscript": "Copy transcript",
+    "enhanceRecordedAudio": "Retranscribe to enhance your recorded audio",
+    "saveChanges": "Save changes"
+  },
+  "placeholders": {
+    "loadingModels": "Loading models...",
+    "selectLanguage": "Select language",
+    "selectModel": "Select model"
+  },
+  "status": {
+    "loadingPreview": "Loading preview..."
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "policy": "Keep exact terms, protocol identifiers, model IDs, URLs, file extensions, command names, storage keys, and code samples unchanged unless a product owner explicitly approves a localized display alias.",
+  "exactTerms": [
+    "Meetily",
+    "Whisper",
+    "Parakeet",
+    "Ollama",
+    "OpenAI",
+    "OpenRouter",
+    "Claude",
+    "Groq",
+    "Deepgram",
+    "ElevenLabs",
+    "FFmpeg",
+    "BlackHole",
+    "Tauri",
+    "Next.js",
+    "React",
+    "i18next",
+    "API",
+    "API Key",
+    "URL",
+    "JSON",
+    "Markdown",
+    "GitHub",
+    "macOS",
+    "Windows",
+    "Linux"
+  ],
+  "fileExtensions": [
+    "MP3",
+    "WAV",
+    "MP4",
+    "FLAC",
+    "OGG",
+    "MKV",
+    "WebM",
+    "WMA",
+    "JSON",
+    "GGUF"
+  ],
+  "codeAndProtocolPatterns": [
+    "Tauri command IDs such as set_language_preference",
+    "event IDs such as request-recording-toggle",
+    "storage keys such as primaryLanguage and meetily.uiLocale",
+    "model IDs and tags such as gemma3:1b",
+    "URLs, filesystem paths, hashes, version strings, MIME types, environment variables, and CLI flags"
+  ],
+  "displayRule": "A surrounding label or explanation may be translated; the exact protected token remains unchanged."
+}

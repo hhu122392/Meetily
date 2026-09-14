@@ -1,0 +1,111 @@
+{
+  "accessibility": {
+    "closeNotification": "Close notification",
+    "gettingThingsReady": "Getting things ready",
+    "intelligentSummariesAndInsights": "Intelligent summaries & insights",
+    "nextStep": "Go to the next setup step",
+    "notifications": "Notifications",
+    "previousStep": "Go to the previous setup step",
+    "setupOverview": "Setup Overview",
+    "stepProgress": "Setup step {{step}} of {{total}}",
+    "welcomeToMeetily": "Welcome to Meetily",
+    "worksOfflineNoCloudRequired": "Works offline, no cloud required",
+    "yourDataNeverLeavesYourDevice": "Your data never leaves your device"
+  },
+  "actions": {
+    "checking": "Checking...",
+    "continue": "Continue",
+    "downloadError": "Download Error",
+    "downloadSummarizationEngine": "Download Summarization Engine",
+    "downloadTranscriptionEngine": "Download Transcription Engine",
+    "downloadWillContinueInTheBackground": "Download will continue in the background.",
+    "enable": "Enable",
+    "finishSetup": "Finish Setup",
+    "getStarted": "Get Started",
+    "grantPermissions": "Grant Permissions",
+    "iLlDoThisLater": "I'll do this later",
+    "letSGo": "Let's Go",
+    "openMicrophoneSettings": "Open Microphone Settings",
+    "openScreenRecordingSettings": "Open Screen Recording Settings",
+    "openSettings": "Open Settings",
+    "recheck": "Recheck",
+    "reportIssuesOnGitHub": "Report issues on GitHub",
+    "tryAgain": "Try Again"
+  },
+  "descriptions": {
+    "clickEnableToGrantAudioCapturePermission": "Click Enable to grant Audio Capture permission",
+    "configureAudioRouting": "Configure your audio routing in Audio MIDI Setup",
+    "downloadStillRunning": "Download will continue in the background.",
+    "finishOnboardingBeforeRecording": "You need to finish onboarding before you can start recording.",
+    "grantScreenRecordingPermission": "Grant Screen Recording permission to Meetily",
+    "installVirtualAudioDevice": "Install a virtual audio device (for example, BlackHole 2ch)",
+    "meetilyNeedsAccessToYourMicrophoneAndSystemAudioTo": "Meetily needs access to your microphone and system audio to record meetings.",
+    "meetilyNeedsMicrophoneNoDevices": "Meetily needs access to your microphone to record meetings. No microphone devices were detected.",
+    "meetilyRequiresThatYouDownloadTheTranscriptionAndSummarizationAI": "Meetily requires the Transcription and Summarization AI models before it can work.",
+    "microphoneConnected": "Your microphone is connected and powered on",
+    "microphoneNotExclusive": "No other app is exclusively using the microphone",
+    "microphonePermissionGranted": "Microphone permission is granted in System Settings",
+    "pleaseCheckYourConnectionAndTryAgain": "Please check your connection and try again.",
+    "pleaseEnableAudioCaptureInSystemSettingsPrivacyAndSecurity": "Please enable Audio Capture in System Settings → Privacy & Security → Audio Capture.",
+    "pleaseEnableMicrophoneAccessInSystemPreferencesSecurityAndPrivacy": "Please enable microphone access in System Preferences → Security & Privacy → Microphone.",
+    "pleaseRetryTheDownloadBeforeContinuing": "Please retry the download before continuing.",
+    "pleaseTryAgain": "Please try again.",
+    "recordTranscribeSummarizeAllOnYourDevice": "Record. Transcribe. Summarize. All on your device.",
+    "requiredToCaptureYourVoiceDuringMeetings": "Required to capture your voice during meetings",
+    "systemAudioAlsoUnavailable": "System audio capture is also not available.",
+    "systemAudioUnavailableMicrophoneWorks": "System audio capture is not available. You can still record with your microphone, but computer audio won't be captured.",
+    "youCanAlsoSelectExternalAIProvidersLikeOpenAIClaude": "You can also select external AI providers such as OpenAI, Claude, or Ollama for summary generation in Settings.",
+    "youCanStartUsingMeetilyAfterDownloadingTheTranscriptionEngine": "You can start using Meetily after downloading the Transcription Engine.",
+    "youCanStartUsingTheAppRecordingWillBeAvailable": "You can start using the app. Recording will be available once speech recognition is ready."
+  },
+  "errors": {
+    "completeSetupBeforeRecording": "Please complete setup first",
+    "downloadRetryFailed": "Download retry failed",
+    "failedToCompleteSetup": "Failed to complete setup",
+    "summaryModelDownloadRetryFailed": "Summary model download retry failed",
+    "summaryModelRecommendationIsNotReadyYet": "Summary model recommendation is not ready yet",
+    "transcriptionEngineRequired": "Transcription engine required"
+  },
+  "downloadErrors": {
+    "generic": "Download failed. Please try again.",
+    "network": "Network error — Check your internet connection.",
+    "server": "Server error — Download is temporarily unavailable.",
+    "storage": "Storage error — Check the available disk space.",
+    "validation": "File validation failed — Please retry the download."
+  },
+  "labels": {
+    "accessDeniedPleaseGrantInSystemSettings": "Access Denied — Please grant access in System Settings",
+    "accessGranted": "Access Granted",
+    "completed": "Completed",
+    "failed": "Failed",
+    "microphone": "Microphone",
+    "microphonePermissionRequired": "Microphone Permission Required",
+    "permissionsRequired": "Permissions Required",
+    "pleaseCheck": "Please check:",
+    "summaryEngine": "Summary Engine",
+    "systemAudio": "System Audio",
+    "systemAudioPermissionRequired": "System Audio Permission Required",
+    "takesLessThan3Minutes": "Takes less than 3 minutes",
+    "toEnableSystemAudioOnMacos": "To enable system audio on macOS:",
+    "transcriptionEngine": "Transcription Engine",
+    "transcriptionModelParakeet": "Transcription Model (Parakeet)",
+    "waiting": "Waiting...",
+    "youCanContinueWhileThisFinishes": "You can continue while this finishes"
+  },
+  "messages": {
+    "downloadsWillContinueInTheBackground": "Downloads will continue in the background",
+    "summaryModel": "Summary Model ({{model}})",
+    "stepWithTitle": "Step {{step}}: {{title}}"
+  },
+  "progress": {
+    "approximateSize": "~{{size}} {{unit}}",
+    "downloaded": "{{downloaded}} {{unit}} / {{total}} {{unit}}",
+    "speed": "{{speed}} {{unit}}/s"
+  },
+  "status": {
+    "downloadCancelled": "Download cancelled",
+    "downloadComplete": "Download complete",
+    "loadingSetup": "Loading setup...",
+    "recordingWonTWorkWithoutPermissionsYouCanGrantThem": "Recording won't work without permissions. You can grant them later in Settings."
+  }
+}

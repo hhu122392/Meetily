@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "phase": "15.11 / Stage 5A-3",
+  "candidateScope": "Windows Sandbox only",
+  "productionInstallAllowed": false,
+  "productIdentity": {
+    "productName": "meetily",
+    "version": "0.4.1",
+    "identifier": "com.meetily.ai",
+    "nsisInstallMode": "currentUser",
+    "silentDowngradeHook": "frontend/src-tauri/scripts/nsis-installer-hooks.nsh"
+  },
+  "source": {
+    "branch": "codex/meetily-i18n-phase5a3",
+    "buildStartedAtCommit": "0c73623e5ed775efe0e4833c848ac207efb581e3",
+    "buildCompletedAtCommit": "42adb0e2e9e33ab4628a536a50bde6ad78c133d4",
+    "productSourceChangedBetweenCommits": false,
+    "candidateConfig": "frontend/src-tauri/tauri.phase5a3.conf.json"
+  },
+  "dependencyRestore": {
+    "command": "pnpm install --offline --frozen-lockfile",
+    "resolved": 882,
+    "reused": 882,
+    "downloaded": 0,
+    "exitCode": 0
+  },
+  "build": {
+    "command": "pnpm exec tauri build --bundles nsis --config src-tauri/tauri.phase5a3.conf.json --no-sign --ci",
+    "frontendStaticPages": "13/13",
+    "rustReleaseBuildElapsed": "143m 07s",
+    "exitCode": 0,
+    "signingRequested": false,
+    "signatureStatus": "NotSigned"
+  },
+  "inputs": {
+    "ffmpeg": {
+      "bytes": 99264000,
+      "sha256": "5AF82A0D4FE2B9EAE211B967332EA97EDFC51C6B328CA35B827E73EAC560DC0D"
+    },
+    "llamaHelper": {
+      "bytes": 3773440,
+      "sha256": "EE4E303B64603DFF8369644EDF3792ADD1948605C62F3BEC66A2549757EF97EC"
+    }
+  },
+  "artifacts": {
+    "executable": {
+      "path": "target-phase5a3-build/artifacts/meetily-0.4.1.exe",
+      "bytes": 65776128,
+      "sha256": "4A1B762599ED79108DCE6FA56EF41162E11AF91723B34CC688E3F32567C3555A",
+      "productName": "meetily",
+      "productVersion": "0.4.1",
+      "signatureStatus": "NotSigned"
+    },
+    "installer": {
+      "path": "target-phase5a3-build/artifacts/meetily_0.4.1_x64-setup.exe",
+      "bytes": 43986293,
+      "sha256": "AD6D1B4B702873CBECBAD9CADD4F7166BC2C505DE70ACFCA226E1F8C46EF79EC",
+      "productName": "meetily",
+      "productVersion": "0.4.1",
+      "signatureStatus": "NotSigned"
+    },
+    "installerPayloadExecutable": {
+      "derivation": "Installed from the frozen NSIS candidate in disposable Windows Sandbox and copied back before launch",
+      "path": "target-phase5a3-build/artifacts/meetily-0.4.1-nsis-payload.exe",
+      "bytes": 65776128,
+      "sha256": "4B35A0398F49A0CC514791888D8857A2D9F576794ECC8120B401D4FDC419DFBD",
+      "productName": "meetily",
+      "productVersion": "0.4.1",
+      "signatureStatus": "NotSigned",
+      "matchesStandaloneExecutable": false,
+      "differenceFromStandalone": {
+        "differingBytes": 3,
+        "offsetDecimal": 53478442,
+        "offsetHex": "0x330042A",
+        "standaloneBytesHexAscii": "554E4B / UNK",
+        "installerPayloadBytesHexAscii": "4E5353 / NSS",
+        "meaning": "Tauri bundle-type marker changes from Unknown to NSIS"
+      },
+      "disposition": "Expected Tauri NSIS bundle-type marker patch; both identities are frozen and independently asserted during 5A-3."
+    }
+  },
+  "formalFrozenArtifacts": {
+    "executable": {
+      "path": "target/release/meetily.exe",
+      "sha256": "1873D2CCA9B06EEBE8B2D42DC8530B6888BCB91C4267BBD6E6724F6A78257823",
+      "unchanged": true
+    },
+    "installer": {
+      "path": "target/release/bundle/nsis/meetily_0.4.0_x64-setup.exe",
+      "sha256": "C6A5BD12F947AEDECAC890C33A48FDEA94E4C11C29FCA03EEF753C25AEE30434",
+      "unchanged": true
+    }
+  }
+}

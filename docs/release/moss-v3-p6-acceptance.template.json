@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "replacement_rule": "Copy this file, set template_only to false, and replace every __REQUIRED_* value with a real wrapper command or relative evidence path before execution.",
+  "scenarios": [
+    {
+      "id": "live-bubbles",
+      "argv": ["__REQUIRED_COMMAND__", "live-bubbles"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/live-bubbles.json"]
+    },
+    {
+      "id": "stop-convergence",
+      "argv": ["__REQUIRED_COMMAND__", "stop-convergence"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/stop-convergence.json"]
+    },
+    {
+      "id": "manual-edit-persistence",
+      "argv": ["__REQUIRED_COMMAND__", "manual-edit-persistence"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/manual-edit-persistence.json"]
+    },
+    {
+      "id": "moss-progress",
+      "argv": ["__REQUIRED_COMMAND__", "moss-progress"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/moss-progress.json"]
+    },
+    {
+      "id": "moss-cancel",
+      "argv": ["__REQUIRED_COMMAND__", "moss-cancel"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/moss-cancel.json"]
+    },
+    {
+      "id": "candidate-review",
+      "argv": ["__REQUIRED_COMMAND__", "candidate-review"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/candidate-review.json"]
+    },
+    {
+      "id": "term-correction-positive",
+      "argv": ["__REQUIRED_COMMAND__", "term-correction-positive"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/term-correction-positive.json"]
+    },
+    {
+      "id": "term-correction-negative",
+      "argv": ["__REQUIRED_COMMAND__", "term-correction-negative"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/term-correction-negative.json"]
+    },
+    {
+      "id": "person-binding-and-segment-correction",
+      "argv": ["__REQUIRED_COMMAND__", "person-binding-and-segment-correction"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/person-binding-and-segment-correction.json"]
+    },
+    {
+      "id": "restart-persistence",
+      "argv": ["__REQUIRED_COMMAND__", "restart-persistence"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/restart-persistence.json"]
+    },
+    {
+      "id": "activate-moss",
+      "argv": ["__REQUIRED_COMMAND__", "activate-moss"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/activate-moss.json"]
+    },
+    {
+      "id": "qwen-2b-summary",
+      "argv": ["__REQUIRED_COMMAND__", "qwen-2b-summary"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/qwen-2b-summary.json"]
+    },
+    {
+      "id": "needs-review-conflict",
+      "argv": ["__REQUIRED_COMMAND__", "needs-review-conflict"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/needs-review-conflict.json"]
+    },
+    {
+      "id": "rollback-to-whisper",
+      "argv": ["__REQUIRED_COMMAND__", "rollback-to-whisper"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/rollback-to-whisper.json"]
+    },
+    {
+      "id": "reactivate-moss",
+      "argv": ["__REQUIRED_COMMAND__", "reactivate-moss"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/reactivate-moss.json"]
+    },
+    {
+      "id": "offline-release-chain",
+      "argv": ["__REQUIRED_COMMAND__", "offline-release-chain"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 3600,
+      "prechecks": [
+        {
+          "id": "network-blocked-before",
+          "argv": [
+            "python",
+            "scripts/qa/moss_v3_p6_network_probe.py",
+            "--mode",
+            "blocked",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_1__:__REQUIRED_PORT_1__",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_2__:__REQUIRED_PORT_2__",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_3__:__REQUIRED_PORT_3__",
+            "--output",
+            "__REQUIRED_RESULTS_DIR__/network-blocked-before.json"
+          ],
+          "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+          "expected_exit_codes": [0],
+          "timeout_seconds": 30
+        }
+      ],
+      "postchecks": [
+        {
+          "id": "network-blocked-after",
+          "argv": [
+            "python",
+            "scripts/qa/moss_v3_p6_network_probe.py",
+            "--mode",
+            "blocked",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_1__:__REQUIRED_PORT_1__",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_2__:__REQUIRED_PORT_2__",
+            "--endpoint",
+            "__REQUIRED_PUBLIC_IP_3__:__REQUIRED_PORT_3__",
+            "--output",
+            "__REQUIRED_RESULTS_DIR__/network-blocked-after.json"
+          ],
+          "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+          "expected_exit_codes": [0],
+          "timeout_seconds": 30
+        }
+      ],
+      "evidence_files": [
+        "__REQUIRED_RESULTS_DIR__/network-reachable-control.json",
+        "__REQUIRED_RESULTS_DIR__/network-blocked-before.json",
+        "__REQUIRED_RESULTS_DIR__/offline-release-chain.json",
+        "__REQUIRED_RESULTS_DIR__/network-blocked-after.json"
+      ]
+    },
+    {
+      "id": "forced-exit-recovery",
+      "argv": ["__REQUIRED_COMMAND__", "forced-exit-recovery"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/forced-exit-recovery.json"]
+    },
+    {
+      "id": "network-failure-preserves-data",
+      "argv": ["__REQUIRED_COMMAND__", "network-failure-preserves-data"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/network-failure-preserves-data.json"]
+    },
+    {
+      "id": "corrupt-model-preserves-data",
+      "argv": ["__REQUIRED_COMMAND__", "corrupt-model-preserves-data"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/corrupt-model-preserves-data.json"]
+    },
+    {
+      "id": "summary-failure-preserves-data",
+      "argv": ["__REQUIRED_COMMAND__", "summary-failure-preserves-data"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/summary-failure-preserves-data.json"]
+    },
+    {
+      "id": "process-release-before-summary",
+      "argv": ["__REQUIRED_COMMAND__", "process-release-before-summary"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/process-release-before-summary.json"]
+    },
+    {
+      "id": "windows-fresh-install",
+      "argv": ["__REQUIRED_COMMAND__", "windows-fresh-install"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/windows-fresh-install.json"]
+    },
+    {
+      "id": "windows-upgrade",
+      "argv": ["__REQUIRED_COMMAND__", "windows-upgrade"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/windows-upgrade.json"]
+    },
+    {
+      "id": "windows-uninstall",
+      "argv": ["__REQUIRED_COMMAND__", "windows-uninstall"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/windows-uninstall.json"]
+    },
+    {
+      "id": "windows-version-rollback",
+      "argv": ["__REQUIRED_COMMAND__", "windows-version-rollback"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/windows-version-rollback.json"]
+    },
+    {
+      "id": "release-data-drive-placement",
+      "argv": ["__REQUIRED_COMMAND__", "release-data-drive-placement"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 1800,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/release-data-drive-placement.json"]
+    },
+    {
+      "id": "long-audio-3096-complete",
+      "argv": ["__REQUIRED_COMMAND__", "long-audio-3096-complete"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 7200,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/long-audio-3096-complete.json"]
+    },
+    {
+      "id": "business-audio-737-chain",
+      "argv": ["__REQUIRED_COMMAND__", "business-audio-737-chain"],
+      "cwd": "__REQUIRED_RELEASE_CHECKOUT__",
+      "expected_exit_codes": [0],
+      "timeout_seconds": 3600,
+      "evidence_files": ["__REQUIRED_RESULTS_DIR__/business-audio-737-chain.json"]
+    }
+  ]
+}
