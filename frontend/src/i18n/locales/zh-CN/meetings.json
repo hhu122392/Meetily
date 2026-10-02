@@ -19,7 +19,8 @@
     "tryAgain": "重试"
   },
   "descriptions": {
-    "addSummaryContext": "补充背景（自由文本）：参与人员、会议概况、目标等。会随本次摘要请求一起使用，不会写入会议记录。",
+    "addSummaryContext": "例如：参会人员、会议目标、希望重点关注的问题",
+    "summaryContextNotSaved": "仅用于本次摘要生成，不会写入会议记录。",
     "theRecoveredMeetingWasSavedButTheDefaultSummaryLanguage": "已保存恢复的会议，但未能应用默认摘要语言。",
     "usingValueTemplateForSummaryGeneration": "正在使用“{{templateName}}”模板生成摘要"
   },
@@ -70,6 +71,7 @@
     "reProcessTheAudioWithDifferentLanguageSettings": "使用不同的语言设置重新处理音频",
     "retranscribeMeeting": "重新转写会议",
     "retranscriptionFailed": "重新转写失败",
+    "summaryContext": "摘要补充背景（可选）",
     "showingFirst": "当前显示前",
     "total": "总计）",
     "transcriptSegmentsOf": "条转写片段（共",

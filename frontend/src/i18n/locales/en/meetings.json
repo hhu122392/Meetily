@@ -19,7 +19,8 @@
     "tryAgain": "Try Again"
   },
   "descriptions": {
-    "addSummaryContext": "Supplementary context (free text): people involved, meeting overview, objective. Used for this summary request only; it is not written into the meeting record.",
+    "addSummaryContext": "For example: attendees, meeting objective, or topics to focus on",
+    "summaryContextNotSaved": "Used for this summary request only; it is not written into the meeting record.",
     "theRecoveredMeetingWasSavedButTheDefaultSummaryLanguage": "The recovered meeting was saved, but the default summary language was not applied.",
     "usingValueTemplateForSummaryGeneration": "Using \"{{templateName}}\" template for summary generation"
   },
@@ -70,6 +71,7 @@
     "reProcessTheAudioWithDifferentLanguageSettings": "Re-process the audio with different language settings",
     "retranscribeMeeting": "Retranscribe Meeting",
     "retranscriptionFailed": "Retranscription Failed",
+    "summaryContext": "Supplementary context (optional)",
     "showingFirst": "Showing first",
     "total": "total)",
     "transcriptSegmentsOf": "transcript segments (of",

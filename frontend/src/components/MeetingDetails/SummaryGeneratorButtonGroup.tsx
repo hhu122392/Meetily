@@ -11,6 +11,7 @@ import {
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertTriangle,
   Sparkles,
@@ -55,6 +56,7 @@ interface SummaryGeneratorButtonGroupProps {
   ) => Promise<void>;
   onStopGeneration: () => void;
   customPrompt: string;
+  onCustomPromptChange: (value: string) => void;
   summaryStatus: 'idle' | 'processing' | 'summarizing' | 'regenerating' | 'completed' | 'needs_review' | 'error';
   availableTemplates: TemplateListItem[];
   selectedTemplate: string;
@@ -95,6 +97,7 @@ export function SummaryGeneratorButtonGroup({
   onRegenerateSummary,
   onStopGeneration,
   customPrompt,
+  onCustomPromptChange,
   summaryStatus,
   availableTemplates,
   selectedTemplate,
@@ -120,7 +123,7 @@ export function SummaryGeneratorButtonGroup({
   layout = 'primary',
   languageSlot
 }: SummaryGeneratorButtonGroupProps) {
-  const { t } = useTranslation(['summary', 'meetings']);
+  const { t } = useTranslation(['summary', 'meetings', 'common']);
   const [isCheckingModels, setIsCheckingModels] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [regenerationDialogOpen, setRegenerationDialogOpen] = useState(false);
@@ -129,13 +132,27 @@ export function SummaryGeneratorButtonGroup({
   const [pendingRegeneration, setPendingRegeneration] = useState<
     { kind: 'choose' } | { kind: 'historical'; generationId: string } | null
   >(null);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptDraft, setPromptDraft] = useState(customPrompt);
+  const [pendingHistoricalGenerationId, setPendingHistoricalGenerationId] = useState<string | null>(null);
 
-  const continueGeneration = (mode?: SummaryRegenerationMode) => {
+  const openPromptDialog = (generationId?: string) => {
+    setPromptDraft(customPrompt);
+    setPendingHistoricalGenerationId(generationId ?? null);
+    setPromptDialogOpen(true);
+  };
+
+  const closePromptDialog = () => {
+    setPromptDialogOpen(false);
+    setPendingHistoricalGenerationId(null);
+  };
+
+  const continueGeneration = (mode?: SummaryRegenerationMode, prompt = customPrompt) => {
     if (hasSummary) {
       // P0-4: 重新生成必须把用户填写的补充背景一起带上，否则上下文会被丢掉
-      void onRegenerateSummary(mode ?? 'historical', undefined, customPrompt);
+      void onRegenerateSummary(mode ?? 'historical', undefined, prompt);
     } else {
-      void onGenerateSummary(customPrompt);
+      void onGenerateSummary(prompt);
     }
   };
 
@@ -164,7 +181,7 @@ export function SummaryGeneratorButtonGroup({
     return null;
   }
 
-  const checkBuiltInAIModelsAndGenerate = async (mode?: SummaryRegenerationMode) => {
+  const checkBuiltInAIModelsAndGenerate = async (mode?: SummaryRegenerationMode, prompt = customPrompt) => {
     setIsCheckingModels(true);
     try {
       const selectedModel = modelConfig.model;
@@ -187,7 +204,7 @@ export function SummaryGeneratorButtonGroup({
 
       if (isReady) {
         // Model is available, proceed with generation
-        continueGeneration(mode);
+        continueGeneration(mode, prompt);
         return;
       }
 
@@ -261,20 +278,20 @@ export function SummaryGeneratorButtonGroup({
     }
   };
 
-  const checkOllamaModelsAndGenerate = async (mode?: SummaryRegenerationMode) => {
+  const checkOllamaModelsAndGenerate = async (mode?: SummaryRegenerationMode, prompt = customPrompt) => {
     // The resolved template preference is part of the generation input.
     // Never start with a preference that is still loading or being saved.
     if (isTemplateLoading || isTemplateSaving || templateIssue || templateError) return;
 
     // Handle built-in AI provider
     if (modelConfig.provider === 'builtin-ai') {
-      await checkBuiltInAIModelsAndGenerate(mode);
+      await checkBuiltInAIModelsAndGenerate(mode, prompt);
       return;
     }
 
     // Only check for Ollama provider
     if (modelConfig.provider !== 'ollama') {
-      continueGeneration(mode);
+      continueGeneration(mode, prompt);
       return;
     }
 
@@ -294,7 +311,7 @@ export function SummaryGeneratorButtonGroup({
       }
 
       // Models are available, proceed with generation
-      continueGeneration(mode);
+      continueGeneration(mode, prompt);
     } catch (error) {
       console.error('Error checking Ollama models:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -329,7 +346,8 @@ export function SummaryGeneratorButtonGroup({
 
   const chooseRegenerationMode = async (mode: SummaryRegenerationMode) => {
     setRegenerationDialogOpen(false);
-    await checkOllamaModelsAndGenerate(mode);
+    onCustomPromptChange(promptDraft);
+    await checkOllamaModelsAndGenerate(mode, promptDraft);
   };
 
   const requestRegenerationChoice = () => {
@@ -338,6 +356,7 @@ export function SummaryGeneratorButtonGroup({
       setUnsavedDialogOpen(true);
       return;
     }
+    setPromptDraft(customPrompt);
     setRegenerationDialogOpen(true);
   };
 
@@ -347,7 +366,7 @@ export function SummaryGeneratorButtonGroup({
       setUnsavedDialogOpen(true);
       return;
     }
-    await onRegenerateSummary('historical', generationId);
+    openPromptDialog(generationId);
   };
 
   const cancelUnsavedRegeneration = () => {
@@ -364,13 +383,26 @@ export function SummaryGeneratorButtonGroup({
       setUnsavedDialogOpen(false);
       setPendingRegeneration(null);
       if (next.kind === 'choose') {
+        setPromptDraft(customPrompt);
         setRegenerationDialogOpen(true);
       } else {
-        await onRegenerateSummary('historical', next.generationId);
+        openPromptDialog(next.generationId);
       }
     } finally {
       setSavingUnsavedChanges(false);
     }
+  };
+
+  const confirmPromptedGeneration = async () => {
+    const prompt = promptDraft;
+    const generationId = pendingHistoricalGenerationId;
+    onCustomPromptChange(prompt);
+    closePromptDialog();
+    if (generationId) {
+      await onRegenerateSummary('historical', generationId, prompt);
+      return;
+    }
+    await checkOllamaModelsAndGenerate(undefined, prompt);
   };
 
   // 模型设置弹窗：toolbar 那份是唯一持有者，主按钮那份通过外部入口打开
@@ -493,7 +525,7 @@ export function SummaryGeneratorButtonGroup({
             if (hasSummary) {
               requestRegenerationChoice();
             } else {
-              void checkOllamaModelsAndGenerate();
+              openPromptDialog();
             }
           }}
           disabled={isCheckingModels || isModelConfigLoading || isTemplateLoading || isTemplateSaving || Boolean(templateIssue || templateError)}
@@ -531,8 +563,46 @@ export function SummaryGeneratorButtonGroup({
       {ownsModelSettingsDialog && modelSettingsDialog}
     </ButtonGroup>
     )}
-    {layout === 'primary' && (
-      <>
+    <Dialog open={promptDialogOpen} onOpenChange={(open) => {
+      if (!open) closePromptDialog();
+    }}>
+      <DialogContent className="sm:max-w-lg" data-testid="summary-context-dialog">
+        <DialogTitle>
+          {pendingHistoricalGenerationId || hasSummary
+            ? t('actions.regenerateSummary')
+            : t('labels.generateSummary')}
+        </DialogTitle>
+        <DialogDescription>{t('meetings:descriptions.summaryContextNotSaved')}</DialogDescription>
+        <div className="space-y-2 pt-2">
+          <label htmlFor="summary-context-input" className="text-sm font-medium text-gray-900">
+            {t('meetings:labels.summaryContext')}
+          </label>
+          <Textarea
+            id="summary-context-input"
+            data-testid="summary-context-input"
+            value={promptDraft}
+            onChange={(event) => setPromptDraft(event.target.value)}
+            placeholder={t('meetings:descriptions.addSummaryContext')}
+            rows={4}
+          />
+        </div>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={closePromptDialog}>
+            {t('actions.cancel')}
+          </Button>
+          <Button
+            type="button"
+            data-testid="summary-context-confirm"
+            onClick={() => void confirmPromptedGeneration()}
+          >
+            <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+            {pendingHistoricalGenerationId || hasSummary
+              ? t('actions.regenerateSummary')
+              : t('labels.generateSummary')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     <Dialog open={unsavedDialogOpen} onOpenChange={(open) => {
       if (!open && !savingUnsavedChanges) cancelUnsavedRegeneration();
     }}>
@@ -566,10 +636,26 @@ export function SummaryGeneratorButtonGroup({
         </div>
       </DialogContent>
     </Dialog>
+    {layout === 'primary' && (
+      <>
     <Dialog open={regenerationDialogOpen} onOpenChange={setRegenerationDialogOpen}>
       <DialogContent className="sm:max-w-lg">
         <DialogTitle>{t('regeneration.chooseTitle')}</DialogTitle>
         <DialogDescription>{t('regeneration.chooseDescription')}</DialogDescription>
+        <div className="space-y-2 pt-2">
+          <label htmlFor="summary-context-regeneration-input" className="text-sm font-medium text-gray-900">
+            {t('meetings:labels.summaryContext')}
+          </label>
+          <Textarea
+            id="summary-context-regeneration-input"
+            data-testid="summary-context-regeneration-input"
+            value={promptDraft}
+            onChange={(event) => setPromptDraft(event.target.value)}
+            placeholder={t('meetings:descriptions.addSummaryContext')}
+            rows={4}
+          />
+          <p className="text-xs text-gray-500">{t('meetings:descriptions.summaryContextNotSaved')}</p>
+        </div>
         <div className="grid gap-3 pt-2">
           <button
             type="button"
@@ -593,6 +679,11 @@ export function SummaryGeneratorButtonGroup({
               <span className="mt-1 block text-sm text-gray-600">{t('regeneration.latestDescription')}</span>
             </span>
           </button>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button type="button" variant="outline" onClick={() => setRegenerationDialogOpen(false)}>
+            {t('actions.cancel')}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

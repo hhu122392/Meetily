@@ -13,8 +13,6 @@ import { toast } from 'sonner';
 
 interface TranscriptPanelProps {
   transcripts: Transcript[];
-  customPrompt: string;
-  onPromptChange: (value: string) => void;
   onCopyTranscript: () => void;
   onOpenMeetingFolder: () => Promise<void>;
   isRecording: boolean;
@@ -41,8 +39,6 @@ interface TranscriptPanelProps {
 
 export function TranscriptPanel({
   transcripts,
-  customPrompt,
-  onPromptChange,
   onCopyTranscript,
   onOpenMeetingFolder,
   isRecording,
@@ -60,7 +56,6 @@ export function TranscriptPanel({
   meetingFolderPath,
   onRefetchTranscripts,
 }: TranscriptPanelProps) {
-  const { t } = useTranslation('meetings');
   const { t: tTranscription } = useTranslation('transcription');
   const handleUpdateSegment = useCallback(async (segmentId: string, text: string) => {
     if (!meetingId) {
@@ -155,18 +150,6 @@ export function TranscriptPanel({
         />
       </div>
 
-      {/* Custom prompt input at bottom of transcript section */}
-      {!isRecording && convertedSegments.length > 0 && (
-        <div className={fullWidth ? 'mx-auto w-full max-w-3xl border-t border-gray-200 p-1' : 'p-1 border-t border-gray-200'}>
-          <textarea
-            placeholder={t('descriptions.addSummaryContext')}
-            aria-label={t('descriptions.addSummaryContext')}
-            className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm min-h-[80px] resize-y"
-            value={customPrompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-          />
-        </div>
-      )}
     </div>
   );
 }

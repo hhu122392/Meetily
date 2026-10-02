@@ -19,6 +19,7 @@
     "unpinLanguageAsDefault": "取消将 {{language}} 设为默认语言"
   },
   "actions": {
+    "cancel": "取消",
     "copy": "复制",
     "delete": "删除",
     "download": "下载",

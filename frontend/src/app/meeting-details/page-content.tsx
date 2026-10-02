@@ -72,28 +72,6 @@ export default function PageContent({
 
   // State
   const [customPrompt, setCustomPrompt] = useState<string>('');
-  // P0-4: 摘要"补充背景"按会议持久化草稿，切走会议/重启应用不丢
-  const promptDraftKey = meeting?.id ? `meetily.summaryContextDraft.${meeting.id}` : null;
-
-  useEffect(() => {
-    if (!promptDraftKey) return;
-    try {
-      const saved = window.localStorage.getItem(promptDraftKey);
-      if (saved) setCustomPrompt(saved);
-    } catch (error) {
-      console.warn('Failed to restore summary context draft:', error);
-    }
-  }, [promptDraftKey]);
-
-  const handlePromptChange = useCallback((value: string) => {
-    setCustomPrompt(value);
-    if (!promptDraftKey) return;
-    try {
-      window.localStorage.setItem(promptDraftKey, value);
-    } catch (error) {
-      console.warn('Failed to persist summary context draft:', error);
-    }
-  }, [promptDraftKey]);
   const [isRecording] = useState(false);
   const [summaryResponse] = useState<SummaryResponse | null>(null);
 
@@ -328,8 +306,6 @@ export default function PageContent({
           fullWidth={activeView === 'transcript'}
           hidden={activeView === 'summary'}
           transcripts={meetingData.transcripts}
-          customPrompt={customPrompt}
-          onPromptChange={handlePromptChange}
           onCopyTranscript={copyOperations.handleCopyTranscript}
           onOpenMeetingFolder={meetingOperations.handleOpenMeetingFolder}
           isRecording={isRecording}
@@ -371,6 +347,7 @@ export default function PageContent({
           onGenerateSummary={summaryGeneration.handleGenerateSummary}
           onStopGeneration={summaryGeneration.handleStopGeneration}
           customPrompt={customPrompt}
+          onCustomPromptChange={setCustomPrompt}
           summaryResponse={summaryResponse}
           onSaveSummary={meetingData.handleSaveSummary}
           onSummaryChange={meetingData.handleSummaryChange}

@@ -96,6 +96,7 @@ interface SummaryPanelProps {
   onGenerateSummary: (customPrompt: string) => Promise<void>;
   onStopGeneration: () => void;
   customPrompt: string;
+  onCustomPromptChange: (value: string) => void;
   summaryResponse: SummaryResponse | null;
   onSaveSummary: (summary: Summary | { markdown?: string; summary_json?: any[] }) => Promise<void>;
   onSummaryChange: (summary: Summary) => void;
@@ -151,6 +152,7 @@ export function SummaryPanel({
   onGenerateSummary,
   onStopGeneration,
   customPrompt,
+  onCustomPromptChange,
   summaryResponse,
   onSaveSummary,
   onSummaryChange,
@@ -539,6 +541,7 @@ export function SummaryPanel({
     onRegenerateSummary,
     onStopGeneration,
     customPrompt,
+    onCustomPromptChange,
     summaryStatus,
     availableTemplates,
     selectedTemplate,

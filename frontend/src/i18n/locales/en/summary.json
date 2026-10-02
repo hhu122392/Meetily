@@ -19,6 +19,7 @@
     "unpinLanguageAsDefault": "Unpin {{language}} as default"
   },
   "actions": {
+    "cancel": "Cancel",
     "copy": "Copy",
     "delete": "Delete",
     "download": "Download",
