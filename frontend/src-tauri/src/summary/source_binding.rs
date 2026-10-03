@@ -16,7 +16,7 @@ use unicode_normalization::UnicodeNormalization;
 use once_cell::sync::Lazy;
 use regex::Regex;
 pub use super::field_schema::SummaryTraceField;
-use super::field_schema::{advance_fence, cell_field_values, inline_field_ranges, inline_labels, is_task_label, label_fields, table_cells, table_header, table_separator, TASK_LABELS};
+use super::field_schema::{advance_fence, ambiguous_dependency_blocker, cell_field_values, inline_field_ranges, inline_labels, is_task_label, label_fields, table_cells, table_header, table_separator, TASK_LABELS};
 
 pub const SUMMARY_SOURCE_BINDING_SCHEMA_VERSION: u8 = 1;
 
@@ -727,7 +727,7 @@ pub fn trace_owner_and_time_fields(
                     if let Some(value) = cells.get(*column) {
                         for (field, value) in cell_field_values(fields, value) {
                             if !is_field_placeholder(field, value) {
-                                claims.push((field, value.to_owned(), markdown_line, Some(*column), anchors.clone()));
+                                claims.push((field, value.to_owned(), markdown_line, Some(*column), anchors.clone(), ambiguous_dependency_blocker(fields, cells.get(*column).unwrap())));
                             }
                         }
                     }
@@ -741,13 +741,28 @@ pub fn trace_owner_and_time_fields(
         for (label, start, end) in inline_labels(line) {
             for (field, value) in cell_field_values(&label_fields(label), &line[start..end]) {
                 if !is_field_placeholder(field, value) {
-                    claims.push((field, value.to_owned(), markdown_line, None, anchors.clone()));
+                    claims.push((field, value.to_owned(), markdown_line, None, anchors.clone(), ambiguous_dependency_blocker(&label_fields(label), &line[start..end])));
                 }
             }
         }
     }
     let tasks = tasks.into_iter().collect::<Vec<_>>();
-    Ok(claims.into_iter().map(|(field, value, line, column, anchors)| trace_field_value(field, &value, line, column, &anchors, &tasks, source)).collect())
+    let mut checked = claims.into_iter().map(|(field, value, line, column, anchors, ambiguous)|
+        (trace_field_value(field, &value, line, column, &anchors, &tasks, source), ambiguous));
+    let mut traces = Vec::new();
+    while let Some((mut trace, ambiguous)) = checked.next() {
+        if ambiguous {
+            // A bare combined cell gets its meaning from unique source evidence, never from its wording.
+            let (other, _) = checked.next().expect("combined dependency/blocker pair");
+            match (trace.status, other.status) {
+                (SummaryTraceStatus::Supported, SummaryTraceStatus::NeedsReview) => {},
+                (SummaryTraceStatus::NeedsReview, SummaryTraceStatus::Supported) => trace = other,
+                _ => { trace.status = SummaryTraceStatus::NeedsReview; trace.related_evidence.extend(trace.evidence.drain(..)); },
+            }
+        }
+        traces.push(trace);
+    }
+    Ok(traces)
 }
 
 /// Restores only evidence-supported action fields after the existing
@@ -772,7 +787,8 @@ pub fn restore_supported_owner_and_time_fields(
                 // A proven deadline cannot also restore an unproven criterion in the same cell.
                 if !cell_checks.is_empty() && cell_checks.iter().all(|trace| trace.status == SummaryTraceStatus::Supported) {
                     sanitized_cells[column] = original_cells[column].clone();
-                } else if cell_checks.len() == 1 && matches!(cell_checks[0].field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+                } else if (cell_checks.len() == 1 && matches!(cell_checks[0].field, SummaryTraceField::Acceptance | SummaryTraceField::Status))
+                    || (!cell_checks.is_empty() && cell_checks.iter().all(|trace| matches!(trace.field, SummaryTraceField::Dependency | SummaryTraceField::Blocker))) {
                     sanitized_cells[column] = review_label(&sanitized_cells[column]).to_owned();
                 }
             }
@@ -784,12 +800,19 @@ pub fn restore_supported_owner_and_time_fields(
                 let fields = label_fields(label);
                 if fields.is_empty() || fields != label_fields(safe_label) || !is_review_placeholder(&line[*safe_start..*safe_end]) { return None; }
                 let values = cell_field_values(&fields, &original_line[*start..*end]);
-                let supported = values.iter().all(|(field, value)| is_field_placeholder(*field, value) || checks.iter().any(|trace| {
+                let has_proof = |field: SummaryTraceField, value: &str| checks.iter().any(|trace| {
+                    trace.markdown_column.is_none() && trace.field == field && trace.status == SummaryTraceStatus::Supported
+                        && normalize_field_value(field, &trace.value) == normalize_field_value(field, value)
+                });
+                let supported = if ambiguous_dependency_blocker(&fields, &original_line[*start..*end]) {
+                    values.iter().filter(|(field, value)| has_proof(*field, value)).count() == 1
+                } else { values.iter().all(|(field, value)| is_field_placeholder(*field, value) || checks.iter().any(|trace| {
                     trace.markdown_column.is_none() && trace.field == *field && trace.status == SummaryTraceStatus::Supported
                         && normalize_field_value(*field, &trace.value) == normalize_field_value(*field, value)
-                }));
+                })) };
                 if supported { Some((*safe_start, *safe_end, &original_line[*start..*end])) }
-                else if fields.len() == 1 && matches!(fields[0], SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+                else if (fields.len() == 1 && matches!(fields[0], SummaryTraceField::Acceptance | SummaryTraceField::Status))
+                    || fields.iter().all(|field| matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker)) {
                     Some((*safe_start, *safe_end, review_label(&line[*safe_start..*safe_end])))
                 } else { None }
             }).collect::<Vec<_>>();
@@ -816,7 +839,7 @@ fn trace_field_value(
         .map(|anchor| normalize_evidence(anchor))
         .filter(|anchor| anchor.chars().count() >= 2)
         .collect::<Vec<_>>();
-    let evidence = if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+    let evidence = if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Dependency | SummaryTraceField::Blocker) {
         stated_attribute_evidence(field, value, &normalized_anchors, all_tasks, source)
     } else { source
         .segments
@@ -837,11 +860,7 @@ fn trace_field_value(
                     SummaryTraceField::Owner => speaker_matches || (text_matches
                         && explicit_owner_statement(sentence, value)),
                     SummaryTraceField::Time => text_matches && !has_multiple_deadlines(&normalized_text),
-                    SummaryTraceField::Dependency => text_matches && normalized_anchors.iter().any(|task| {
-                        ["依赖", "的前提是", "需要先", "dependson", "requires"]
-                            .iter().any(|relation| normalized_text.contains(&format!("{task}{relation}{normalized_value}")))
-                    }),
-                    SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Blocker
+                    SummaryTraceField::Dependency | SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Blocker
                     | SummaryTraceField::Criteria | SummaryTraceField::Escalation => false,
                 }
             })
@@ -891,7 +910,7 @@ fn stated_attribute_evidence(
     source: &TranscriptVersionSnapshot,
 ) -> Vec<SummaryEvidenceReference> {
     static ATTRIBUTE: Lazy<Regex> = Lazy::new(|| Regex::new(
-        r"(?i)验收标准|验收条件|放行标准|当前状态|任务状态|状态|截止时间|截止日期|依赖|前提|需要先|卡点|acceptance criteria|acceptance criterion|current status|status|deadline|due date|dependencies|dependency|requires|prerequisite|blocker"
+        r"(?i)验收标准|验收条件|放行标准|当前状态|任务状态|状态|截止时间|截止日期|依赖|前提|需要先|(?:要|需要)?等|卡点|卡在|阻碍|acceptance criteria|acceptance criterion|current status|status|deadline|due date|dependencies|dependency|depends on|requires|prerequisite|blocker|blocked by"
     ).unwrap());
     static ACCEPTANCE: Lazy<Regex> = Lazy::new(|| Regex::new(
         r"(?i)(?:验收标准|验收条件|放行标准|acceptance criteri(?:a|on))\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
@@ -900,11 +919,31 @@ fn stated_attribute_evidence(
         r"(?i)(?:当前状态|任务状态|状态|current status|status)\s*(?:(?:改为|是|为|[:：]|is\b)\s*)?(?P<value>[^，,。；;\n]+)"
     ).unwrap());
     static CONDITIONAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:if|provided|example)\b").unwrap());
-    let pattern = if field == SummaryTraceField::Acceptance { &*ACCEPTANCE } else { &*STATUS };
+    static DEPENDENCY: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)(?:依赖|前提(?:条件)?|需要先|(?:要|需要)?等|depends on|dependencies|dependency|requires|prerequisites?)\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
+    ).unwrap());
+    static BLOCKER: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)(?:卡点|卡在|阻碍|blockers?|blocked by)\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
+    ).unwrap());
+    static NEGATED: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:not|no|never)\b").unwrap());
+    let relation = matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker);
+    let pattern = match field { SummaryTraceField::Acceptance => &*ACCEPTANCE, SummaryTraceField::Status => &*STATUS,
+        SummaryTraceField::Dependency => &*DEPENDENCY, _ => &*BLOCKER };
     let mut assertions = Vec::new();
     for segment in &source.segments {
         for sentence in evidence_sentences(&segment.text) {
             if sentence.trim_end().ends_with(['?', '？']) { continue; }
+            let absence = relation && matches!(normalize_evidence(value).as_str(), "无" | "none") && anchors.iter().any(|task| {
+                let normalized = normalize_evidence(sentence);
+                let Some((_, tail)) = normalized.rsplit_once(task) else { return false; };
+                let tail = tail.trim_end_matches(['。', '！', '.', '!']);
+                let tail = tail.strip_prefix('的').unwrap_or(tail);
+                let tail = tail.strip_prefix("目前").or_else(|| tail.strip_prefix("当前")).unwrap_or(tail);
+                match field {
+                    SummaryTraceField::Dependency => ["无依赖", "没有依赖", "hasnodependencies", "hasnodependency"].contains(&tail),
+                    _ => ["无卡点", "没有卡点", "没有阻碍", "hasnoblockers", "hasnoblocker"].contains(&tail),
+                }
+            });
             let first_attribute = ATTRIBUTE.find_iter(sentence).find(|found| {
                 let prefix = normalize_evidence(&sentence[..found.start()]);
                 all_tasks.iter().any(|task| prefix.contains(task))
@@ -916,14 +955,19 @@ fn stated_attribute_evidence(
             if !subjects.iter().any(|task| anchors.contains(*task))
                 || ["如果", "假如", "若", "假设", "例如", "没说", "不是说", "不要说"].iter().any(|word| qualifiers.contains(word))
                 || (field == SummaryTraceField::Status && qualifiers.contains("计划"))
+                || (relation && !absence && (["不", "没"].iter().any(|word| qualifiers.contains(word)) || NEGATED.is_match(&sentence[..first_attribute])))
                 || CONDITIONAL.is_match(&sentence[..first_attribute]) {
                 continue;
             }
-            let mut values = pattern.captures_iter(sentence).filter(|capture| capture.get(0).unwrap().start() >= first_attribute).map(|capture| {
+            let mut values = pattern.captures_iter(sentence).filter(|capture| capture.get(0).unwrap().start() >= first_attribute).filter_map(|capture| {
                 let matched = capture.get(0).unwrap();
                 let correction = matched.as_str().contains("改为") || ["更正", "不对", "correction"].iter()
                     .any(|word| sentence[..matched.start()].to_lowercase().contains(word));
-                (matched.start(), capture["value"].trim().trim_end_matches(['.', '!']).to_owned(), correction)
+                let mut value = capture["value"].trim().trim_end_matches(['.', '!']);
+                if field == SummaryTraceField::Dependency && ["等", "要等", "需要等"].iter().any(|prefix| matched.as_str().starts_with(prefix)) {
+                    for suffix in ["之后才能开始", "后才能开始", "之后", "后"] { if let Some(prefix) = value.strip_suffix(suffix) { value = prefix; break; } }
+                }
+                (!value.is_empty()).then(|| (matched.start(), value.to_owned(), correction))
             }).collect::<Vec<_>>();
             let fallback = (field == SummaryTraceField::Acceptance).then(|| {
                     ["尚未确定验收条件", "未约定验收条件", "尚未确定验收标准", "未约定验收标准"].iter()
@@ -936,19 +980,21 @@ fn stated_attribute_evidence(
                     let tail = tail.trim_end_matches(['。', '！', '？']);
                     let tail = tail.strip_prefix("目前").or_else(|| tail.strip_prefix("现在")).unwrap_or(tail);
                     ["进行中", "正在进行", "未开始", "已完成", "已经完成", "尚未完成", "未完成", "已暂停", "已取消", "inprogress", "notstarted", "completed", "unfinished"].contains(&tail).then(|| tail.to_owned())
-                });
+                }).or_else(|| absence.then(|| value.to_owned()));
             if values.is_empty() {
                 if let Some(value) = fallback { values.push((first_attribute, value, sentence.contains("更正"))); }
             }
             for (start, assertion, correction) in values {
-                let intervening = normalize_evidence(&sentence[first_attribute..start]);
-                if all_tasks.iter().any(|task| !anchors.contains(task) && intervening.contains(task)) { break; }
                 // ponytail: explicit labels and literal values; arbitrary paraphrases stay for review.
                 let end = ATTRIBUTE.find_iter(sentence).find(|found| found.start() > start).map_or(sentence.len(), |found| found.start());
-                let confidence = format!("{}{}", qualifiers, normalize_evidence(&sentence[start..end]));
+                let clause_start = sentence[..start].rfind(['，', ',', '；', ';']).map_or(0, |index| index + sentence[index..].chars().next().unwrap().len_utf8());
+                let clause_subject = normalize_evidence(&sentence[clause_start..start]);
+                if all_tasks.iter().any(|task| !anchors.iter().any(|anchor| anchor.contains(task)) && clause_subject.contains(task)) { break; }
+                let confidence = format!("{}{}", qualifiers, normalize_evidence(&sentence[clause_start..end]));
                 let certain = subjects.len() == 1
                     && !["可能", "预计", "尚未确认", "未经确认", "未核实", "尚未核实", "unconfirmed", "notconfirmed"].iter().any(|word| confidence.contains(word))
-                    && !["计划", "希望", "如果", "假设", "planned", "expected", "might", "would"].iter().any(|word| assertion.to_lowercase().contains(word));
+                    && !["计划", "希望", "如果", "假设", "planned", "expected", "might", "would"].iter().any(|word| assertion.to_lowercase().contains(word))
+                    && !(relation && !absence && (["不依赖", "没有卡", "并未卡", "没有阻"].iter().any(|word| confidence.contains(word)) || NEGATED.is_match(&sentence[clause_start..end])));
                 assertions.push((segment, normalize_field_value(field, &assertion), correction, certain));
             }
         }
@@ -967,8 +1013,16 @@ fn stated_attribute_evidence(
 }
 
 fn normalize_field_value(field: SummaryTraceField, value: &str) -> String {
-    if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
-        value.trim().trim_end_matches(['。', '.', '！', '!']).nfkc().flat_map(char::to_lowercase)
+    if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Dependency | SummaryTraceField::Blocker) {
+        static DEPENDENCY_PREFIX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^(?:依赖于?|需要先|depends on|requires)\s*[:：]?\s*").unwrap());
+        static BLOCKER_PREFIX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^(?:(?:目前|当前)?卡在|(?:is )?(?:currently )?blocked by)\s*[:：]?\s*").unwrap());
+        let value = value.trim().trim_matches('*').trim().nfkc().collect::<String>();
+        let value = match field {
+            SummaryTraceField::Dependency => DEPENDENCY_PREFIX.replace(&value, ""),
+            SummaryTraceField::Blocker => BLOCKER_PREFIX.replace(&value, ""),
+            _ => std::borrow::Cow::Borrowed(value.as_str()),
+        };
+        value.trim_end_matches(['。', '.', '！', '!']).chars().flat_map(char::to_lowercase)
             .filter(|character| !character.is_whitespace() && *character != '*').collect()
     } else { normalize_evidence(value) }
 }
@@ -1033,6 +1087,8 @@ fn is_review_placeholder(value: &str) -> bool {
 }
 
 fn is_field_placeholder(field: SummaryTraceField, value: &str) -> bool {
+    if matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker)
+        && matches!(normalize_evidence(value).as_str(), "无" | "none" | "尚未确定" | "未定" | "未决定") { return false; }
     if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status)
         && matches!(normalize_evidence(value).as_str(), "尚未确定" | "未定" | "未决定") { return false; }
     is_review_placeholder(value)
@@ -1415,6 +1471,70 @@ mod tests {
         );
     }
 
+    #[test]
+    fn t05_relation_words_in_a_cell_do_not_hide_literal_source_evidence() {
+        let mut source = moss_source(TranscriptVersionState::Active);
+        source.segments[0].text = "整理报告目前卡在供应商审批。发布版本依赖接口回归测试通过。".into(); source.transcript_sha256 = source.computed_transcript_sha256();
+        let traces = trace_owner_and_time_fields("| 任务 | 依赖或卡点 |\n| --- | --- |\n| 整理报告 | 卡在供应商审批 |\n| 发布版本 | 依赖接口回归测试通过 |", &source).unwrap();
+        assert_eq!(traces.len(), 2);
+        assert_eq!(traces[0].field, SummaryTraceField::Blocker); assert_eq!(traces[1].field, SummaryTraceField::Dependency);
+        assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported));
+    }
+    #[test]
+    fn t05_dependency_and_blocker_use_their_own_relations() {
+        let mut source = moss_source(TranscriptVersionState::Active);
+        source.segments[0].text = "整理报告的前提是测试环境就绪，卡点是供应商审批。".into();
+        source.transcript_sha256 = source.computed_transcript_sha256();
+        let traces = trace_owner_and_time_fields("任务：整理报告；依赖或卡点：依赖：测试环境就绪；卡点：供应商审批", &source).unwrap();
+        assert_eq!(traces.len(), 2);
+        assert!(traces.iter().all(|t| t.status == SummaryTraceStatus::Supported));
+        let blocker = trace_owner_and_time_fields("任务：整理报告；依赖或卡点：供应商审批", &source).unwrap();
+        assert_eq!(blocker.len(), 1); assert_eq!(blocker[0].field, SummaryTraceField::Blocker);
+        assert_eq!(blocker[0].status, SummaryTraceStatus::Supported);
+    }
+    #[test]
+    fn t05_risk_negation_direction_and_uncertainty_do_not_prove_a_relation() {
+        for text in ["整理报告不依赖供应商审批。", "整理报告存在供应商审批风险。", "如果整理报告依赖供应商审批，就通知大家。", "整理报告依赖供应商审批，但此依赖尚未确认。", "发布版本依赖整理报告。"] {
+            let mut source = moss_source(TranscriptVersionState::Active);
+            source.segments[0].text = text.into(); source.transcript_sha256 = source.computed_transcript_sha256();
+            let traces = trace_owner_and_time_fields("任务：整理报告；依赖或卡点：供应商审批", &source).unwrap();
+            assert_eq!(traces.len(), 1); assert_eq!(traces[0].status, SummaryTraceStatus::NeedsReview, "{text}");
+        }
+    }
+    #[test]
+    fn t05_none_is_a_fact_needing_proof_and_unknown_is_not_none() {
+        for (text, label, value, expected) in [
+            ("整理报告目前没有依赖。", "依赖", "无", SummaryTraceStatus::Supported),
+            ("整理报告目前没有卡点。", "卡点", "无", SummaryTraceStatus::Supported),
+            ("整理报告的依赖是尚未确定。", "依赖", "尚未确定", SummaryTraceStatus::Supported),
+            ("整理报告没有卡点。", "依赖", "无", SummaryTraceStatus::NeedsReview),
+            ("整理报告只分配了负责人。", "依赖", "无", SummaryTraceStatus::NeedsReview),
+            ("Run regression tests has no blockers.", "Blocker", "None", SummaryTraceStatus::Supported),
+        ] {
+            let mut source = moss_source(TranscriptVersionState::Active);
+            source.segments[0].text = text.into(); source.transcript_sha256 = source.computed_transcript_sha256();
+            let task = if text.is_ascii() { "Run regression tests" } else { "整理报告" };
+            let traces = trace_owner_and_time_fields(&format!("任务：{task}；{label}：{value}"), &source).unwrap();
+            assert_eq!(traces.len(), 1); assert_eq!(traces[0].status, expected, "{text}");
+        }
+    }
+    #[test]
+    fn t05_known_dependency_object_does_not_replace_the_task_subject() {
+        let mut source = moss_source(TranscriptVersionState::Active);
+        source.segments[0].text = "发布版本依赖整理报告，卡点是供应商审批。".into(); source.transcript_sha256 = source.computed_transcript_sha256();
+        let traces = trace_owner_and_time_fields("| 任务 | 依赖或卡点 |\n| --- | --- |\n| 发布版本 | 依赖：整理报告；卡点：供应商审批 |\n| 整理报告 | 会议未提及 |", &source).unwrap();
+        assert_eq!(traces.len(), 2); assert!(traces.iter().all(|t| t.status == SummaryTraceStatus::Supported));
+    }
+    #[test]
+    fn t05_unverified_combined_tail_and_ambiguous_meaning_stay_for_review() {
+        let mut source = moss_source(TranscriptVersionState::Active);
+        source.segments[0].text = "整理报告依赖供应商审批，卡点是供应商审批。".into(); source.transcript_sha256 = source.computed_transcript_sha256();
+        let original = "| 任务 | 依赖或卡点 |\n| --- | --- |\n| 整理报告 | 供应商审批 |";
+        let traces = trace_owner_and_time_fields(original, &source).unwrap();
+        assert_eq!(traces.len(), 1); assert_eq!(traces[0].status, SummaryTraceStatus::NeedsReview);
+        let restored = restore_supported_owner_and_time_fields(original, &original.replace("| 整理报告 | 供应商审批 |", "| 整理报告 | 会议未提及 |"), &traces);
+        assert!(restored.ends_with("| 整理报告 | 待核对 |"));
+    }
     #[test]
     fn t04_acceptance_and_status_use_explicit_task_attributes() {
         let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {

@@ -109,11 +109,11 @@ pub fn cell_field_values<'a>(fields: &[SummaryTraceField], value: &'a str) -> Ve
         if complete { return explicit; }
         return fields.iter().map(|field| (*field, value)).collect();
     }
-    if fields == [SummaryTraceField::Dependency, SummaryTraceField::Blocker] {
-        let field = if value.contains("卡") || value.to_ascii_lowercase().contains("block") { SummaryTraceField::Blocker } else { SummaryTraceField::Dependency };
-        return vec![(field, value.trim().trim_matches('*').trim())];
-    }
     fields.iter().map(|field| (*field, explicit.iter().find(|(found,_)| found == field).map_or(value, |(_,value)| *value))).collect()
+}
+
+pub fn ambiguous_dependency_blocker(fields: &[SummaryTraceField], value: &str) -> bool {
+    fields == [SummaryTraceField::Dependency, SummaryTraceField::Blocker] && inline_labels(value).is_empty()
 }
 
 pub fn advance_fence(fence: &mut Option<(char, usize)>, line: &str) -> bool {
