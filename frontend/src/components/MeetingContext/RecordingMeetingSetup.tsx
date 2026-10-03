@@ -77,6 +77,10 @@ export function RecordingMeetingSetup({
   const { t } = useTranslation('templates');
   const [open, setOpen] = useState(false);
   const [peopleQuery, setPeopleQuery] = useState('');
+  useEffect(() => {
+    if (isRecording) setOpen(false);
+  }, [isRecording]);
+
   const enabledPeople = setup.profile?.people.filter((person) => person.enabled) ?? [];
   const normalizedPeopleQuery = peopleQuery.trim().toLowerCase();
   const visiblePeople = normalizedPeopleQuery
@@ -126,24 +130,34 @@ export function RecordingMeetingSetup({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="max-w-[620px] rounded-full bg-white shadow-sm"
-        onClick={() => setOpen(true)}
-      >
-        {isRecording ? <LockKeyhole aria-hidden="true" /> : <Settings2 aria-hidden="true" />}
-        <span className="truncate">
-          {isRecording
-            ? t('recordingSetup.locked', { template: templateName })
-            : t('recordingSetup.summary', { template: templateName, count: candidateCount })}
-        </span>
-        {/* 这是一个可点的入口，不是状态标签：给个箭头提示能展开 */}
-        {!isRecording && <ChevronDown className="h-4 w-4 flex-none text-gray-400" aria-hidden="true" />}
-      </Button>
+      {isRecording ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex max-w-[620px] items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600"
+        >
+          <LockKeyhole className="h-4 w-4 flex-none" aria-hidden="true" />
+          <span className="truncate">{t('recordingSetup.locked', { template: templateName })}</span>
+          <HelpHint
+            label={t('recordingSetup.titleHelpLabel')}
+            text={t('recordingSetup.lockedDescription')}
+          />
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="max-w-[620px] rounded-full bg-white shadow-sm"
+          onClick={() => setOpen(true)}
+        >
+          <Settings2 aria-hidden="true" />
+          <span className="truncate">{t('recordingSetup.summary', { template: templateName, count: candidateCount })}</span>
+          <ChevronDown className="h-4 w-4 flex-none text-gray-400" aria-hidden="true" />
+        </Button>
+      )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && !isRecording} onOpenChange={setOpen}>
         <DialogContent className="max-h-[88vh] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-1.5">
