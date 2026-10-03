@@ -66,8 +66,11 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialLoadRef = useRef<Promise<LoadedMeetingSetup | null> | null>(null);
+  const loadSequenceRef = useRef(0);
+  const loadStateRef = useRef<{ status: 'loading' | 'ready' | 'failed'; loaded: LoadedMeetingSetup | null }>({ status: 'loading', loaded: null });
 
   const applyLoaded = useCallback((next: LoadedMeetingSetup) => {
+    loadStateRef.current = { status: 'ready', loaded: next };
     setLoaded(next);
     setDraft(next.draft);
     setIsCustomized(false);
@@ -76,6 +79,8 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
 
   const loadInitial = useCallback((): Promise<LoadedMeetingSetup | null> => {
     if (initialLoadRef.current) return initialLoadRef.current;
+    const sequence = ++loadSequenceRef.current;
+    loadStateRef.current.status = 'loading';
     initialLoadRef.current = (async () => {
       try {
         const [list, preference] = await Promise.all([
@@ -84,14 +89,19 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
         ]);
         setTemplates(list.templates.filter((template) => template.valid));
         const next = await loadSetup(preference.resolvedTemplateId);
-        applyLoaded(next);
+        if (sequence === loadSequenceRef.current) {
+          applyLoaded(next);
+        }
         return next;
       } catch (loadError) {
         console.error('Failed to prepare recording meeting context:', loadError);
-        setError('RECORDING_MEETING_SETUP_UNAVAILABLE');
+        if (sequence === loadSequenceRef.current) {
+          setError('RECORDING_MEETING_SETUP_UNAVAILABLE');
+          loadStateRef.current.status = 'failed';
+        }
         return null;
       } finally {
-        setIsLoading(false);
+        if (sequence === loadSequenceRef.current) setIsLoading(false);
       }
     })();
     return initialLoadRef.current;
@@ -102,16 +112,22 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
   }, [loadInitial]);
 
   const selectTemplate = useCallback(async (templateId: string) => {
+    const sequence = ++loadSequenceRef.current;
+    loadStateRef.current.status = 'loading';
     setIsLoading(true);
     try {
       const next = await loadSetup(templateId);
-      applyLoaded(next);
+      if (sequence === loadSequenceRef.current) {
+        applyLoaded(next);
+      }
     } catch (loadError) {
       console.error('Failed to load selected recording template:', loadError);
-      setError('RECORDING_TEMPLATE_LOAD_FAILED');
-      throw loadError;
+      if (sequence === loadSequenceRef.current) {
+        setError('RECORDING_TEMPLATE_LOAD_FAILED');
+        loadStateRef.current.status = 'failed';
+      }
     } finally {
-      setIsLoading(false);
+      if (sequence === loadSequenceRef.current) setIsLoading(false);
     }
   }, [applyLoaded]);
 
@@ -122,19 +138,27 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
 
   const resetAdjustments = useCallback(async () => {
     if (!loaded) return;
-    const next = await loadSetup(loaded.details.template.id);
-    applyLoaded(next);
-  }, [applyLoaded, loaded]);
+    await selectTemplate(loaded.details.template.id);
+  }, [loaded, selectTemplate]);
 
   const prepareRecordingMetadata = useCallback(async (): Promise<PreparedRecordingMetadata> => {
-    const current = loaded ?? await loadInitial();
-    if (!current) {
-      toast.warning(t('recordingSetup.warningNoContext'));
-      return { templateSelection: null, meetingContextDraft: null };
+    const initial = loaded ? null : loadInitial();
+    const sequence = loadSequenceRef.current;
+    if (initial) await initial;
+    const current = loadStateRef.current.loaded;
+    if (sequence !== loadSequenceRef.current || loadStateRef.current.status === 'loading') {
+      toast.error(t('recordingSetup.loading'));
+      throw new Error('RECORDING_MEETING_SETUP_LOADING');
     }
-    if (isCustomized && current.profile && draft) {
-      const issues = validateRecordingMeetingContextDraft(current.profile, draft);
-      if (issues.length > 0) {
+    if (!current || loadStateRef.current.status === 'failed') {
+      toast.error(t('recordingSetup.loadWarning'));
+      throw new Error('RECORDING_MEETING_SETUP_UNAVAILABLE');
+    }
+    const effectiveDraft = loaded === current ? draft : current.draft;
+    if (current.profile) {
+      const issues = effectiveDraft ? validateRecordingMeetingContextDraft(current.profile, effectiveDraft) : [];
+      if (!effectiveDraft || issues.length > 0
+        || effectiveDraft.expectedProfileSha256 !== current.draft?.expectedProfileSha256) {
         console.error('Recording meeting context draft is invalid:', issues);
         toast.error(t('recordingSetup.invalidDraft'));
         throw new Error('RECORDING_MEETING_CONTEXT_INVALID');
@@ -146,9 +170,9 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
         templateVersion: current.details.template.version,
         templateFileSha256: current.details.fileSha256,
       },
-      meetingContextDraft: isCustomized ? draft : null,
+      meetingContextDraft: effectiveDraft,
     };
-  }, [draft, isCustomized, loadInitial, loaded, t]);
+  }, [draft, loadInitial, loaded, t]);
 
   return {
     templates,

@@ -23,7 +23,7 @@
     "template": "Meeting template",
     "selectTemplate": "Select a meeting template",
     "loading": "Loading the template's people preset…",
-    "loadWarning": "The template or preset could not be loaded. Recording remains available but may start without people context.",
+    "loadWarning": "The template or preset could not be loaded. Select the template again before recording.",
     "warningNoContext": "The people and terminology preset is temporarily unavailable. This recording will start without people context.",
     "invalidDraft": "This meeting's people or terminology setup has incomplete or conflicting values. Fix them before recording.",
     "noPreset": "This template has no people and terminology preset. Recording and summary generation remain available.",

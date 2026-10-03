@@ -461,7 +461,7 @@ export function RecordingMeetingSetup({
 
           <DialogFooter>
             {!isRecording && setup.isCustomized && (
-              <Button type="button" variant="outline" onClick={() => void setup.resetAdjustments()}>
+              <Button type="button" variant="outline" disabled={setup.isLoading} onClick={() => void setup.resetAdjustments()}>
                 {t('recordingSetup.reset')}
               </Button>
             )}
