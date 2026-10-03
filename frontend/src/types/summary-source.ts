@@ -53,7 +53,7 @@ export interface SummaryFreshness {
   reasons: SummaryStaleReason[];
 }
 
-export type SummaryTraceField = 'owner' | 'time' | 'dependency';
+export type SummaryTraceField = 'owner' | 'time' | 'dependency' | 'acceptance' | 'status' | 'blocker' | 'criteria' | 'escalation';
 export type SummaryTraceStatus = 'supported' | 'needs_review';
 
 export interface SummaryEvidenceReference {

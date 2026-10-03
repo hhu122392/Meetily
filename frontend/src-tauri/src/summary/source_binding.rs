@@ -15,6 +15,8 @@ use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 use once_cell::sync::Lazy;
 use regex::Regex;
+pub use super::field_schema::SummaryTraceField;
+use super::field_schema::{advance_fence, cell_field_values, inline_field_ranges, inline_labels, is_task_label, label_fields, table_cells, table_header, table_separator, TASK_LABELS};
 
 pub const SUMMARY_SOURCE_BINDING_SCHEMA_VERSION: u8 = 1;
 
@@ -660,14 +662,6 @@ pub fn evaluate_summary_freshness(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum SummaryTraceField {
-    Owner,
-    Time,
-    Dependency,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum SummaryTraceStatus {
     Supported,
     NeedsReview,
@@ -698,7 +692,7 @@ pub struct SummaryFieldTrace {
     pub related_evidence: Vec<SummaryEvidenceReference>,
 }
 
-/// Finds exact, reviewable evidence for owner and time fields. This is not a
+/// Finds reviewable evidence for recognized action fields. This is not a
 /// semantic-entailment claim: unsupported values are explicitly marked for
 /// review, while supported values carry stable segment/timestamp references.
 pub fn trace_owner_and_time_fields(
@@ -708,80 +702,43 @@ pub fn trace_owner_and_time_fields(
     source.validate_active()?;
     let mut traces = Vec::new();
     let mut table_schema: Option<TableTraceSchema> = None;
-
-    for (line_index, line) in markdown.lines().enumerate() {
+    let lines = markdown.lines().collect::<Vec<_>>();
+    let mut fence = None;
+    for (line_index, line) in lines.iter().enumerate() {
         let markdown_line = line_index + 1;
-        if line.trim_start().starts_with('|') && line.trim_end().ends_with('|') {
-            let cells = markdown_table_cells(line);
-            if cells.is_empty() {
-                table_schema = None;
+        if advance_fence(&mut fence, line) || fence.is_some() { table_schema = None; continue; }
+        let cells = table_cells(line);
+        if !cells.is_empty() {
+            if table_header(&lines, line_index) {
+                let fields = cells.iter().enumerate().filter_map(|(index, label)| {
+                    let fields = label_fields(label); (!fields.is_empty()).then_some((index, fields))
+                }).collect::<Vec<_>>();
+                let anchors = cells.iter().enumerate().filter_map(|(index, label)| is_task_label(label).then_some(index)).collect();
+                table_schema = Some(TableTraceSchema { fields, action_anchor_columns: anchors });
                 continue;
             }
-            if table_schema.is_none() {
-                let fields = cells
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, header)| {
-                        trace_field_for_header(header).map(|field| (index, field))
-                    })
-                    .collect::<Vec<_>>();
-                let anchors = cells
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, header)| is_action_anchor_header(header).then_some(index))
-                    .collect::<Vec<_>>();
-                table_schema = (!fields.is_empty()).then_some(TableTraceSchema {
-                    fields,
-                    action_anchor_columns: anchors,
-                });
-                continue;
-            }
-            if markdown_table_separator(&cells) {
-                continue;
-            }
+            if table_separator(&cells) { continue; }
             if let Some(schema) = table_schema.as_ref() {
-                let action_anchors = schema
-                    .action_anchor_columns
-                    .iter()
-                    .filter_map(|column| cells.get(*column))
-                    .filter(|value| !is_review_placeholder(value))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                for (column, field) in &schema.fields {
+                let anchors = schema.action_anchor_columns.iter().filter_map(|column| cells.get(*column))
+                    .filter(|value| !is_review_placeholder(value)).cloned().collect::<Vec<_>>();
+                for (column, fields) in &schema.fields {
                     if let Some(value) = cells.get(*column) {
-                        if !is_review_placeholder(value) {
-                            traces.push(trace_field_value(
-                                *field,
-                                value,
-                                markdown_line,
-                                Some(*column),
-                                &action_anchors,
-                                source,
-                            ));
+                        for (field, value) in cell_field_values(fields, value) {
+                            if !is_review_placeholder(value) {
+                                traces.push(trace_field_value(field, value, markdown_line, Some(*column), &anchors, source));
+                            }
                         }
                     }
                 }
             }
             continue;
         }
-
         table_schema = None;
-        let action_anchors = inline_action_anchors(line);
-        for (field, labels) in [
-            (SummaryTraceField::Owner, OWNER_INLINE_LABELS),
-            (SummaryTraceField::Time, TIME_INLINE_LABELS),
-            (SummaryTraceField::Dependency, DEPENDENCY_INLINE_LABELS),
-        ] {
-            for value in inline_field_values(line, labels) {
+        let anchors = inline_action_anchors(line);
+        for (label, start, end) in inline_labels(line) {
+            for (field, value) in cell_field_values(&label_fields(label), &line[start..end]) {
                 if !is_review_placeholder(value) {
-                    traces.push(trace_field_value(
-                        field,
-                        value,
-                        markdown_line,
-                        None,
-                        &action_anchors,
-                        source,
-                    ));
+                    traces.push(trace_field_value(field, value, markdown_line, None, &anchors, source));
                 }
             }
         }
@@ -789,7 +746,7 @@ pub fn trace_owner_and_time_fields(
     Ok(traces)
 }
 
-/// Restores only evidence-supported owner/time fields after the existing
+/// Restores only evidence-supported action fields after the existing
 /// safety sanitizer has replaced high-risk values with placeholders.
 /// Unsupported fields remain masked and carry `needs_review` traces.
 pub fn restore_supported_owner_and_time_fields(
@@ -798,39 +755,39 @@ pub fn restore_supported_owner_and_time_fields(
     traces: &[SummaryFieldTrace],
 ) -> String {
     let original = evidence_normalized_markdown.lines().collect::<Vec<_>>();
-    let mut sanitized = sanitized_markdown
-        .lines()
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    for trace in traces
-        .iter()
-        .filter(|trace| trace.status == SummaryTraceStatus::Supported)
-    {
-        let line_index = trace.markdown_line.saturating_sub(1);
-        let (Some(original_line), Some(sanitized_line)) =
-            (original.get(line_index), sanitized.get_mut(line_index))
-        else {
-            continue;
-        };
-        if let Some(column) = trace.markdown_column {
-            let original_cells = markdown_table_cells(original_line);
-            let mut sanitized_cells = markdown_table_cells(sanitized_line);
-            let (Some(original_cell), Some(sanitized_cell)) =
-                (original_cells.get(column), sanitized_cells.get_mut(column))
-            else {
-                continue;
-            };
-            *sanitized_cell = original_cell.clone();
-            *sanitized_line = format!("| {} |", sanitized_cells.join(" | "));
+    let mut sanitized = sanitized_markdown.lines().map(str::to_owned).collect::<Vec<_>>();
+    for (index, line) in sanitized.iter_mut().enumerate() {
+        let Some(original_line) = original.get(index) else { continue; };
+        let checks = traces.iter().filter(|trace| trace.markdown_line == index+1).collect::<Vec<_>>();
+        if checks.is_empty() { continue; }
+        let original_cells = table_cells(original_line);
+        let mut sanitized_cells = table_cells(line);
+        if !original_cells.is_empty() && original_cells.len() == sanitized_cells.len() {
+            for column in 0..original_cells.len() {
+                let cell_checks = checks.iter().filter(|trace| trace.markdown_column == Some(column)).collect::<Vec<_>>();
+                // A proven deadline cannot also restore an unproven criterion in the same cell.
+                if !cell_checks.is_empty() && cell_checks.iter().all(|trace| trace.status == SummaryTraceStatus::Supported) {
+                    sanitized_cells[column] = original_cells[column].clone();
+                }
+            }
+            *line = format!("| {} |", sanitized_cells.join(" | "));
         } else {
-            *sanitized_line =
-                restore_first_inline_placeholder(sanitized_line, trace.field, trace.value.as_str());
+            let original_fields = inline_labels(original_line);
+            let safe_fields = inline_labels(line);
+            let replacements = original_fields.iter().zip(safe_fields.iter()).filter_map(|((label, start, end), (safe_label, safe_start, safe_end))| {
+                let fields = label_fields(label);
+                if fields.is_empty() || fields != label_fields(safe_label) || !is_review_placeholder(&line[*safe_start..*safe_end]) { return None; }
+                let values = cell_field_values(&fields, &original_line[*start..*end]);
+                values.iter().all(|(field, value)| is_review_placeholder(value) || checks.iter().any(|trace| {
+                    trace.markdown_column.is_none() && trace.field == *field && trace.status == SummaryTraceStatus::Supported
+                        && normalize_evidence(&trace.value) == normalize_evidence(value)
+                })).then_some((*safe_start, *safe_end, &original_line[*start..*end]))
+            }).collect::<Vec<_>>();
+            for (start, end, value) in replacements.into_iter().rev() { line.replace_range(start..end, value); }
         }
     }
     let mut result = sanitized.join("\n");
-    if sanitized_markdown.ends_with('\n') {
-        result.push('\n');
-    }
+    if sanitized_markdown.ends_with('\n') { result.push('\n'); }
     result
 }
 
@@ -871,6 +828,8 @@ fn trace_field_value(
                         ["依赖", "的前提是", "需要先", "dependson", "requires"]
                             .iter().any(|relation| normalized_text.contains(&format!("{task}{relation}{normalized_value}")))
                     }),
+                    SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Blocker
+                    | SummaryTraceField::Criteria | SummaryTraceField::Escalation => false,
                 }
             })
         })
@@ -906,53 +865,13 @@ fn trace_field_value(
     }
 }
 
-const OWNER_INLINE_LABELS: &[&str] = &["负责人", "责任人", "owner", "assignee"];
-const TIME_INLINE_LABELS: &[&str] = &["截止时间", "截止日期", "完成时间", "截止", "deadline", "due date"];
-const DEPENDENCY_INLINE_LABELS: &[&str] = &["依赖", "前提条件", "dependency", "prerequisite"];
-const ACTION_INLINE_LABELS: &[&str] =
-    &["行动项", "行动任务", "任务", "事项", "action item", "task"];
-
 struct TableTraceSchema {
-    fields: Vec<(usize, SummaryTraceField)>,
+    fields: Vec<(usize, Vec<SummaryTraceField>)>,
     action_anchor_columns: Vec<usize>,
 }
 
-fn trace_field_for_header(header: &str) -> Option<SummaryTraceField> {
-    let normalized = header.trim().trim_matches('*').trim().to_ascii_lowercase();
-    match normalized.as_str() {
-        "负责人" | "负责人/部门" | "负责人／部门" | "责任人" | "owner" | "owner/department"
-        | "owner / department" | "assignee" => Some(SummaryTraceField::Owner),
-        "时间" | "截止时间" | "截止日期" | "完成时间" | "截止" | "deadline" | "due date" | "time" => {
-            Some(SummaryTraceField::Time)
-        }
-        "依赖" | "前提条件" | "dependency" | "prerequisite" => Some(SummaryTraceField::Dependency),
-        _ => None,
-    }
-}
-
-fn is_action_anchor_header(header: &str) -> bool {
-    matches!(
-        header
-            .trim()
-            .trim_matches('*')
-            .trim()
-            .to_ascii_lowercase()
-            .as_str(),
-        "行动项"
-            | "行动任务"
-            | "任务"
-            | "事项"
-            | "决策"
-            | "结论"
-            | "action item"
-            | "action"
-            | "task"
-            | "decision"
-    )
-}
-
 fn inline_action_anchors(line: &str) -> Vec<String> {
-    inline_field_values(line, ACTION_INLINE_LABELS)
+    inline_field_values(line, TASK_LABELS)
         .into_iter()
         .map(str::to_owned)
         .collect()
@@ -975,98 +894,11 @@ fn contains_first_person_commitment(text: &str) -> bool {
     .any(|phrase| normalized.contains(phrase))
 }
 
-fn restore_first_inline_placeholder(
-    line: &str,
-    field: SummaryTraceField,
-    original_value: &str,
-) -> String {
-    let labels = match field {
-        SummaryTraceField::Owner => OWNER_INLINE_LABELS,
-        SummaryTraceField::Time => TIME_INLINE_LABELS,
-        SummaryTraceField::Dependency => DEPENDENCY_INLINE_LABELS,
-    };
-    for (start, end) in inline_field_ranges(line, labels) {
-        if is_review_placeholder(&line[start..end]) {
-            let mut restored = String::with_capacity(line.len() + original_value.len());
-            restored.push_str(&line[..start]);
-            restored.push_str(original_value);
-            restored.push_str(&line[end..]);
-            return restored;
-        }
-    }
-    line.to_owned()
-}
-
 fn inline_field_values<'a>(line: &'a str, labels: &[&str]) -> Vec<&'a str> {
     inline_field_ranges(line, labels)
         .into_iter()
         .map(|(start, end)| line[start..end].trim().trim_matches('*').trim())
         .collect()
-}
-
-fn inline_field_ranges(line: &str, labels: &[&str]) -> Vec<(usize, usize)> {
-    let lowercase = line.to_ascii_lowercase();
-    let mut ranges = Vec::new();
-    for label in labels {
-        let needle = label.to_ascii_lowercase();
-        let mut offset = 0;
-        while let Some(relative) = lowercase[offset..].find(&needle) {
-            let start = offset + relative + needle.len();
-            let remainder = &line[start..];
-            let Some(colon_offset) = remainder.find([':', '：']) else {
-                break;
-            };
-            if !remainder[..colon_offset]
-                .chars()
-                .all(|character| character.is_whitespace() || character == '*')
-            {
-                offset = start;
-                continue;
-            }
-            let value_start = start
-                + colon_offset
-                + remainder[colon_offset..]
-                    .chars()
-                    .next()
-                    .map(char::len_utf8)
-                    .unwrap_or(1);
-            let value_remainder = &line[value_start..];
-            let value_end = value_remainder
-                .find([';', '；', '|'])
-                .unwrap_or(value_remainder.len());
-            let raw_value = &value_remainder[..value_end];
-            let leading = raw_value.len() - raw_value.trim_start().len();
-            let trailing = raw_value.trim_end().len();
-            let range_start = value_start + leading;
-            let range_end = value_start + trailing;
-            if range_start < range_end {
-                ranges.push((range_start, range_end));
-            }
-            offset = value_start + value_end;
-            if offset >= line.len() {
-                break;
-            }
-        }
-    }
-    ranges.sort_unstable();
-    ranges.dedup();
-    ranges
-}
-
-fn markdown_table_cells(line: &str) -> Vec<String> {
-    line.trim()
-        .trim_matches('|')
-        .split('|')
-        .map(|cell| cell.trim().trim_matches('*').trim().to_owned())
-        .collect()
-}
-
-fn markdown_table_separator(cells: &[String]) -> bool {
-    !cells.is_empty()
-        && cells.iter().all(|cell| {
-            cell.chars()
-                .all(|character| matches!(character, ':' | '-' | ' '))
-        })
 }
 
 fn is_review_placeholder(value: &str) -> bool {
@@ -1467,6 +1299,60 @@ mod tests {
                 SummaryStaleReason::TemplateChanged,
             ]
         );
+    }
+
+    #[test]
+    fn t03_deliverable_reordered_bold_aliases_use_the_same_evidence() {
+        let source = moss_source(TranscriptVersionState::Active);
+        let markdown = "| **Due  Date** | 责任人 | Deliverable | 保留列 |
+| --- | --- | --- | --- |
+| 周五 | Rayson | 整理报告 | **原样** |";
+        let traces = trace_owner_and_time_fields(markdown, &source).unwrap();
+        assert_eq!(traces.len(), 2); assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported));
+        assert!(traces.iter().all(|trace| trace.task == "整理报告"));
+        let restored = restore_supported_owner_and_time_fields(markdown, &markdown.replace("| 周五 | Rayson |", "| 会议未提及 | 会议未提及 |"), &traces);
+        assert_eq!(restored, markdown);
+    }
+    #[test]
+    fn t03_unknown_task_headers_do_not_supply_an_action_anchor() {
+        let source = moss_source(TranscriptVersionState::Active);
+        let traces = trace_owner_and_time_fields("| Deliverable Notes | Due Date |
+| --- | --- |
+| 整理报告 | 周五 |", &source).unwrap();
+        assert_eq!(traces.len(), 1); assert_eq!(traces[0].status, SummaryTraceStatus::NeedsReview); assert!(traces[0].task.is_empty());
+    }
+    #[test]
+    fn t03_combined_cell_requires_every_claim_to_be_supported() {
+        let source = moss_source(TranscriptVersionState::Active);
+        let original = "| 行动任务 | 截止时间/验收标准 |
+| --- | --- |
+| 整理报告 | 截止时间：周五；验收标准：100个用例通过 |";
+        let traces = trace_owner_and_time_fields(original, &source).unwrap();
+        assert_eq!(traces.len(), 2);
+        assert_eq!(traces.iter().find(|trace| trace.field == SummaryTraceField::Time).unwrap().status, SummaryTraceStatus::Supported);
+        assert_eq!(traces.iter().find(|trace| trace.field == SummaryTraceField::Acceptance).unwrap().status, SummaryTraceStatus::NeedsReview);
+        let masked = "| 行动任务 | 截止时间/验收标准 |
+| --- | --- |
+| 整理报告 | 会议未提及 |";
+        assert_eq!(restore_supported_owner_and_time_fields(original, masked, &traces), masked);
+    }
+    #[test]
+    fn t03_inline_restoration_keeps_the_unsupported_slot_masked() {
+        let source = moss_source(TranscriptVersionState::Active);
+        let original = "任务：整理报告；责任人：未知人；负责人：Rayson；截止日期：周五";
+        let traces = trace_owner_and_time_fields(original, &source).unwrap();
+        let masked = "任务：整理报告；责任人：会议未提及；负责人：会议未提及；截止日期：会议未提及";
+        let restored = restore_supported_owner_and_time_fields(original, masked, &traces);
+        assert_eq!(restored, "任务：整理报告；责任人：会议未提及；负责人：Rayson；截止日期：周五");
+    }
+    #[test]
+    fn t03_fenced_tables_are_examples_not_field_claims() {
+        let source = moss_source(TranscriptVersionState::Active);
+        assert!(trace_owner_and_time_fields("```markdown
+| 行动任务 | 负责人 |
+| --- | --- |
+| 整理报告 | 未知人 |
+```", &source).unwrap().is_empty());
     }
 
     #[test]

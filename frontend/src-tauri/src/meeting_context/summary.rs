@@ -7,6 +7,7 @@ use crate::summary::source_binding::{
     SummarySourceBindingError, SummaryTraceField, SummaryTraceStatus, TranscriptEvidenceBinding,
     TranscriptVersionSnapshot,
 };
+use crate::summary::field_schema::{advance_fence as advance_markdown_fence, label_fields, inline_labels, table_cells, table_header, table_separator};
 use chrono::{DateTime, Datelike, NaiveDate, SecondsFormat, Utc};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -584,6 +585,7 @@ pub fn validate_summary_markdown_with_source(
             replace_unverified_hybrid_person_names(&normalized, context).0
         })
         .unwrap_or_else(|| markdown.to_owned());
+    validated.markdown = mask_action_fields(&validated.markdown);
     let traces = trace_owner_and_time_fields(&evidence_markdown, source)?;
 
     if traces.iter().any(|trace| {
@@ -612,6 +614,10 @@ pub fn validate_summary_markdown_with_source(
             "untraceable_action_dependency",
             "summary:factValidation.untraceableActionDependency",
         );
+    }
+    if traces.iter().any(|trace| !matches!(trace.field, SummaryTraceField::Owner | SummaryTraceField::Time | SummaryTraceField::Dependency)
+        && trace.status == SummaryTraceStatus::NeedsReview) {
+        push_fact_warning(&mut validated.validation, "untraceable_action_field", "summary:factValidation.untraceableActionField");
     }
     validated.markdown =
         restore_supported_owner_and_time_fields(&evidence_markdown, &validated.markdown, &traces);
@@ -650,19 +656,6 @@ fn summary_section_title(line: &str) -> Option<&str> {
     } else if line.starts_with("**") && line.ends_with("**") {
         Some(line.trim_matches('*').trim())
     } else { None }
-}
-
-fn advance_markdown_fence(fence: &mut Option<(char, usize)>, line: &str) -> bool {
-    let line = line.trim_start();
-    let marker = line.chars().next().unwrap_or(' ');
-    let count = line.chars().take_while(|c| *c == marker).count();
-    if !matches!(marker, '`' | '~') || count < 3 { return false; }
-    match *fence {
-        None => *fence = Some((marker, count)),
-        Some((opening, length)) if marker == opening && count >= length && line[count..].trim().is_empty() => *fence = None,
-        _ => {}
-    }
-    true
 }
 
 fn fill_verified_people_fields(
@@ -713,7 +706,7 @@ fn fill_verified_people_fields(
             if advance_markdown_fence(&mut fence, line) || fence.is_some() { continue; }
             if line.trim().starts_with('|') && line.trim().ends_with('|') {
                 has_table = true;
-                let mut cells = line.trim().trim_matches('|').split('|').map(|cell| cell.trim().to_owned()).collect::<Vec<_>>();
+                let mut cells = table_cells(line);
                 let separator = cells.iter().all(|cell| !cell.is_empty() && cell.chars().all(|c| matches!(c, '-' | ':' | ' ')));
                 let next_separator = lines.get(index + 1).is_some_and(|next| next.trim().starts_with('|')
                     && next.chars().all(|c| matches!(c, '-' | ':' | ' ' | '|')));
@@ -1008,7 +1001,7 @@ fn contains_unsupported_organization_value(markdown: &str, support_corpus: &str)
             organization_columns = None;
             continue;
         }
-        let cells = parse_markdown_table_cells(line);
+        let cells = table_cells(line).into_iter().map(|cell| cell.trim().trim_matches('*').trim().to_owned()).collect::<Vec<_>>();
         if cells.is_empty() {
             organization_columns = None;
             continue;
@@ -1024,7 +1017,7 @@ fn contains_unsupported_organization_value(markdown: &str, support_corpus: &str)
             }
             continue;
         }
-        if is_markdown_table_separator(&cells) {
+        if table_separator(&cells) {
             continue;
         }
         if let Some(columns) = organization_columns.as_ref() {
@@ -1905,108 +1898,35 @@ fn line_has_person_identity_signal(line: &str) -> bool {
 }
 
 fn omit_unverified_high_risk_fields(markdown: &str, context: &SummaryMeetingContext) -> String {
-    let without_roles = remove_unverified_person_annotations(markdown, context);
-    let mut active_columns: Option<(Vec<usize>, String)> = None;
-    without_roles
-        .split('\n')
-        .map(|line| {
-            if line.trim_start().starts_with('|') && line.trim_end().ends_with('|') {
-                let mut cells = parse_markdown_table_cells(line);
-                let high_risk_columns = cells
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, header)| {
-                        is_high_risk_table_header(header).then_some(index)
-                    })
-                    .collect::<Vec<_>>();
-                if !high_risk_columns.is_empty() {
-                    let placeholder = if cells.iter().any(|cell| !cell.is_ascii()) {
-                        "会议未提及"
-                    } else {
-                        "Not mentioned"
-                    };
-                    active_columns = Some((high_risk_columns, placeholder.to_owned()));
-                    return line.to_owned();
-                }
-                if let Some((columns, placeholder)) = active_columns.as_ref() {
-                    if is_markdown_table_separator(&cells) {
-                        return line.to_owned();
-                    }
-                    for index in columns {
-                        if let Some(cell) = cells.get_mut(*index) {
-                            *cell = placeholder.clone();
-                        }
-                    }
-                    return format!("| {} |", cells.join(" | "));
-                }
-                line.to_owned()
-            } else {
-                active_columns = None;
-                omit_unverified_inline_fields(line)
+    mask_action_fields(&remove_unverified_person_annotations(markdown, context))
+}
+
+fn mask_action_fields(markdown: &str) -> String {
+    let lines = markdown.split('\n').collect::<Vec<_>>();
+    let mut columns: Vec<usize> = Vec::new();
+    let mut placeholder = "会议未提及";
+    let mut fence = None;
+    lines.iter().enumerate().map(|(index, line)| {
+        if advance_markdown_fence(&mut fence, line) || fence.is_some() { columns.clear(); return (*line).to_owned(); }
+        let mut cells = table_cells(line);
+        if !cells.is_empty() {
+            if table_header(&lines, index) {
+                columns = cells.iter().enumerate().filter_map(|(index, header)| (!label_fields(header).is_empty()).then_some(index)).collect();
+                placeholder = if cells.iter().any(|cell| !cell.is_ascii()) { "会议未提及" } else { "Not mentioned" };
+                return (*line).to_owned();
             }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn parse_markdown_table_cells(line: &str) -> Vec<String> {
-    line.trim()
-        .trim_matches('|')
-        .split('|')
-        .map(|cell| cell.trim().trim_matches('*').trim().to_owned())
-        .collect()
-}
-
-fn is_markdown_table_separator(cells: &[String]) -> bool {
-    !cells.is_empty()
-        && cells.iter().all(|cell| {
-            cell.chars()
-                .all(|character| matches!(character, ':' | '-' | ' '))
-        })
-}
-
-fn is_high_risk_table_header(header: &str) -> bool {
-    let normalized = header.trim().trim_matches('*').trim().to_ascii_lowercase();
-    matches!(
-        normalized.as_str(),
-        "负责人"
-            | "负责人/部门"
-            | "负责人／部门"
-            | "owner"
-            | "owner/department"
-            | "owner / department"
-            | "截止时间"
-            | "deadline"
-            | "due date"
-            | "验收标准"
-            | "acceptance criteria"
-            | "当前状态"
-            | "status"
-            | "依赖或卡点"
-            | "dependencies"
-            | "dependency/blocker"
-            | "升级条件"
-            | "escalation condition"
-    )
-}
-
-fn omit_unverified_inline_fields(line: &str) -> String {
-    static CHINESE_HIGH_RISK_FIELD: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(
-            r"((?:负责人|判断口径|截止时间|验收标准|当前状态|依赖或卡点|升级条件)\s*(?:\*\*)?\s*[:：]\s*)[^；;\n]+",
-        )
-        .expect("Chinese high-risk summary field regex must compile")
-    });
-    static ENGLISH_HIGH_RISK_FIELD: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(
-            r"(?i)((?:owner|criteria|deadline|due date|acceptance criteria|status|dependencies|dependency/blocker|escalation condition)\s*(?:\*\*)?\s*:\s*)[^;\n]+",
-        )
-        .expect("English high-risk summary field regex must compile")
-    });
-    let sanitized = CHINESE_HIGH_RISK_FIELD.replace_all(line, "${1}会议未提及");
-    ENGLISH_HIGH_RISK_FIELD
-        .replace_all(&sanitized, "${1}Not mentioned")
-        .into_owned()
+            if table_separator(&cells) || columns.is_empty() { return (*line).to_owned(); }
+            for column in &columns { if let Some(cell) = cells.get_mut(*column) { *cell = placeholder.to_owned(); } }
+            format!("| {} |", cells.join(" | "))
+        } else {
+            columns.clear();
+            let replacements = inline_labels(line).into_iter().filter(|(label, _, _)| !label_fields(label).is_empty())
+                .map(|(label, start, end)| (start, end, if label.is_ascii() { "Not mentioned" } else { "会议未提及" })).collect::<Vec<_>>();
+            let mut safe = (*line).to_owned();
+            for (start, end, value) in replacements.into_iter().rev() { safe.replace_range(start..end, value); }
+            safe
+        }
+    }).collect::<Vec<_>>().join("\n")
 }
 
 fn remove_unverified_person_annotations(markdown: &str, context: &SummaryMeetingContext) -> String {
@@ -2265,6 +2185,33 @@ mod tests {
     }
 
     #[test]
+    fn t03_masking_uses_confirmed_headers_and_keeps_unknown_columns() {
+        let original = "| 行动任务 | 责任人 | 截止日期 | 当前状态 | 自定义列 |
+| --- | --- | --- | --- | --- |
+| 当前状态 | 未知人 | 周五 | 已批准 | **保留** |
+| 负责人 | 另一个人 | 周六 | 进行中 | 原样 |";
+        let masked = mask_action_fields(original);
+        assert!(masked.contains("| 当前状态 | 会议未提及 | 会议未提及 | 会议未提及 | **保留** |"));
+        assert!(masked.contains("| 负责人 | 会议未提及 | 会议未提及 | 会议未提及 | 原样 |"));
+        assert!(masked.starts_with("| 行动任务 | 责任人 | 截止日期 | 当前状态 | 自定义列 |"));
+        let unknown = "| 行动任务 | Success Metric |
+| --- | --- |
+| 整理报告 | 原指标 |";
+        assert_eq!(mask_action_fields(unknown), unknown);
+    }
+    #[test]
+    fn t03_masking_inline_aliases_and_code_use_the_shared_schema() {
+        let line = "- **任务**：整理报告；**责任人**：未知人；**Due  Date**: Friday; CustomOwner: 原样";
+        assert_eq!(mask_action_fields(line), "- **任务**：整理报告；**责任人**：会议未提及；**Due  Date**: Not mentioned; CustomOwner: 原样");
+        let code = "```markdown
+| 任务 | owner |
+| --- | --- |
+| 演示 | nobody |
+```";
+        assert_eq!(mask_action_fields(code), code);
+    }
+
+    #[test]
     fn t02_generated_missing_people_are_filled_from_verified_snapshot_only() {
         let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
         let template = t02_people_template("paragraph");
@@ -2316,6 +2263,11 @@ mod tests {
         assert!(!unresolved);
         assert!(text.contains("| 参会人员 | MeiL、QA测试嘉宾 |"));
         assert!(text.contains("| 缺席人员 | Nick |"));
+        let mut escaped_context = context.clone();
+        escaped_context.verified_meeting_facts.attending[0].display_name = "Mei|L".into();
+        let (filled, _) = fill_verified_people_fields(wide, Some(&escaped_context), &t02_people_template("list"));
+        assert!(filled.contains(r"Mei\|L、QA测试嘉宾 | 保留日期 | Nick | MeiL"));
+        assert_eq!(fill_verified_people_fields(&filled, Some(&escaped_context), &t02_people_template("list")).0, filled);
     }
 
     #[test]

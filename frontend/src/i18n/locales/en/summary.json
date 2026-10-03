@@ -297,9 +297,10 @@
     "related": "Related text · does not establish this field",
     "original": "Source text",
     "unavailable": "No matching source is available, or the transcript has changed. Check this item in the transcript.",
-    "fields": { "owner": "Owner", "time": "Deadline", "dependency": "Dependency" }
+    "fields": { "owner": "Owner", "time": "Deadline", "dependency": "Dependency", "acceptance": "Acceptance criteria", "status": "Current status", "blocker": "Blocker", "criteria": "Evaluation criteria", "escalation": "Escalation condition" }
   },
   "factValidation": {
+    "untraceableActionField": "An action field could not be verified for the corresponding task. Check its source evidence.",
     "unmappedPeopleFields": "The template’s people fields could not be located reliably. Check them against this meeting’s settings.",
     "needsReviewTitle": "This summary needs a fact check",
     "needsReviewDescription": "The summary was generated and remains editable, but it conflicts with recorded meeting facts or those facts were unavailable.",
