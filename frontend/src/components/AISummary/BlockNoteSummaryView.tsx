@@ -7,6 +7,7 @@ import { AISummary } from './index';
 import { Block } from '@blocknote/core';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/shadcn';
+import { BlockNoteLocale, useBlockNoteLocale } from '@/lib/blocknote-locale';
 import { blocksToMarkdownSafely } from '@/lib/blocknote-markdown';
 import { summaryBlocksFingerprint } from '@/lib/summary-editor-state';
 import "@blocknote/shadcn/style.css";
@@ -91,8 +92,10 @@ export const BlockNoteSummaryView = forwardRef<BlockNoteSummaryViewRef, BlockNot
   const latestContentFingerprint = useRef('');
 
   // Create BlockNote editor for markdown parsing
+  const locale = useBlockNoteLocale();
   const editor = useCreateBlockNote({
-    initialContent: undefined
+    initialContent: undefined,
+    dictionary: locale.dictionary,
   });
 
   // Parse markdown to blocks when format is markdown
@@ -287,7 +290,7 @@ export const BlockNoteSummaryView = forwardRef<BlockNoteSummaryViewRef, BlockNot
     return (
       <div className="flex flex-col w-full">
         <div className="w-full">
-          <BlockNoteView
+          <BlockNoteLocale {...locale}><BlockNoteView
             editor={editor}
             editable={true}
             onChange={() => {
@@ -296,7 +299,7 @@ export const BlockNoteSummaryView = forwardRef<BlockNoteSummaryViewRef, BlockNot
               }
             }}
             theme="light"
-          />
+          /></BlockNoteLocale>
         </div>
       </div>
     );

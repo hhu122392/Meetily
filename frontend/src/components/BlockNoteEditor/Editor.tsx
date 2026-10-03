@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { PartialBlock, Block } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
+import { BlockNoteLocale, useBlockNoteLocale } from '@/lib/blocknote-locale';
 import "@blocknote/shadcn/style.css";
 import "@blocknote/core/fonts/inter.css";
 
@@ -20,8 +21,10 @@ export default function Editor({ initialContent, onChange, editable = true }: Ed
     editable
   });
 
+  const locale = useBlockNoteLocale();
   const editor = useCreateBlockNote({
     initialContent: initialContent as PartialBlock[] | undefined,
+    dictionary: locale.dictionary,
   });
 
   console.log('📝 EDITOR: BlockNote editor created successfully');
@@ -47,5 +50,5 @@ export default function Editor({ initialContent, onChange, editable = true }: Ed
     };
   }, [editor, onChange]);
 
-  return <BlockNoteView editor={editor} editable={editable} theme="light" />;
+  return <BlockNoteLocale {...locale}><BlockNoteView editor={editor} editable={editable} theme="light" /></BlockNoteLocale>;
 }

@@ -17,6 +17,9 @@ import { useImportDialog } from '@/contexts/ImportDialogContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { requestAppNavigation } from '@/lib/navigation-guard';
 import { DEFAULT_TRANSCRIPT_CONFIG } from '@/lib/sensevoice';
+import dynamic from 'next/dynamic';
+
+const SettingsPanel = dynamic(() => import('@/components/SettingsPanel'), { ssr: false });
 
 import {
   Dialog,
@@ -48,6 +51,12 @@ const Sidebar: React.FC = () => {
   const { t } = useTranslation('navigation');
   const router = useRouter();
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => {
+    // A settings route would unmount a meeting's unsaved editor and undo history.
+    if (pathname === '/meeting-details') setSettingsOpen(true);
+    else requestAppNavigation('/settings', () => router.push('/settings'));
+  }, [pathname, router]);
   const {
     currentMeeting,
     setCurrentMeeting,
@@ -69,7 +78,6 @@ const Sidebar: React.FC = () => {
   const { betaFeatures } = useConfig();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['meetings']));
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showModelSettings, setShowModelSettings] = useState(false);
   const [modelConfig, setModelConfig] = useState<ModelConfig>({
     provider: 'ollama',
     model: '',
@@ -442,17 +450,15 @@ const Sidebar: React.FC = () => {
     setExpandedFolders(newExpanded);
   };
 
-  // Expose setShowModelSettings to window for Rust tray to call
+  // Sidebar and native tray use the same navigation guard / meeting dialog.
   useEffect(() => {
-    (window as any).openSettings = () => {
-      setShowModelSettings(true);
-    };
+    (window as any).openSettings = openSettings;
 
     // Cleanup on unmount
     return () => {
       delete (window as any).openSettings;
     };
-  }, []);
+  }, [openSettings]);
 
   const renderCollapsedIcons = () => {
     if (!isCollapsed) return null;
@@ -541,7 +547,7 @@ const Sidebar: React.FC = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => requestAppNavigation('/settings', () => router.push('/settings'))}
+                onClick={openSettings}
                 aria-label={t('labels.settings')}
                 className={`p-2 rounded-lg transition-colors duration-150 ${isSettingsPage ? 'bg-gray-100' : 'hover:bg-gray-100'
                   }`}
@@ -868,7 +874,7 @@ const Sidebar: React.FC = () => {
             )}
 
             <button
-              onClick={() => requestAppNavigation('/settings', () => router.push('/settings'))}
+              onClick={openSettings}
               className="w-full flex items-center justify-center px-3 py-1.5 mt-1 mb-1 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors shadow-sm"
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -880,6 +886,13 @@ const Sidebar: React.FC = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-6xl overflow-hidden p-0" aria-describedby={undefined}>
+          <VisuallyHidden><DialogTitle>{t('labels.settings')}</DialogTitle></VisuallyHidden>
+          <SettingsPanel onBack={() => setSettingsOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Modal for Delete */}
       <ConfirmationModal
