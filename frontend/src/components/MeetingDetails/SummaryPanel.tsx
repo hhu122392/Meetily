@@ -54,6 +54,8 @@ const factWarningTranslationKeys = {
   untraceable_action_owner: 'factValidation.untraceableActionOwner',
   untraceable_action_time: 'factValidation.untraceableActionTime',
   untraceable_action_dependency: 'factValidation.untraceableActionDependency',
+  untraceable_action_field: 'factValidation.untraceableActionField',
+  unmapped_people_fields: 'factValidation.unmappedPeopleFields',
   manual_high_risk_fields_unverified: 'factValidation.manualHighRiskFieldsUnverified',
   summary_validation_unavailable: 'factValidation.validationUnavailable',
   summary_markdown_unavailable: 'factValidation.summaryMarkdownUnavailable',

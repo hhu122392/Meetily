@@ -3,7 +3,7 @@ use super::{
     MeetingContextContainer, MeetingContextSnapshot, SnapshotPerson,
 };
 use crate::summary::source_binding::{
-    restore_supported_owner_and_time_fields, trace_owner_and_time_fields, SummaryFieldTrace,
+    restore_supported_owner_and_time_fields, review_trace_slot_is_masked, trace_owner_and_time_fields, SummaryFieldTrace,
     SummarySourceBindingError, SummaryTraceField, SummaryTraceStatus, TranscriptEvidenceBinding,
     TranscriptVersionSnapshot,
 };
@@ -228,6 +228,28 @@ impl SummaryFactValidation {
                 _ => {}
             }
         }
+        let Some(markdown) = stored_summary.get("markdown").and_then(serde_json::Value::as_str) else { return; };
+        let Some(saved) = stored_summary.get("factValidation")
+            .and_then(|value| serde_json::from_value::<Self>(value.clone()).ok()) else { return; };
+        let same_evidence = self.source_evidence.is_some() && self.source_evidence == saved.source_evidence
+            && self.summary_context_sha256 == saved.summary_context_sha256;
+        for mut trace in saved.field_traces.into_iter().filter(|trace|
+            trace.status == SummaryTraceStatus::NeedsReview && review_trace_slot_is_masked(markdown, trace)) {
+            // Preserve the original candidate for review, never certify it with old evidence.
+            trace.evidence.clear();
+            if !same_evidence { trace.related_evidence.clear(); }
+            let (code, key) = match trace.field {
+                SummaryTraceField::Owner => ("untraceable_action_owner", "untraceableActionOwner"),
+                SummaryTraceField::Time => ("untraceable_action_time", "untraceableActionTime"),
+                SummaryTraceField::Dependency => ("untraceable_action_dependency", "untraceableActionDependency"),
+                _ => ("untraceable_action_field", "untraceableActionField"),
+            };
+            push_fact_warning(self, code, &format!("summary:factValidation.{key}"));
+            self.field_traces.retain(|current| !(current.field == trace.field
+                && current.markdown_line == trace.markdown_line && current.markdown_column == trace.markdown_column));
+            self.field_traces.push(trace);
+        }
+        self.field_traces.sort_by_key(|trace| (trace.markdown_line, trace.markdown_column));
     }
 }
 
@@ -1654,6 +1676,20 @@ fn structured_field_value<'a>(line: &'a str, labels: &[&str]) -> Option<&'a str>
         .filter_map(|label| lower_value.find(&label.to_ascii_lowercase()))
         .min()
         .unwrap_or(value.len());
+    let mut value_end = value_end;
+    if labels == ATTENDEE_FIELD_LABELS {
+        // Commas may separate attendees; stop only at a separate explicit absence clause.
+        static ABSENCE_CLAUSE: Lazy<Regex> = Lazy::new(|| Regex::new(
+            r"(?i)[，,;；。][^,，;；。]*(?:缺席|未出席|请假|\babsent\b|did not attend)[^,，;；。]*"
+        ).unwrap());
+        // An English absence label may already truncate value_end before its predicate.
+        if let Some(clause) = ABSENCE_CLAUSE.find(value) {
+            let clause_text = clause.as_str().to_ascii_lowercase();
+            if !["不缺席", "没缺席", "没有缺席", "未缺席", "不是缺席", "不请假", "没有请假",
+                "可能", "也许", "是否", "但", "not absent", "n't absent", "may ", "might ", "but ", "?", "？"]
+                .iter().any(|qualifier| clause_text.contains(qualifier)) { value_end = value_end.min(clause.start()); }
+        }
+    }
     Some(value[..value_end].trim())
 }
 
@@ -2117,6 +2153,58 @@ mod tests {
     };
     use crate::summary::source_binding::TranscriptEvidenceSegment;
     use chrono::TimeZone;
+
+    #[test]
+    fn t07_people_prose_does_not_mix_separate_absence_with_attendees() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        for text in ["参会人员为MeiL；Nick缺席。", "参会人员包括MeiL，Nick缺席。",
+            "Attendees: MeiL, Nick was absent.", "Attendees: MeiL; Nick did not attend."] {
+            let v = validate_summary_markdown(text, Some(&context));
+            assert!(!v.validation.warnings.iter().any(|w| w.code == "attendance_conflict"), "{text}");
+        }
+        for text in ["参会人员：MeiL、Nick", "Attendees: MeiL, Nick", "参会人员为MeiL和Rayson",
+            "参会人员：MeiL；Nick", "Attendees: MeiL; Nick", "参会人员包括MeiL，Nick没有缺席。",
+            "Attendees: MeiL, Nick was not absent.", "参会人员包括MeiL，Nick可能缺席。"] {
+            assert!(validate_summary_markdown(text, Some(&context)).validation.warnings.iter()
+                .any(|w| w.code == "attendance_conflict"), "{text}");
+        }
+    }
+
+    #[test]
+    fn t07_native_read_keeps_review_candidates_only_in_matching_masked_slots() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let source = TranscriptVersionSnapshot::legacy_whisper("t07_synthetic", vec![TranscriptEvidenceSegment {
+            segment_id: "t07_seg".into(), start_ms: Some(0), end_ms: Some(3000), wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "讨论接口回归测试，没有约定各字段。".into(),
+        }]);
+        let markdown = "| 任务 | 负责人 | 截止时间 | 验收标准 | 当前状态 | 依赖 | 卡点 |\n| --- | --- | --- | --- | --- | --- | --- |\n| 接口回归测试 | MeiL | 周五 | 阻断问题为0 | 进行中 | 接口发布 | 审批 |";
+        let checked = validate_summary_markdown_with_source(markdown, Some(&context), &source).unwrap();
+        assert_eq!(checked.validation.field_traces.len(), 6);
+        let stored = serde_json::json!({"markdown":checked.markdown,"factValidation":checked.validation});
+        let mut read = validate_summary_markdown_with_source(stored["markdown"].as_str().unwrap(), Some(&context), &source).unwrap();
+        assert!(read.validation.field_traces.is_empty());
+        read.validation.retain_saved_omission_warnings(&stored);
+        assert_eq!(read.validation.field_traces.iter().map(|t| t.value.as_str()).collect::<Vec<_>>(),
+            ["MeiL", "周五", "阻断问题为0", "进行中", "接口发布", "审批"]);
+        assert!(read.validation.field_traces.iter().all(|t| t.status == SummaryTraceStatus::NeedsReview && t.evidence.is_empty()));
+        assert!(read.validation.field_traces.iter().any(|t| !t.related_evidence.is_empty()));
+        assert_eq!(read.validation.warning_count, read.validation.warnings.len());
+        for changed in [stored["markdown"].as_str().unwrap().replace("接口回归测试", "发布邀请"),
+            stored["markdown"].as_str().unwrap().replace("待核对", "人工改值"),
+            format!("```\n{}\n```", stored["markdown"] .as_str().unwrap())] {
+            let mut edited = stored.clone(); edited["markdown"] = changed.into();
+            let mut current = validate_summary_markdown_with_source(edited["markdown"].as_str().unwrap(), Some(&context), &source).unwrap().validation;
+            current.retain_saved_omission_warnings(&edited);
+            assert!(!current.field_traces.iter().any(|t| t.value == "周五"));
+        }
+        let mut changed_source = source.clone(); changed_source.segments[0].text = "另一个版本讨论接口回归测试。".into();
+        changed_source = TranscriptVersionSnapshot::legacy_whisper("t07_synthetic", changed_source.segments);
+        let mut current = validate_summary_markdown_with_source(stored["markdown"].as_str().unwrap(), Some(&context), &changed_source).unwrap().validation;
+        current.retain_saved_omission_warnings(&stored);
+        assert_eq!(current.field_traces.len(), 6);
+        assert!(current.field_traces.iter().all(|t| t.evidence.is_empty() && t.related_evidence.is_empty()));
+    }
 
     fn snapshot() -> MeetingContextSnapshot {
         let mut snapshot = MeetingContextSnapshot {

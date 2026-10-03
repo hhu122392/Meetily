@@ -154,17 +154,21 @@ export function usePaginatedTranscripts({
 
     // Force refetch of data (e.g., after retranscription)
     const refetch = useCallback(async () => {
-        if (!meetingId) return;
+        if (!meetingId || isLoadingRef.current) return;
 
-        reset();
-        setIsLoading(true);
+        // Keep the loaded page mounted: resetting initial loading would discard
+        // its current summary/editor before native evidence can be refreshed.
+        isLoadingRef.current = true;
+        setIsLoadingMore(true);
+        setError(null);
         try {
             await loadMetadata();
             await loadTranscriptsAtOffset(0, false);
         } finally {
-            setIsLoading(false);
+            setIsLoadingMore(false);
+            isLoadingRef.current = false;
         }
-    }, [meetingId, reset, loadMetadata, loadTranscriptsAtOffset]);
+    }, [meetingId, loadMetadata, loadTranscriptsAtOffset]);
 
     // Initial load
     useEffect(() => {

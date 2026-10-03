@@ -794,6 +794,37 @@ fn normalize_task(task: &str) -> String {
     if task.is_ascii() { task.split_whitespace().collect::<Vec<_>>().join(" ") } else { normalize_evidence(&task) }
 }
 
+/// A saved review candidate belongs only to its still-masked task/field slot.
+/// This never verifies a value or restores it into the authored body.
+pub fn review_trace_slot_is_masked(markdown: &str, trace: &SummaryFieldTrace) -> bool {
+    if trace.task.trim().is_empty() || trace.markdown_line == 0 { return false; }
+    let lines = markdown.lines().collect::<Vec<_>>();
+    let mut header = Vec::new();
+    let mut fence = None;
+    for (index, line) in lines.iter().enumerate() {
+        if advance_fence(&mut fence, line) || fence.is_some() { header.clear(); continue; }
+        let cells = table_cells(line);
+        if table_header(&lines, index) { header = cells; continue; }
+        if index + 1 == trace.markdown_line {
+            let (anchors, slots) = if let Some(column) = trace.markdown_column {
+                let Some(label) = header.get(column) else { return false; };
+                let Some(value) = cells.get(column) else { return false; };
+                let anchors = header.iter().enumerate().filter(|(_, label)| is_task_label(label))
+                    .filter_map(|(i, _)| cells.get(i)).cloned().collect::<Vec<_>>();
+                (anchors, cell_field_values(&label_fields(label), value))
+            } else {
+                (inline_action_anchors(line), inline_labels(line).into_iter()
+                    .flat_map(|(label, start, end)| cell_field_values(&label_fields(label), &line[start..end])).collect())
+            };
+            return normalize_task(&anchors.join(" / ")) == normalize_task(&trace.task)
+                && slots.iter().filter(|(field, _)| *field == trace.field).count() == 1
+                && slots.iter().any(|(field, value)| *field == trace.field && is_field_placeholder(*field, value));
+        }
+        if cells.is_empty() { header.clear(); }
+    }
+    false
+}
+
 fn task_matches(text: &str, task: &str) -> bool {
     if !task.is_ascii() { return normalize_evidence(text).contains(task); }
     let pattern = task.split_whitespace().map(regex::escape).collect::<Vec<_>>().join(r"\s+");
@@ -1212,6 +1243,7 @@ fn is_review_placeholder(value: &str) -> bool {
     matches!(
         normalize_evidence(value).trim_matches(['。', '，', '；', '：']),
         "会议未提及"
+            | "待核对"
             | "未提及"
             | "待确认"
             | "待检查"
@@ -1440,6 +1472,23 @@ fn canonical_json_sha256<T: Serialize>(value: &T) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn t07_review_slot_checks_combined_fields_inline_duplicates_and_column_meaning() {
+        let mut trace = SummaryFieldTrace { field: SummaryTraceField::Time, value: "周五".into(),
+            markdown_line: 3, markdown_column: Some(1), status: SummaryTraceStatus::NeedsReview,
+            task: "接口回归测试".into(), evidence: Vec::new(), related_evidence: Vec::new() };
+        let mixed = "| 任务 | 负责人/截止时间 |\n| --- | --- |\n| 接口回归测试 | MeiL / 待核对 |";
+        assert!(review_trace_slot_is_masked(mixed, &trace));
+        trace.field = SummaryTraceField::Owner;
+        assert!(!review_trace_slot_is_masked(mixed, &trace));
+        trace.field = SummaryTraceField::Time;
+        assert!(!review_trace_slot_is_masked(&mixed.replace("负责人/截止时间", "自定义列"), &trace));
+        trace.markdown_line = 1; trace.markdown_column = None;
+        assert!(review_trace_slot_is_masked("任务：接口回归测试；截止时间：待核对", &trace));
+        assert!(!review_trace_slot_is_masked("任务：接口回归测试；截止时间：待核对；截止时间：待核对", &trace));
+        assert!(!review_trace_slot_is_masked("任务：发布邀请；截止时间：待核对", &trace));
+    }
     use chrono::TimeZone;
 
     fn at() -> DateTime<Utc> {

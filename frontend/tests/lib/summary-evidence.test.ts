@@ -41,3 +41,16 @@ test('supported evidence preserves the segment identity and actual recording off
   assert.equal(result.sources[0].startMs, 330000);
   assert.equal(result.sources[0].related, false);
 });
+
+test('new field candidates stay readable and related text never becomes proof', async () => {
+  for (const field of ['acceptance', 'status', 'dependency', 'blocker'] as const) {
+    const candidate: SummaryFieldTrace = { ...trace, field, value: `Original ${field} candidate`, evidence: [reference] };
+    const [result] = await resolveSummaryEvidence([candidate], [{ id: 'segment-12', text }]);
+    assert.equal(result.trace.value, candidate.value);
+    assert.equal(result.trace.status, 'needs_review');
+    assert.equal(result.sources[0].related, true);
+    const [changed] = await resolveSummaryEvidence([candidate], [{ id: 'segment-12', text: 'Changed text' }]);
+    assert.equal(changed.trace.value, candidate.value);
+    assert.deepEqual(changed.sources, []);
+  }
+});

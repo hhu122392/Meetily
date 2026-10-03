@@ -287,7 +287,7 @@
   },
   "evidence": {
     "title": "Source evidence ({{count}})",
-    "description": "Check each task's owner, deadline and dependency",
+    "description": "Check each task’s owner, deadline, acceptance criteria, status, dependencies and blockers",
     "helpLabel": "About source evidence",
     "help": "A source reference does not prove the entire summary is correct. Fields marked for review lack explicit evidence for that task. Related text is only a review aid.",
     "refreshRequired": "Save your summary edits first. If the transcript or template changed, regenerate the summary before reviewing.",

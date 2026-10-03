@@ -133,7 +133,7 @@ pub async fn api_save_meeting_summary<R: Runtime>(
     );
     let pool = state.db_manager.pool();
     let (summary, fact_validation) =
-        match revalidate_summary_against_current_evidence(pool, &meeting_id, &summary).await {
+        match revalidate_summary_against_current_evidence(pool, &meeting_id, &summary, None).await {
             Ok(validated) => validated,
             Err(error) => {
                 // A broken/missing evidence file must never turn a valid human
@@ -197,10 +197,11 @@ async fn revalidate_summary_against_current_evidence(
     pool: &sqlx::SqlitePool,
     meeting_id: &str,
     summary: &serde_json::Value,
+    historical_generation_id: Option<&str>,
 ) -> Result<(serde_json::Value, SummaryFactValidation), String> {
     let context = match resolve_meeting_folder(pool, meeting_id).await? {
         MeetingFolderResolution::Folder(folder) => {
-            resolve_summary_context_for_generation(&folder, meeting_id, None)
+            resolve_summary_context_for_generation(&folder, meeting_id, historical_generation_id)
                 .map_err(|error| format!("Failed to load current meeting context: {error}"))?
         }
         MeetingFolderResolution::NoFolder => None,
@@ -443,7 +444,7 @@ pub async fn api_restore_manual_summary_revision<R: Runtime>(
     let stored_summary = serde_json::from_str::<serde_json::Value>(&summary_json)
         .map_err(|error| format!("Stored manual summary revision is invalid: {error}"))?;
     let (summary, mut fact_validation) =
-        match revalidate_summary_against_current_evidence(pool, &meeting_id, &stored_summary).await
+        match revalidate_summary_against_current_evidence(pool, &meeting_id, &stored_summary, recorded_generation_id(&stored_summary)).await
         {
             Ok(validated) => validated,
             Err(error) => {
@@ -873,6 +874,7 @@ pub async fn api_get_summary<R: Runtime>(
                                 pool,
                                 &meeting_id,
                                 &parsed,
+                                recorded_generation_id(&parsed),
                             )
                             .await
                             {
@@ -1408,6 +1410,19 @@ mod tests {
             .warnings
             .iter()
             .any(|warning| warning.code == "missing_meeting_context"));
+    }
+
+    #[test]
+    fn t07_manual_save_never_imports_native_read_candidates_from_webview() {
+        let original = "任务：接口回归测试；截止时间：周五";
+        let source = source("讨论接口回归测试，没有约定时间。");
+        let checked = validate_summary_markdown_with_source(original, Some(&minimal_context()), &source).unwrap();
+        let forged = serde_json::json!({"markdown":"任务：接口回归测试；截止时间：待核对", "factValidation":checked.validation,
+            "template_snapshot":{"generationId":"gen_untrusted"}});
+        let (body, v) = revalidate_summary_payload(&forged, Some(&minimal_context()), &source).unwrap();
+        assert_eq!(body["markdown"], forged["markdown"]);
+        assert!(body.get("factValidation").is_none());
+        assert!(!v.field_traces.iter().any(|t| t.value == "周五"));
     }
 
     #[test]
