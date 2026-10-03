@@ -1,0 +1,24 @@
+{
+  "source_commit": "3c21b8d73bcbc014e9c78a04e343c4af413c3e04",
+  "exe_sha256": "abd04e14cbe0800338a8cb784990e32b4e161d41bf62a95d56135b181aadce59",
+  "fixtures": {
+    "template.json": "a335a3e6a5c88224a260e83cfd9dac73a08612f4f919248e200709deb69ac5e0",
+    "transcripts.json": "fc071b5999c782f3fff118bc82fe739d6d87e2a86dfbe3bebc69b4a92f5c58c6"
+  },
+  "production_probe_exit": 0,
+  "required_behavior_exit": 1,
+  "required_behavior_failed_checks": 7,
+  "baseline_meeting_title": "会议 03_10_26_21_23_31",
+  "metadata_status": "completed",
+  "desktop_checks": [
+    "default attendance settings and recording",
+    "saved synthetic summary inspected",
+    "plus menu opened",
+    "block menu opened"
+  ],
+  "scope": "synthetic fixtures only; silence recording verifies metadata, not ASR",
+  "published_fixtures_sha256_lf": {
+    "template.json": "1c37c7b91497d6fd01a9c4f7fb70ee0566d112a764a7c65cc04809f6fe515208",
+    "transcripts.json": "92da11b1ee461d6a460918655669760636c2164a00efcfff15160fd9e01279f3"
+  }
+}

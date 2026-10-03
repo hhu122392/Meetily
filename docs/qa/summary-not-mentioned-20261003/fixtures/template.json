@@ -1,0 +1,75 @@
+{
+  "schema_version": 2,
+  "id": "repro_not_mentioned_20261003",
+  "name": "复现测试｜人员与行动计划（虚构）",
+  "description": "仅用于本机复现，不是真实会议",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [
+    "复现测试"
+  ],
+  "source": {
+    "type": "manual",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-10-03T12:00:00Z",
+  "updated_at": "2026-10-03T12:00:00Z",
+  "sections": [
+    {
+      "id": "meeting_info",
+      "title": "会议信息",
+      "instruction": "依据已确认的会议上下文填写参会人员、缺席人员、主持人；没有依据写会议未提及。模板预设名单本身不是出席证据。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "action_items",
+      "title": "行动计划",
+      "instruction": "从转录逐条提取已明确的任务、负责人、截止时间、验收标准、当前状态和依赖或卡点。保持下列表头，原文明确给出时保留原文事实，无依据写会议未提及。不要根据任务目标或计划自行推断。",
+      "format": "list",
+      "item_format": "| 行动任务 | 负责人 | 截止时间 | 验收标准 | 当前状态 | 依赖或卡点 |\n| --- | --- | --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily_meeting_context": {
+      "schema_version": 1,
+      "fixed_meeting_mechanism": null,
+      "terms": [],
+      "people": [
+        {
+          "person_id": "repro_person_1",
+          "display_name": "林舟",
+          "aliases": [],
+          "department": null,
+          "role": null,
+          "enabled": true
+        },
+        {
+          "person_id": "repro_person_2",
+          "display_name": "陈岚",
+          "aliases": [],
+          "department": null,
+          "role": null,
+          "enabled": true
+        },
+        {
+          "person_id": "repro_person_3",
+          "display_name": "顾然",
+          "aliases": [],
+          "department": null,
+          "role": null,
+          "enabled": true
+        }
+      ]
+    }
+  }
+}
