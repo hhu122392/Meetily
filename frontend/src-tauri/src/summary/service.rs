@@ -2,9 +2,10 @@ use crate::database::repositories::{
     meeting::MeetingsRepository, setting::SettingsRepository, summary::SummaryProcessesRepository,
 };
 use crate::meeting_context::{
-    sanitize_generated_summary_with_transcript, validate_summary_markdown_with_source,
+    sanitize_generated_summary_with_transcript,
     SummaryFactValidation, SummaryMeetingContext,
 };
+use crate::meeting_context::summary::validate_generated_summary_with_source;
 use crate::ollama::metadata::ModelMetadataCache;
 use crate::summary::language_detection::detect_summary_language;
 use crate::summary::llm_client::LLMProvider;
@@ -695,10 +696,11 @@ impl SummaryService {
                 // application changes can be distinguished during review.
                 // Validate the exact persisted body, with its title already removed.
                 let final_markdown = strip_title_if_present(&final_markdown);
-                let validated_summary = match validate_summary_markdown_with_source(
+                let validated_summary = match validate_generated_summary_with_source(
                     &final_markdown,
                     summary_meeting_context.as_ref(),
                     &summary_source,
+                    &template,
                 ) {
                     Ok(validated) => validated,
                     Err(error) => {

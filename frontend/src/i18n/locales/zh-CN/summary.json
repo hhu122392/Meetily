@@ -300,6 +300,7 @@
     "fields": { "owner": "负责人", "time": "截止时间", "dependency": "依赖" }
   },
   "factValidation": {
+    "unmappedPeopleFields": "模板要求的人员字段无法准确定位，请核对名单与本次会议设置。",
     "needsReviewTitle": "此摘要需检查事实",
     "needsReviewDescription": "摘要已经生成并可继续编辑，但部分内容与会议记录事实冲突，或本会议缺少结构化事实上下文。",
     "genericWarning": "有一项会议记录事实无法核验。",

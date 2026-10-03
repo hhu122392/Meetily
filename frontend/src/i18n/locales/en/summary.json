@@ -300,6 +300,7 @@
     "fields": { "owner": "Owner", "time": "Deadline", "dependency": "Dependency" }
   },
   "factValidation": {
+    "unmappedPeopleFields": "The template’s people fields could not be located reliably. Check them against this meeting’s settings.",
     "needsReviewTitle": "This summary needs a fact check",
     "needsReviewDescription": "The summary was generated and remains editable, but it conflicts with recorded meeting facts or those facts were unavailable.",
     "genericWarning": "A recorded meeting fact could not be verified.",

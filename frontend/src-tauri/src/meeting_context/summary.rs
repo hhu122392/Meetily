@@ -217,6 +217,9 @@ impl SummaryFactValidation {
                 Some("unsupported_year") => push_fact_warning(
                     self, "unsupported_year", "summary:factValidation.unsupportedYear",
                 ),
+                Some("unmapped_people_fields") => push_fact_warning(
+                    self, "unmapped_people_fields", "summary:factValidation.unmappedPeopleFields",
+                ),
                 Some("unsupported_acronym_expansion") => push_fact_warning(
                     self, "unsupported_acronym_expansion",
                     "summary:factValidation.unsupportedAcronymExpansion",
@@ -615,6 +618,157 @@ pub fn validate_summary_markdown_with_source(
     validated.validation.field_traces = traces;
     validated.validation.source_evidence = Some(source.evidence_binding()?);
     Ok(validated)
+}
+
+/// Generation-only reconciliation. Manual saves keep their submitted body.
+/// Template requirements and people both come from the resolved generation snapshot.
+pub fn validate_generated_summary_with_source(
+    markdown: &str,
+    context: Option<&SummaryMeetingContext>,
+    source: &TranscriptVersionSnapshot,
+    template: &crate::summary::templates::Template,
+) -> Result<ValidatedSummaryMarkdown, SummarySourceBindingError> {
+    let (filled, unresolved) = fill_verified_people_fields(markdown, context, template);
+    let mut validated = validate_summary_markdown_with_source(&filled, context, source)?;
+    if unresolved {
+        push_fact_warning(&mut validated.validation, "unmapped_people_fields",
+            "summary:factValidation.unmappedPeopleFields");
+    }
+    Ok(validated)
+}
+
+fn people_field_index(label: &str) -> Option<usize> {
+    let label = label.trim().trim_matches('*').trim();
+    [ATTENDEE_FIELD_LABELS, ABSENCE_FIELD_LABELS, &["主持人", "host", "chairperson"]]
+        .iter().position(|labels| labels.iter().any(|alias| label.eq_ignore_ascii_case(alias)))
+}
+
+fn summary_section_title(line: &str) -> Option<&str> {
+    let line = line.trim();
+    if line.starts_with('#') {
+        Some(line.trim_start_matches('#').trim().trim_matches('*').trim())
+    } else if line.starts_with("**") && line.ends_with("**") {
+        Some(line.trim_matches('*').trim())
+    } else { None }
+}
+
+fn advance_markdown_fence(fence: &mut Option<(char, usize)>, line: &str) -> bool {
+    let line = line.trim_start();
+    let marker = line.chars().next().unwrap_or(' ');
+    let count = line.chars().take_while(|c| *c == marker).count();
+    if !matches!(marker, '`' | '~') || count < 3 { return false; }
+    match *fence {
+        None => *fence = Some((marker, count)),
+        Some((opening, length)) if marker == opening && count >= length && line[count..].trim().is_empty() => *fence = None,
+        _ => {}
+    }
+    true
+}
+
+fn fill_verified_people_fields(
+    markdown: &str,
+    context: Option<&SummaryMeetingContext>,
+    template: &crate::summary::templates::Template,
+) -> (String, bool) {
+    let Some(context) = context else { return (markdown.to_owned(), false) };
+    let mut lines = markdown.split('\n').map(str::to_owned).collect::<Vec<_>>();
+    let mut unresolved = false;
+    for section in &template.sections {
+        let requirements = format!("{} {} {} {}", section.title, section.instruction,
+            section.item_format.as_deref().unwrap_or_default(),
+            section.example_item_format.as_deref().unwrap_or_default());
+        let labels: [&[&str]; 3] = [ATTENDEE_FIELD_LABELS, ABSENCE_FIELD_LABELS, &["主持人", "host", "chairperson"]];
+        let requested = labels.map(|aliases| aliases.iter().any(|label| {
+            if !contains_known_name(&requirements, label) { return false; }
+            let excluded = Regex::new(&format!(r"(?i)(?:不要|不必|无需|不需要|禁止)\s*(?:填写|列出|记录|显示|包含)?\s*{}|(?:do not|omit|exclude)\s+(?:include\s+|list\s+)?{}", regex::escape(label), regex::escape(label))).unwrap();
+            !excluded.is_match(&section.instruction)
+        }));
+        if !requested.iter().any(|required| *required) { continue; }
+        let mut fence = None;
+        let headings = lines.iter().enumerate().filter_map(|(index, line)| {
+            if advance_markdown_fence(&mut fence, line) || fence.is_some() { return None; }
+            summary_section_title(line).map(|title| (index, title))
+        }).collect::<Vec<_>>();
+        let starts = headings.iter().filter(|(_, title)| title.eq_ignore_ascii_case(section.title.trim()))
+            .map(|(index, _)| *index).collect::<Vec<_>>();
+        if starts.len() != 1 { unresolved = true; continue; }
+        let start = starts[0] + 1;
+        let end = headings.iter().find(|(index, _)| *index >= start).map_or(lines.len(), |(index, _)| *index);
+        let chinese = !section.title.is_ascii();
+        let missing = if chinese { "会议未提及" } else { "Not mentioned" };
+        let facts = &context.verified_meeting_facts;
+        let names = |people: &[VerifiedMeetingPerson]| {
+            if people.is_empty() { missing.to_owned() } else {
+                people.iter().map(|person| person.display_name.replace('\n', " ").replace('|', "\\|"))
+                    .collect::<Vec<_>>().join(if chinese { "、" } else { ", " })
+            }
+        };
+        let values = [names(&facts.attending), names(&facts.absent), names(&facts.host.iter().cloned().collect::<Vec<_>>())];
+        let mut filled = [false; 3];
+        let mut columns: Vec<(usize, usize)> = Vec::new();
+        let mut fence = None;
+        let mut has_table = false;
+        for index in start..end {
+            let line = &lines[index];
+            if advance_markdown_fence(&mut fence, line) || fence.is_some() { continue; }
+            if line.trim().starts_with('|') && line.trim().ends_with('|') {
+                has_table = true;
+                let mut cells = line.trim().trim_matches('|').split('|').map(|cell| cell.trim().to_owned()).collect::<Vec<_>>();
+                let separator = cells.iter().all(|cell| !cell.is_empty() && cell.chars().all(|c| matches!(c, '-' | ':' | ' ')));
+                let next_separator = lines.get(index + 1).is_some_and(|next| next.trim().starts_with('|')
+                    && next.chars().all(|c| matches!(c, '-' | ':' | ' ' | '|')));
+                if next_separator {
+                    columns = cells.iter().enumerate().filter_map(|(column, label)| people_field_index(label)
+                        .filter(|field| requested[*field]).map(|field| (column, field))).collect();
+                    continue;
+                }
+                if separator { continue; }
+                let mut changed = false;
+                if cells.len() >= 2 && columns.is_empty() {
+                    if let Some(field) = people_field_index(&cells[0]).filter(|field| requested[*field]) {
+                        cells[1] = values[field].clone(); filled[field] = true; changed = true;
+                    }
+                }
+                for &(column, field) in &columns {
+                    if let Some(cell) = cells.get_mut(column) {
+                        *cell = values[field].clone(); filled[field] = true; changed = true;
+                    }
+                }
+                if changed { lines[index] = format!("| {} |", cells.join(" | ")); }
+                continue;
+            }
+            static PEOPLE_LABEL: Lazy<Regex> = Lazy::new(|| Regex::new(
+                r"(?i)(?:^\s*(?:[-*]\s+)?|[；;。]\s*)(?:\*\*)?(参会人员|出席人员|attendees|participants|缺席人员|absent|主持人|host|chairperson)(?:\*\*)?\s*[：:]\s*(?:\*\*)?"
+            ).unwrap());
+            let replacements = PEOPLE_LABEL.captures_iter(line).filter_map(|capture| {
+                let field = people_field_index(&capture[1])?;
+                if !requested[field] { return None; }
+                let value_start = capture.get(0)?.end();
+                let value_end = line[value_start..].find(['；', ';', '。']).map_or(line.len(), |offset| value_start + offset);
+                Some((value_start, value_end, field))
+            }).collect::<Vec<_>>();
+            let mut updated = line.clone();
+            for (value_start, value_end, field) in replacements.into_iter().rev() {
+                updated.replace_range(value_start..value_end, &values[field]); filled[field] = true;
+            }
+            lines[index] = updated;
+        }
+        let missing_fields = (0..3).filter(|field| requested[*field] && !filled[*field]).collect::<Vec<_>>();
+        if !missing_fields.is_empty() {
+            // ponytail: only append explicit labels inside an existing prose/list section.
+            // An ambiguous table or single-value layout remains visible for review.
+            if has_table || !matches!(section.format.as_str(), "paragraph" | "list") || fence.is_some() {
+                unresolved = true;
+            } else {
+                let canonical = if chinese { ["参会人员", "缺席人员", "主持人"] } else { ["Attendees", "Absent", "Host"] };
+                let fields = missing_fields.iter().map(|field| format!("{}{}{}", canonical[*field], if chinese { "：" } else { ": " }, values[*field])).collect::<Vec<_>>();
+                let added = if section.format == "list" { fields.iter().map(|field| format!("- {field}")).collect::<Vec<_>>().join("\n") }
+                    else { fields.join(if chinese { "；" } else { "; " }) };
+                lines.insert(end, format!("\n{added}\n"));
+            }
+        }
+    }
+    (lines.join("\n"), unresolved)
 }
 
 fn push_fact_warning(validation: &mut SummaryFactValidation, code: &str, message_key: &str) {
@@ -2098,6 +2252,134 @@ mod tests {
         };
         snapshot.context_sha256 = super::super::snapshot_sha256(&snapshot);
         snapshot
+    }
+
+    fn t02_people_template(format: &str) -> crate::summary::templates::Template {
+        crate::summary::templates::Template {
+            name: "Synthetic".into(), description: "Synthetic people fields".into(),
+            sections: vec![crate::summary::templates::TemplateSection {
+                title: "会议信息".into(), instruction: "填写参会人员、缺席人员、主持人".into(),
+                format: format.into(), item_format: None, example_item_format: None,
+            }],
+        }
+    }
+
+    #[test]
+    fn t02_generated_missing_people_are_filled_from_verified_snapshot_only() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let template = t02_people_template("paragraph");
+        let (text, unresolved) = fill_verified_people_fields("## 会议信息\n本次讨论接口测试。\n## 行动计划\nNick参与方案讨论。", Some(&context), &template);
+        assert!(!unresolved);
+        assert!(text.contains("参会人员：MeiL、QA测试嘉宾"));
+        assert!(text.contains("缺席人员：Nick"));
+        assert!(text.contains("主持人：MeiL"));
+        assert!(!text.contains("Rayson"));
+        assert!(text.contains("## 行动计划\nNick参与方案讨论。"));
+        assert_eq!(fill_verified_people_fields(&text, Some(&context), &template), (text, false));
+    }
+
+    #[test]
+    fn t02_added_people_keep_the_next_section_in_a_separate_paragraph() {
+        let mut context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        context.verified_meeting_facts.host = None;
+        let input = "**会议信息**\n\n原会议内容。\n\n**行动计划**\n\n- 原任务";
+        let (text, unresolved) = fill_verified_people_fields(input, Some(&context), &t02_people_template("paragraph"));
+        assert!(!unresolved);
+        assert!(text.contains("主持人：会议未提及\n\n**行动计划**"));
+        assert!(text.contains("\n\n参会人员："));
+        assert!(text.ends_with("**行动计划**\n\n- 原任务"));
+        assert_eq!(fill_verified_people_fields(&text, Some(&context), &t02_people_template("paragraph")).0, text);
+    }
+
+    #[test]
+    fn t02_people_placeholders_conflicts_and_unknown_host_use_snapshot() {
+        let mut context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        context.verified_meeting_facts.host = None;
+        let (text, unresolved) = fill_verified_people_fields("**会议信息**\n- **参会人员**：Rayson、Nick\n- 缺席人员：会议未提及\n- 主持人：MeiL\n其他事实：保留。", Some(&context), &t02_people_template("list"));
+        assert!(!unresolved);
+        assert!(text.contains("- **参会人员**：MeiL、QA测试嘉宾"));
+        assert!(text.contains("- 缺席人员：Nick"));
+        assert!(text.contains("- 主持人：会议未提及"));
+        assert!(text.contains("其他事实：保留。"));
+    }
+
+    #[test]
+    fn t02_people_tables_keep_layout_and_other_columns() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let wide = "## 会议信息\n| 参会人员 | 日期 | 缺席人员 | 主持人 |\n| --- | --- | --- | --- |\n| 未提及 | 保留日期 | Rayson | 未提及 |\n";
+        let (text, unresolved) = fill_verified_people_fields(wide, Some(&context), &t02_people_template("list"));
+        assert!(!unresolved);
+        assert!(text.contains("| MeiL、QA测试嘉宾 | 保留日期 | Nick | MeiL |"));
+        assert_eq!(text.lines().count(), wide.lines().count());
+        let pairs = "## 会议信息\n| 字段 | 值 |\n| --- | --- |\n| 参会人员 | 未提及 |\n| 缺席人员 | 未提及 |\n| 主持人 | 未提及 |\n";
+        let (text, unresolved) = fill_verified_people_fields(pairs, Some(&context), &t02_people_template("list"));
+        assert!(!unresolved);
+        assert!(text.contains("| 参会人员 | MeiL、QA测试嘉宾 |"));
+        assert!(text.contains("| 缺席人员 | Nick |"));
+    }
+
+    #[test]
+    fn t02_no_template_people_fields_or_context_never_adds_people() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let mut template = t02_people_template("paragraph");
+        template.sections[0].instruction = "汇总讨论要点".into();
+        let original = "## 会议信息\nNick说参会人员需要核实。";
+        assert_eq!(fill_verified_people_fields(original, Some(&context), &template), (original.into(), false));
+        assert_eq!(fill_verified_people_fields(original, None, &t02_people_template("paragraph")), (original.into(), false));
+        template.sections[0].instruction = "不要填写参会人员；不要列出缺席人员；无需填写主持人".into();
+        assert_eq!(fill_verified_people_fields(original, Some(&context), &template), (original.into(), false));
+        let mut expected_only = context.clone();
+        expected_only.verified_meeting_facts.attending.clear();
+        expected_only.verified_meeting_facts.absent.clear();
+        expected_only.verified_meeting_facts.host = None;
+        let (text, _) = fill_verified_people_fields("## 会议信息\n", Some(&expected_only), &t02_people_template("paragraph"));
+        assert!(!text.contains("MeiL"));
+        assert!(!text.contains("Rayson"));
+    }
+
+    #[test]
+    fn t02_english_people_fields_use_english_labels_and_missing_host() {
+        let mut context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        context.verified_meeting_facts.host = None;
+        let mut template = t02_people_template("paragraph");
+        template.sections[0].title = "Meeting Info".into();
+        template.sections[0].instruction = "Include Attendees, Absent, Host".into();
+        let (text, unresolved) = fill_verified_people_fields("## Meeting Info\nDiscussion only.", Some(&context), &template);
+        assert!(!unresolved);
+        assert!(text.contains("Attendees: MeiL, QA测试嘉宾"));
+        assert!(text.contains("Absent: Nick"));
+        assert!(text.contains("Host: Not mentioned"));
+        assert_eq!(fill_verified_people_fields(&text, Some(&context), &template), (text, false));
+    }
+
+    #[test]
+    fn t02_prose_and_fenced_examples_are_preserved() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let original = "## 会议信息\n讨论参会人员：Rayson的姓名识别。\n```text\n参会人员：代码示例\n```\n";
+        let (text, unresolved) = fill_verified_people_fields(original, Some(&context), &t02_people_template("paragraph"));
+        assert!(!unresolved);
+        assert!(text.starts_with(original));
+        assert!(text.contains("参会人员：MeiL、QA测试嘉宾"));
+        let fenced_heading = "```text\n## 会议信息\n参会人员：代码示例\n```";
+        assert_eq!(fill_verified_people_fields(fenced_heading, Some(&context), &t02_people_template("paragraph")), (fenced_heading.into(), true));
+        let mut template = t02_people_template("paragraph");
+        template.sections[0].format = "string".into();
+        assert_eq!(fill_verified_people_fields("## 会议信息\n不明结构", Some(&context), &template), ("## 会议信息\n不明结构".into(), true));
+    }
+
+    #[test]
+    fn t02_unmappable_people_fields_require_review_without_new_section() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let original = "## 未知章节\n保留内容";
+        assert_eq!(fill_verified_people_fields(original, Some(&context), &t02_people_template("paragraph")), (original.into(), true));
+        let ambiguous = "## 会议信息\n第一段\n## 会议信息\n第二段";
+        assert_eq!(fill_verified_people_fields(ambiguous, Some(&context), &t02_people_template("paragraph")), (ambiguous.into(), true));
+        let mut validation = validate_summary_markdown("## 讨论\n保留。", Some(&context)).validation;
+        validation.retain_saved_omission_warnings(&serde_json::json!({"factValidation":{"warnings":[
+            {"code":"unmapped_people_fields","messageKey":"untrusted:key"}
+        ]}}));
+        assert!(validation.warnings.iter().any(|warning| warning.code == "unmapped_people_fields"
+            && warning.message_key == "summary:factValidation.unmappedPeopleFields"));
     }
 
     #[test]
