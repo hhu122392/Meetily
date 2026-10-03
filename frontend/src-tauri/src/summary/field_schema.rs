@@ -100,6 +100,12 @@ pub fn cell_field_values<'a>(fields: &[SummaryTraceField], value: &'a str) -> Ve
     let explicit = inline_labels(value).into_iter().flat_map(|(label, start, end)| {
         label_fields(label).into_iter().filter(|field| fields.contains(field)).map(move |field| (field, value[start..end].trim().trim_matches('*').trim()))
     }).collect::<Vec<_>>();
+    if explicit.is_empty() && fields != [SummaryTraceField::Dependency, SummaryTraceField::Blocker] {
+        let parts = value.split('/').map(str::trim).collect::<Vec<_>>();
+        if parts.len() == fields.len() && parts.iter().all(|part| !part.is_empty()) {
+            return fields.iter().zip(parts).map(|(field, value)| (*field, value)).collect();
+        }
+    }
     if !explicit.is_empty() && fields == [SummaryTraceField::Dependency, SummaryTraceField::Blocker] {
         let complete = value.split([';', '；']).filter(|part| !part.trim().is_empty()).all(|part| {
             let labels = inline_labels(part);

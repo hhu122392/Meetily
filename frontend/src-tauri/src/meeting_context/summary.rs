@@ -645,6 +645,8 @@ pub fn validate_generated_summary_with_source(
     template: &crate::summary::templates::Template,
 ) -> Result<ValidatedSummaryMarkdown, SummarySourceBindingError> {
     let (filled, unresolved) = fill_verified_people_fields(markdown, context, template);
+    let owners = context.map(|context| context.recognition_dictionary.people.iter().map(|person| person.display_name.clone()).collect::<Vec<_>>()).unwrap_or_default();
+    let filled = crate::summary::source_binding::recover_missing_action_fields(&filled, source, &owners)?;
     let mut validated = validate_summary_markdown_with_source(&filled, context, source)?;
     if unresolved {
         push_fact_warning(&mut validated.validation, "unmapped_people_fields",
@@ -3113,7 +3115,7 @@ mod tests {
         assert!(validated.markdown.contains("| 整理报告 | Rayson | 周五 |"));
         assert!(validated
             .markdown
-            .contains("| 发布版本 | 会议未提及 | 会议未提及 |"));
+            .contains("| 发布版本 | 待核对 | 待核对 |"));
         assert_eq!(
             validated.validation.status,
             SummaryFactValidationStatus::NeedsReview
@@ -3132,6 +3134,23 @@ mod tests {
         assert_eq!(evidence.transcript_version_id, "legacy_whisper_meeting_1");
         assert_eq!(evidence.transcript_sha256.len(), 64);
         assert_eq!(evidence.speaker_binding_sha256.len(), 64);
+    }
+
+    #[test]
+    fn t06_generated_missing_fields_recover_but_manual_validation_does_not_fill_them() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let source = TranscriptVersionSnapshot::legacy_whisper("t06_virtual", vec![TranscriptEvidenceSegment {
+            segment_id: "t06_virtual_1".into(), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "Rayson负责整理报告，截止时间为周五。".into(),
+        }]);
+        let markdown = "任务：整理报告；负责人：会议未提及；截止时间：会议未提及";
+        let generated = validate_generated_summary_with_source(markdown, Some(&context), &source, &t02_people_template("paragraph")).unwrap();
+        assert_eq!(generated.markdown, "任务：整理报告；负责人：Rayson；截止时间：周五");
+        assert!(generated.validation.field_traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported));
+        let manual = validate_summary_markdown_with_source(markdown, Some(&context), &source).unwrap();
+        assert_eq!(manual.markdown, markdown);
+        assert!(manual.validation.field_traces.is_empty());
     }
 
     #[test]

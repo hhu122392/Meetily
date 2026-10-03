@@ -16,7 +16,7 @@ use unicode_normalization::UnicodeNormalization;
 use once_cell::sync::Lazy;
 use regex::Regex;
 pub use super::field_schema::SummaryTraceField;
-use super::field_schema::{advance_fence, ambiguous_dependency_blocker, cell_field_values, inline_field_ranges, inline_labels, is_task_label, label_fields, table_cells, table_header, table_separator, TASK_LABELS};
+use super::field_schema::{advance_fence, ambiguous_dependency_blocker, cell_field_values, field_labels, inline_field_ranges, inline_labels, is_task_label, label_fields, table_cells, table_header, table_separator, ACTION_FIELDS, TASK_LABELS};
 
 pub const SUMMARY_SOURCE_BINDING_SCHEMA_VERSION: u8 = 1;
 
@@ -699,6 +699,16 @@ pub fn trace_owner_and_time_fields(
     markdown: &str,
     source: &TranscriptVersionSnapshot,
 ) -> Result<Vec<SummaryFieldTrace>, SummarySourceBindingError> {
+    trace_action_fields(markdown, source, None)
+}
+
+/// Generation alone can recover missing slots, using the same proof as filled slots.
+pub fn recover_missing_action_fields(markdown: &str, source: &TranscriptVersionSnapshot, owners: &[String]) -> Result<String, SummarySourceBindingError> {
+    let traces = trace_action_fields(markdown, source, Some(owners))?;
+    Ok(restore_supported_owner_and_time_fields(markdown, markdown, &traces))
+}
+
+fn trace_action_fields(markdown: &str, source: &TranscriptVersionSnapshot, recover_owners: Option<&[String]>) -> Result<Vec<SummaryFieldTrace>, SummarySourceBindingError> {
     source.validate_active()?;
     let mut claims = Vec::new();
     let mut tasks = BTreeSet::new();
@@ -722,11 +732,11 @@ pub fn trace_owner_and_time_fields(
             if let Some(schema) = table_schema.as_ref() {
                 let anchors = schema.action_anchor_columns.iter().filter_map(|column| cells.get(*column))
                     .filter(|value| !is_review_placeholder(value)).cloned().collect::<Vec<_>>();
-                tasks.extend(anchors.iter().map(|task| normalize_evidence(task)));
+                tasks.extend(anchors.iter().map(|task| normalize_task(task)));
                 for (column, fields) in &schema.fields {
                     if let Some(value) = cells.get(*column) {
                         for (field, value) in cell_field_values(fields, value) {
-                            if !is_field_placeholder(field, value) {
+                            if is_field_placeholder(field, value) == recover_owners.is_some() {
                                 claims.push((field, value.to_owned(), markdown_line, Some(*column), anchors.clone(), ambiguous_dependency_blocker(fields, cells.get(*column).unwrap())));
                             }
                         }
@@ -737,18 +747,25 @@ pub fn trace_owner_and_time_fields(
         }
         table_schema = None;
         let anchors = inline_action_anchors(line);
-        tasks.extend(anchors.iter().map(|task| normalize_evidence(task)));
+        tasks.extend(anchors.iter().map(|task| normalize_task(task)));
         for (label, start, end) in inline_labels(line) {
             for (field, value) in cell_field_values(&label_fields(label), &line[start..end]) {
-                if !is_field_placeholder(field, value) {
+                if is_field_placeholder(field, value) == recover_owners.is_some() {
                     claims.push((field, value.to_owned(), markdown_line, None, anchors.clone(), ambiguous_dependency_blocker(&label_fields(label), &line[start..end])));
                 }
             }
         }
     }
     let tasks = tasks.into_iter().collect::<Vec<_>>();
+    let task_keys = tasks.iter().map(|task| task_evidence_key(task, &tasks)).collect::<Vec<_>>();
     let mut checked = claims.into_iter().map(|(field, value, line, column, anchors, ambiguous)|
-        (trace_field_value(field, &value, line, column, &anchors, &tasks, source), ambiguous));
+        {
+            let keys = anchors.iter().map(|task| task_evidence_key(&normalize_task(task), &tasks)).collect::<Vec<_>>();
+            let recovered = recover_owners.and_then(|owners| recover_field_value(field, &keys, &task_keys, source, owners));
+            let mut trace = trace_field_value(field, recovered.as_deref().unwrap_or(&value), line, column, &keys, &task_keys, source);
+            trace.task = anchors.join(" / ");
+            (trace, ambiguous)
+        });
     let mut traces = Vec::new();
     while let Some((mut trace, ambiguous)) = checked.next() {
         if ambiguous {
@@ -760,9 +777,87 @@ pub fn trace_owner_and_time_fields(
                 _ => { trace.status = SummaryTraceStatus::NeedsReview; trace.related_evidence.extend(trace.evidence.drain(..)); },
             }
         }
-        traces.push(trace);
+        if recover_owners.is_none() || !is_field_placeholder(trace.field, &trace.value) { traces.push(trace); }
     }
     Ok(traces)
+}
+
+fn task_evidence_key(task: &str, all_tasks: &[String]) -> String {
+    let core = |task: &str| ["完成", "执行", "开展"].iter().find_map(|prefix| task.strip_prefix(prefix))
+        .filter(|tail| tail.chars().count() >= 4).unwrap_or(task).to_owned();
+    let key = core(task);
+    if all_tasks.iter().filter(|other| core(other) == key).count() == 1 { key } else { task.to_owned() }
+}
+
+fn normalize_task(task: &str) -> String {
+    let task = task.trim().trim_matches('*').trim().nfkc().flat_map(char::to_lowercase).collect::<String>();
+    if task.is_ascii() { task.split_whitespace().collect::<Vec<_>>().join(" ") } else { normalize_evidence(&task) }
+}
+
+fn task_matches(text: &str, task: &str) -> bool {
+    if !task.is_ascii() { return normalize_evidence(text).contains(task); }
+    let pattern = task.split_whitespace().map(regex::escape).collect::<Vec<_>>().join(r"\s+");
+    Regex::new(&format!(r"(?i)(?:^|[^a-z0-9_]){pattern}(?:$|[^a-z0-9_])")).unwrap().is_match(text)
+}
+
+fn recover_field_value(field: SummaryTraceField, anchors: &[String], all_tasks: &[String], source: &TranscriptVersionSnapshot, owners: &[String]) -> Option<String> {
+    if field == SummaryTraceField::Owner {
+        let supported = owners.iter().filter(|owner| trace_field_value(field, owner, 0, None, anchors, all_tasks, source).status == SummaryTraceStatus::Supported).collect::<Vec<_>>();
+        return (supported.len() == 1).then(|| supported[0].clone());
+    }
+    if matches!(field, SummaryTraceField::Time | SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Dependency | SummaryTraceField::Blocker) {
+        return stated_attribute_assertion(field, anchors, all_tasks, source).map(|(value, _)| value);
+    }
+    None
+}
+
+struct ScopedStatement {
+    text: String,
+    references: Vec<SummaryEvidenceReference>,
+    speaker: Option<String>,
+}
+
+fn source_reference(segment: &TranscriptEvidenceSegment) -> SummaryEvidenceReference {
+    SummaryEvidenceReference { segment_id: segment.segment_id.clone(), start_ms: segment.start_ms, end_ms: segment.end_ms, excerpt_sha256: sha256_text(segment.text.trim()) }
+}
+
+fn scoped_source_statements(source: &TranscriptVersionSnapshot, all_tasks: &[String]) -> Vec<ScopedStatement> {
+    let mut statements = Vec::new();
+    let mut previous: Option<(String, SummaryEvidenceReference, Option<String>)> = None;
+    for segment in &source.segments {
+        let speaker = segment.effective_speaker().or(segment.anonymous_speaker.as_deref()).map(str::to_owned);
+        for sentence in evidence_sentences(&segment.text).into_iter().filter(|sentence| !sentence.trim().is_empty()) {
+            let normalized = normalize_evidence(sentence);
+            let mut subjects = all_tasks.iter().filter(|task| task_matches(sentence, task)).collect::<Vec<_>>();
+            let reference = source_reference(segment);
+            let mut references = vec![reference.clone()];
+            let continuation = normalized.strip_prefix("更正").unwrap_or(&normalized);
+            let continuation = continuation.trim_start_matches(['，', ',']);
+            let starts_with_field = ACTION_FIELDS.iter().flat_map(|field| field_labels(*field)).any(|label| continuation.starts_with(&normalize_evidence(label)));
+            // A task named in a field value is its object, not a new subject.
+            if starts_with_field && !subjects.iter().any(|task| normalized.starts_with(normalize_evidence(task).as_str())) { subjects.clear(); }
+            let mut text = sentence.to_owned();
+            if subjects.is_empty() && starts_with_field {
+                if let Some((task, anchor, _)) = previous.as_ref().filter(|(_, _, prior_speaker)| *prior_speaker == speaker) {
+                    // Internal scope only. References and displayed excerpts remain original source text.
+                    text = format!("{task}，{sentence}");
+                    if anchor.segment_id != reference.segment_id { references.insert(0, anchor.clone()); }
+                } else { previous = None; }
+            } else {
+                previous = if subjects.len() == 1 {
+                    let task = subjects[0];
+                    let start = normalized.find(normalize_evidence(task).as_str()).unwrap();
+                    let prefix = &normalized[..start];
+                    let object_only = ["依赖", "前提", "卡在", "dependson", "blockedby"].iter().any(|word| prefix.contains(word));
+                    let qualifiers = normalized.replace(normalize_evidence(task).as_str(), "");
+                    let hypothetical = ["如果", "假如", "假设", "例如", "没说", "if", "example"].iter().any(|word| qualifiers.contains(word)) || sentence.trim_end().ends_with(['?', '？']);
+                    (!object_only && !hypothetical).then(|| (task.clone(), reference.clone(), speaker.clone()))
+                } else { None };
+            }
+            statements.push(ScopedStatement { text, references, speaker: segment.effective_speaker().map(str::to_owned) });
+        }
+    }
+    statements
 }
 
 /// Restores only evidence-supported action fields after the existing
@@ -783,14 +878,8 @@ pub fn restore_supported_owner_and_time_fields(
         let mut sanitized_cells = table_cells(line);
         if !original_cells.is_empty() && original_cells.len() == sanitized_cells.len() {
             for column in 0..original_cells.len() {
-                let cell_checks = checks.iter().filter(|trace| trace.markdown_column == Some(column)).collect::<Vec<_>>();
-                // A proven deadline cannot also restore an unproven criterion in the same cell.
-                if !cell_checks.is_empty() && cell_checks.iter().all(|trace| trace.status == SummaryTraceStatus::Supported) {
-                    sanitized_cells[column] = original_cells[column].clone();
-                } else if (cell_checks.len() == 1 && matches!(cell_checks[0].field, SummaryTraceField::Acceptance | SummaryTraceField::Status))
-                    || (!cell_checks.is_empty() && cell_checks.iter().all(|trace| matches!(trace.field, SummaryTraceField::Dependency | SummaryTraceField::Blocker))) {
-                    sanitized_cells[column] = review_label(&sanitized_cells[column]).to_owned();
-                }
+                let cell_checks = checks.iter().filter(|trace| trace.markdown_column == Some(column)).copied().collect::<Vec<_>>();
+                if !cell_checks.is_empty() { sanitized_cells[column] = checked_field_cell(&original_cells[column], &sanitized_cells[column], &cell_checks); }
             }
             *line = format!("| {} |", sanitized_cells.join(" | "));
         } else {
@@ -798,30 +887,54 @@ pub fn restore_supported_owner_and_time_fields(
             let safe_fields = inline_labels(line);
             let replacements = original_fields.iter().zip(safe_fields.iter()).filter_map(|((label, start, end), (safe_label, safe_start, safe_end))| {
                 let fields = label_fields(label);
-                if fields.is_empty() || fields != label_fields(safe_label) || !is_review_placeholder(&line[*safe_start..*safe_end]) { return None; }
-                let values = cell_field_values(&fields, &original_line[*start..*end]);
-                let has_proof = |field: SummaryTraceField, value: &str| checks.iter().any(|trace| {
-                    trace.markdown_column.is_none() && trace.field == field && trace.status == SummaryTraceStatus::Supported
-                        && normalize_field_value(field, &trace.value) == normalize_field_value(field, value)
-                });
-                let supported = if ambiguous_dependency_blocker(&fields, &original_line[*start..*end]) {
-                    values.iter().filter(|(field, value)| has_proof(*field, value)).count() == 1
-                } else { values.iter().all(|(field, value)| is_field_placeholder(*field, value) || checks.iter().any(|trace| {
-                    trace.markdown_column.is_none() && trace.field == *field && trace.status == SummaryTraceStatus::Supported
-                        && normalize_field_value(*field, &trace.value) == normalize_field_value(*field, value)
-                })) };
-                if supported { Some((*safe_start, *safe_end, &original_line[*start..*end])) }
-                else if (fields.len() == 1 && matches!(fields[0], SummaryTraceField::Acceptance | SummaryTraceField::Status))
-                    || fields.iter().all(|field| matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker)) {
-                    Some((*safe_start, *safe_end, review_label(&line[*safe_start..*safe_end])))
-                } else { None }
+                if fields.is_empty() || fields != label_fields(safe_label) { return None; }
+                let cell_checks = checks.iter().filter(|trace| trace.markdown_column.is_none() && fields.contains(&trace.field)
+                    && (fields.len() != 1 || checks.iter().filter(|other| other.field == trace.field).count() == 1
+                        || is_field_placeholder(trace.field, &original_line[*start..*end])
+                        || normalize_field_value(trace.field, &trace.value) == normalize_field_value(trace.field, &original_line[*start..*end])
+                        || (trace.field == SummaryTraceField::Time && deadline_values_match(&original_line[*start..*end], &trace.value))))
+                    .copied().collect::<Vec<_>>();
+                (!cell_checks.is_empty()).then(|| (*safe_start, *safe_end, checked_field_cell(&original_line[*start..*end], &line[*safe_start..*safe_end], &cell_checks)))
             }).collect::<Vec<_>>();
-            for (start, end, value) in replacements.into_iter().rev() { line.replace_range(start..end, value); }
+            for (start, end, value) in replacements.into_iter().rev() { line.replace_range(start..end, &value); }
         }
     }
     let mut result = sanitized.join("\n");
     if sanitized_markdown.ends_with('\n') { result.push('\n'); }
     result
+}
+
+fn checked_field_cell(original: &str, masked: &str, checks: &[&SummaryFieldTrace]) -> String {
+    let slots = inline_labels(original);
+    let complete = !slots.is_empty() && original.split([';', '；']).filter(|part| !part.trim().is_empty()).all(|part| {
+        let labels = inline_labels(part); labels.len() == 1 && !label_fields(labels[0].0).is_empty()
+    });
+    if complete {
+        let mut result = original.to_owned();
+        for (label, start, end) in slots.into_iter().rev() {
+            let fields = label_fields(label);
+            let checked = checks.iter().filter(|trace| fields.contains(&trace.field)).collect::<Vec<_>>();
+            if checked.len() == 1 {
+                let value = if checked[0].status == SummaryTraceStatus::Supported { checked[0].value.as_str() } else { review_label(masked) };
+                result.replace_range(start..end, value);
+            } else if !checked.is_empty() { result.replace_range(start..end, review_label(masked)); }
+        }
+        return result;
+    }
+    let parts = original.split('/').map(str::trim).collect::<Vec<_>>();
+    if checks.len() > 1 && parts.len() == checks.len() && !checks.iter().all(|trace| matches!(trace.field, SummaryTraceField::Dependency | SummaryTraceField::Blocker)) {
+        return checks.iter().zip(parts).map(|(trace, part)| {
+            if trace.status == SummaryTraceStatus::Supported { trace.value.as_str() }
+            else if is_field_placeholder(trace.field, part) { part }
+            else { review_label(masked) }
+        }).collect::<Vec<_>>().join(" / ");
+    }
+    if checks.len() == 1 && checks[0].status == SummaryTraceStatus::Supported {
+        if parts.len() > 1 && !original.contains(&checks[0].value) { return original.to_owned(); }
+        return checks[0].value.clone();
+    }
+    if checks.iter().all(|trace| trace.status == SummaryTraceStatus::Supported) { original.to_owned() }
+    else { review_label(masked).to_owned() }
 }
 
 fn trace_field_value(
@@ -836,41 +949,45 @@ fn trace_field_value(
     let normalized_value = normalize_evidence(value);
     let normalized_anchors = action_anchors
         .iter()
-        .map(|anchor| normalize_evidence(anchor))
+        .map(|anchor| normalize_task(anchor))
         .filter(|anchor| anchor.chars().count() >= 2)
         .collect::<Vec<_>>();
-    let evidence = if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Dependency | SummaryTraceField::Blocker) {
-        stated_attribute_evidence(field, value, &normalized_anchors, all_tasks, source)
-    } else { source
-        .segments
-        .iter()
-        .filter(|segment| {
-            // An audio segment can contain several unrelated tasks and clock times.
-            // Require the task and value in the same sentence, not just the same segment.
-            evidence_sentences(&segment.text).iter().any(|sentence| {
+    let mut checked_value = value.trim().to_owned();
+    let evidence = if matches!(field, SummaryTraceField::Time | SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Dependency | SummaryTraceField::Blocker) {
+        stated_attribute_assertion(field, &normalized_anchors, all_tasks, source).filter(|(assertion, _)| {
+            if field == SummaryTraceField::Time { deadline_values_match(value, assertion) }
+            else { normalize_field_value(field, value) == normalize_field_value(field, assertion) }
+        }).map_or_else(Vec::new, |(assertion, references)| {
+            if field == SummaryTraceField::Time { checked_value = assertion; }
+            references
+        })
+    } else { scoped_source_statements(source, all_tasks)
+        .into_iter()
+        .filter(|statement| {
+            // Scope is explicit; adjacent labelled statements retain their task anchor reference.
+            evidence_sentences(&statement.text).iter().any(|sentence| {
                 let normalized_text = normalize_evidence(sentence);
-                let action_matches = normalized_anchors.iter().any(|anchor| normalized_text.contains(anchor));
+                let action_matches = normalized_anchors.iter().any(|anchor| task_matches(sentence, anchor));
                 let text_matches = !normalized_value.is_empty() && normalized_text.contains(&normalized_value);
                 let speaker_matches = field == SummaryTraceField::Owner
-                    && segment.effective_speaker()
+                    && statement.speaker.as_deref()
                         .is_some_and(|speaker| normalize_evidence(speaker) == normalized_value)
                     && contains_first_person_commitment(sentence);
                 if !action_matches { return false; }
                 match field {
-                    SummaryTraceField::Owner => speaker_matches || (text_matches
-                        && explicit_owner_statement(sentence, value)),
-                    SummaryTraceField::Time => text_matches && !has_multiple_deadlines(&normalized_text),
+                    SummaryTraceField::Owner => sentence.split(['，', ',', '；', ';']).any(|clause| {
+                        let end = ["依赖", "前提", "卡在", "depends on", "blocked by"].iter().filter_map(|label| clause.find(label)).min().unwrap_or(clause.len());
+                        let subject = &clause[..end];
+                        normalized_anchors.iter().any(|anchor| task_matches(subject, anchor))
+                            && ((speaker_matches && contains_first_person_commitment(clause)) || (text_matches && explicit_owner_statement(clause, value)))
+                    }),
+                    SummaryTraceField::Time => false,
                     SummaryTraceField::Dependency | SummaryTraceField::Acceptance | SummaryTraceField::Status | SummaryTraceField::Blocker
                     | SummaryTraceField::Criteria | SummaryTraceField::Escalation => false,
                 }
             })
         })
-        .map(|segment| SummaryEvidenceReference {
-            segment_id: segment.segment_id.clone(),
-            start_ms: segment.start_ms,
-            end_ms: segment.end_ms,
-            excerpt_sha256: sha256_text(segment.text.trim()),
-        })
+        .flat_map(|statement| statement.references.clone())
         .collect::<Vec<_>>() };
     let related_evidence = if evidence.is_empty() {
         let texts: Vec<_> = source.segments.iter().map(|segment| segment.text.as_str()).collect();
@@ -883,7 +1000,7 @@ fn trace_field_value(
     } else { Vec::new() };
     SummaryFieldTrace {
         field,
-        value: value.trim().to_owned(),
+        value: checked_value,
         markdown_line,
         markdown_column,
         status: if evidence.is_empty() {
@@ -902,13 +1019,12 @@ fn review_label(placeholder: &str) -> &'static str {
 }
 
 /// Literal attribute assertions only; retrieval and nearby task mentions are not proof.
-fn stated_attribute_evidence(
+fn stated_attribute_assertion(
     field: SummaryTraceField,
-    value: &str,
     anchors: &[String],
     all_tasks: &[String],
     source: &TranscriptVersionSnapshot,
-) -> Vec<SummaryEvidenceReference> {
+) -> Option<(String, Vec<SummaryEvidenceReference>)> {
     static ATTRIBUTE: Lazy<Regex> = Lazy::new(|| Regex::new(
         r"(?i)验收标准|验收条件|放行标准|当前状态|任务状态|状态|截止时间|截止日期|依赖|前提|需要先|(?:要|需要)?等|卡点|卡在|阻碍|acceptance criteria|acceptance criterion|current status|status|deadline|due date|dependencies|dependency|depends on|requires|prerequisite|blocker|blocked by"
     ).unwrap());
@@ -926,16 +1042,22 @@ fn stated_attribute_evidence(
         r"(?i)(?:卡点|卡在|阻碍|blockers?|blocked by)\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
     ).unwrap());
     static NEGATED: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:not|no|never)\b").unwrap());
+    static DEADLINE: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)(?:截止时间|截止日期|完成时间|截止|deadline|due date)\s*(?:(?:改为|是|为|[:：]|is\b)\s*)?(?P<value>[^，,。；;\n]+)"
+    ).unwrap());
+    static DUE_BEFORE: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?P<value>(?:今天|明天|后天|(?:\d{4}年)?\d{1,2}月\d{1,2}日|(?:下|本)?周[一二三四五六日天]?|星期[一二三四五六日天])(?:\d{1,2}[点时](?:\d{1,2}分?)?|\d{1,2}:\d{2})?前)(?:提交|完成|交付|发布|发送|发给)"
+    ).unwrap());
     let relation = matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker);
     let pattern = match field { SummaryTraceField::Acceptance => &*ACCEPTANCE, SummaryTraceField::Status => &*STATUS,
-        SummaryTraceField::Dependency => &*DEPENDENCY, _ => &*BLOCKER };
+        SummaryTraceField::Dependency => &*DEPENDENCY, SummaryTraceField::Time => &*DEADLINE, _ => &*BLOCKER };
     let mut assertions = Vec::new();
-    for segment in &source.segments {
-        for sentence in evidence_sentences(&segment.text) {
+    for statement in scoped_source_statements(source, all_tasks) {
+        let sentence = statement.text.as_str();
             if sentence.trim_end().ends_with(['?', '？']) { continue; }
-            let absence = relation && matches!(normalize_evidence(value).as_str(), "无" | "none") && anchors.iter().any(|task| {
+            let absence = relation && anchors.iter().any(|task| {
                 let normalized = normalize_evidence(sentence);
-                let Some((_, tail)) = normalized.rsplit_once(task) else { return false; };
+                let Some((_, tail)) = normalized.rsplit_once(normalize_evidence(task).as_str()) else { return false; };
                 let tail = tail.trim_end_matches(['。', '！', '.', '!']);
                 let tail = tail.strip_prefix('的').unwrap_or(tail);
                 let tail = tail.strip_prefix("目前").or_else(|| tail.strip_prefix("当前")).unwrap_or(tail);
@@ -945,13 +1067,12 @@ fn stated_attribute_evidence(
                 }
             });
             let first_attribute = ATTRIBUTE.find_iter(sentence).find(|found| {
-                let prefix = normalize_evidence(&sentence[..found.start()]);
-                all_tasks.iter().any(|task| prefix.contains(task))
+                all_tasks.iter().any(|task| task_matches(&sentence[..found.start()], task))
             }).map_or(sentence.len(), |found| found.start());
             let subject = normalize_evidence(&sentence[..first_attribute]);
-            let subjects = all_tasks.iter().filter(|task| subject.contains(task.as_str())).collect::<Vec<_>>();
+            let subjects = all_tasks.iter().filter(|task| task_matches(&sentence[..first_attribute], task)).collect::<Vec<_>>();
             let subjects = subjects.iter().filter(|task| !subjects.iter().any(|other| other != *task && other.contains(task.as_str()))).collect::<Vec<_>>();
-            let qualifiers = all_tasks.iter().fold(subject.clone(), |text, task| text.replace(task, ""));
+            let qualifiers = all_tasks.iter().fold(subject.clone(), |text, task| text.replace(normalize_evidence(task).as_str(), ""));
             if !subjects.iter().any(|task| anchors.contains(*task))
                 || ["如果", "假如", "若", "假设", "例如", "没说", "不是说", "不要说"].iter().any(|word| qualifiers.contains(word))
                 || (field == SummaryTraceField::Status && qualifiers.contains("计划"))
@@ -976,11 +1097,22 @@ fn stated_attribute_evidence(
                 .or_else(|| {
                     if field != SummaryTraceField::Status { return None; }
                     let normalized = normalize_evidence(sentence);
-                    let (_, tail) = normalized.rsplit_once(anchors.first()?.as_str())?;
+                    let (_, tail) = normalized.rsplit_once(normalize_evidence(anchors.first()?).as_str())?;
                     let tail = tail.trim_end_matches(['。', '！', '？']);
                     let tail = tail.strip_prefix("目前").or_else(|| tail.strip_prefix("现在")).unwrap_or(tail);
                     ["进行中", "正在进行", "未开始", "已完成", "已经完成", "尚未完成", "未完成", "已暂停", "已取消", "inprogress", "notstarted", "completed", "unfinished"].contains(&tail).then(|| tail.to_owned())
-                }).or_else(|| absence.then(|| value.to_owned()));
+                }).or_else(|| absence.then(|| if sentence.is_ascii() { "None" } else { "无" }.to_owned()))
+                .or_else(|| (field == SummaryTraceField::Time).then(|| {
+                    if has_multiple_deadlines(&normalize_evidence(sentence)) { return None; }
+                    DUE_BEFORE.captures(sentence).map(|capture| capture["value"].to_owned()).or_else(|| {
+                        ["下周", "本周", "明天", "今天"].iter().find(|period| sentence.trim_start().starts_with(**period))
+                            .filter(|period| {
+                                let tail = normalize_evidence(sentence.trim_start().strip_prefix(**period).unwrap()).trim_end_matches(['。', '.']).to_owned();
+                                anchors.iter().any(|task| tail == normalize_evidence(task) || ["完成", "执行", "开展"].iter().any(|verb| tail == format!("{verb}{}", normalize_evidence(task))))
+                            })
+                            .map(|_| sentence.trim().trim_end_matches(['。', '.']).to_owned())
+                    })
+                }).flatten());
             if values.is_empty() {
                 if let Some(value) = fallback { values.push((first_attribute, value, sentence.contains("更正"))); }
             }
@@ -988,28 +1120,41 @@ fn stated_attribute_evidence(
                 // ponytail: explicit labels and literal values; arbitrary paraphrases stay for review.
                 let end = ATTRIBUTE.find_iter(sentence).find(|found| found.start() > start).map_or(sentence.len(), |found| found.start());
                 let clause_start = sentence[..start].rfind(['，', ',', '；', ';']).map_or(0, |index| index + sentence[index..].chars().next().unwrap().len_utf8());
-                let clause_subject = normalize_evidence(&sentence[clause_start..start]);
-                if all_tasks.iter().any(|task| !anchors.iter().any(|anchor| anchor.contains(task)) && clause_subject.contains(task)) { break; }
+                let clause_subject = &sentence[clause_start..start];
+                if all_tasks.iter().any(|task| !anchors.iter().any(|anchor| anchor.contains(task)) && task_matches(clause_subject, task)) { break; }
                 let confidence = format!("{}{}", qualifiers, normalize_evidence(&sentence[clause_start..end]));
+                let unknown_time = field == SummaryTraceField::Time && matches!(normalize_evidence(&assertion).as_str(), "尚未确定" | "未决定" | "未定" | "tobeconfirmed" | "notyetdecided" | "undetermined" | "notdetermined");
                 let certain = subjects.len() == 1
                     && !["可能", "预计", "尚未确认", "未经确认", "未核实", "尚未核实", "unconfirmed", "notconfirmed"].iter().any(|word| confidence.contains(word))
                     && !["计划", "希望", "如果", "假设", "planned", "expected", "might", "would"].iter().any(|word| assertion.to_lowercase().contains(word))
-                    && !(relation && !absence && (["不依赖", "没有卡", "并未卡", "没有阻"].iter().any(|word| confidence.contains(word)) || NEGATED.is_match(&sentence[clause_start..end])));
-                assertions.push((segment, normalize_field_value(field, &assertion), correction, certain));
+                    && !(relation && !absence && (["不依赖", "没有卡", "并未卡", "没有阻"].iter().any(|word| confidence.contains(word)) || NEGATED.is_match(&sentence[clause_start..end]) || CONDITIONAL.is_match(&sentence[clause_start..end])))
+                    && !(field == SummaryTraceField::Time && (has_multiple_deadlines(&normalize_evidence(sentence)) || CONDITIONAL.is_match(&sentence[clause_start..end]) || (!unknown_time && ["不是", "不在", "not", "never"].iter().any(|word| confidence.contains(word)))));
+                assertions.push((statement.references.clone(), assertion, correction, certain));
             }
-        }
     }
-    let Some((_, final_value, _, certain)) = assertions.last() else { return Vec::new(); };
+    let (_, final_value, _, certain) = assertions.last()?;
     let decisive = assertions.iter().rposition(|(_, _, corrected, _)| *corrected).unwrap_or(0);
-    if !certain || *final_value != normalize_field_value(field, value)
-        || assertions[decisive..].iter().any(|(_, assertion, _, certain)| !certain || assertion != final_value) {
-        return Vec::new();
+    if !certain || assertions[decisive..].iter().any(|(_, assertion, _, certain)| !certain || normalize_field_value(field, assertion) != normalize_field_value(field, final_value)) {
+        return None;
     }
+    let value = final_value.clone();
     let mut seen = BTreeSet::new();
-    assertions.into_iter().filter(|(segment, _, _, _)| seen.insert(segment.segment_id.clone())).map(|(segment, _, _, _)| SummaryEvidenceReference {
-        segment_id: segment.segment_id.clone(), start_ms: segment.start_ms, end_ms: segment.end_ms,
-        excerpt_sha256: sha256_text(segment.text.trim()),
-    }).collect()
+    let evidence = assertions.into_iter().flat_map(|(references, _, _, _)| references).filter(|reference| seen.insert(reference.segment_id.clone())).collect();
+    Some((value, evidence))
+}
+
+fn deadline_values_match(candidate: &str, source: &str) -> bool {
+    if normalize_evidence(candidate).trim_end_matches('前') == normalize_evidence(source).trim_end_matches('前') { return true; }
+    static CHINESE_DATE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(\d{1,2})[点时](?:(\d{1,2})分?)?前?$").unwrap());
+    // Match minute precision only; render the literal source, never an inferred UTC time or year.
+    static ISO_DATE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::00(?:\.0+)?)?Z?$").unwrap());
+    let (Some(original), Some(iso)) = (CHINESE_DATE.captures(source.trim()), ISO_DATE.captures(candidate.trim())) else { return false; };
+    let number = |capture: &regex::Captures<'_>, index| capture.get(index).and_then(|value| value.as_str().parse::<u32>().ok());
+    let (month, day, hour, minute) = (number(&original, 2), number(&original, 3), number(&original, 4), number(&original, 5).unwrap_or(0));
+    original.get(1).map_or(true, |year| year.as_str() == &iso[1])
+        && month == number(&iso, 2) && day == number(&iso, 3) && hour == number(&iso, 4) && minute == number(&iso, 5).unwrap_or(0)
+        && hour.is_some_and(|hour| hour < 24) && minute < 60
+        && chrono::NaiveDate::from_ymd_opt(number(&original, 1).unwrap_or(2000) as i32, month.unwrap_or(0), day.unwrap_or(0)).is_some()
 }
 
 fn normalize_field_value(field: SummaryTraceField, value: &str) -> String {
@@ -1087,6 +1232,7 @@ fn is_review_placeholder(value: &str) -> bool {
 }
 
 fn is_field_placeholder(field: SummaryTraceField, value: &str) -> bool {
+    if field == SummaryTraceField::Time && matches!(normalize_evidence(value).as_str(), "尚未确定" | "未定" | "未决定" | "tobeconfirmed") { return false; }
     if matches!(field, SummaryTraceField::Dependency | SummaryTraceField::Blocker)
         && matches!(normalize_evidence(value).as_str(), "无" | "none" | "尚未确定" | "未定" | "未决定") { return false; }
     if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status)
@@ -1298,6 +1444,88 @@ mod tests {
 
     fn at() -> DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 8, 29, 4, 0, 0).unwrap()
+    }
+
+    fn t06_source(texts: &[&str]) -> TranscriptVersionSnapshot {
+        TranscriptVersionSnapshot::legacy_whisper("t06_virtual", texts.iter().enumerate().map(|(index, text)| TranscriptEvidenceSegment {
+            segment_id: format!("t06_virtual_{index}"), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: (*text).to_owned(),
+        }).collect())
+    }
+
+    #[test]
+    fn t06_adjacent_fields_keep_anchor_and_field_references_and_stop_at_switches() {
+        let markdown = "任务：完成接口回归测试；截止时间：周五";
+        let source = t06_source(&["林舟负责完成接口回归测试。", "截止时间为周五。"]);
+        let trace = &trace_owner_and_time_fields(markdown, &source).unwrap()[0];
+        assert_eq!(trace.status, SummaryTraceStatus::Supported);
+        assert_eq!(trace.evidence.iter().map(|reference| reference.segment_id.as_str()).collect::<Vec<_>>(), ["t06_virtual_0", "t06_virtual_1"]);
+        for lines in [vec!["如果完成接口回归测试。", "截止时间为周五。"], vec!["完成接口回归测试。", "另外安排发布邀请。", "截止时间为周五。"], vec!["完成接口回归测试。", "陈岚：截止时间为周五。"]] {
+            assert_eq!(trace_owner_and_time_fields(markdown, &t06_source(&lines)).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        }
+        let mut switched = source.clone();
+        switched.segments[0].anonymous_speaker = Some("S01".into());
+        switched.segments[1].anonymous_speaker = Some("S02".into());
+        switched.transcript_sha256 = switched.computed_transcript_sha256();
+        switched.speaker_binding_sha256 = switched.computed_speaker_binding_sha256();
+        assert_eq!(trace_owner_and_time_fields(markdown, &switched).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        let dependency = "| 行动任务 | 依赖 |\n| --- | --- |\n| 发布试点邀请 | 完成接口回归测试 |\n| 完成接口回归测试 | 会议未提及 |";
+        let traces = trace_owner_and_time_fields(dependency, &t06_source(&["发布试点邀请截止时间为周五。", "依赖完成接口回归测试。"])).unwrap();
+        assert_eq!(traces[0].status, SummaryTraceStatus::Supported);
+        assert_eq!(traces[0].evidence.len(), 2);
+    }
+
+    #[test]
+    fn t06_controlled_task_verbs_do_not_merge_colliding_tasks() {
+        let source = t06_source(&["接口回归测试截止时间为周五。"]);
+        assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；截止时间：周五", &source).unwrap()[0].status, SummaryTraceStatus::Supported);
+        let table = "| 行动任务 | 截止时间 |\n| --- | --- |\n| 完成接口回归测试 | 周五 |\n| 执行接口回归测试 | 周五 |";
+        assert!(trace_owner_and_time_fields(table, &source).unwrap().iter().all(|trace| trace.status == SummaryTraceStatus::NeedsReview));
+        assert_eq!(trace_owner_and_time_fields("Task: Build model; Deadline: Friday", &t06_source(&["Rebuild model deadline is Friday."])).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+    }
+
+    #[test]
+    fn t06_final_deadline_and_iso_render_the_literal_source_without_an_invented_year() {
+        let source = t06_source(&["完成接口回归测试截止时间为10月8日18点。", "更正，截止时间改为10月9日12点。"]);
+        let markdown = "任务：完成接口回归测试；截止时间：2026-10-09 12:00";
+        let traces = trace_owner_and_time_fields(markdown, &source).unwrap();
+        assert_eq!(traces[0].status, SummaryTraceStatus::Supported);
+        assert_eq!(traces[0].value, "10月9日12点");
+        assert_eq!(traces[0].evidence.len(), 2);
+        for candidate in ["2026-10-09T12:00:00Z", "2026-10-09T12:00:00.000Z"] {
+            let trace = &trace_owner_and_time_fields(&markdown.replace("2026-10-09 12:00", candidate), &source).unwrap()[0];
+            assert_eq!(trace.status, SummaryTraceStatus::Supported);
+            assert_eq!(trace.value, "10月9日12点");
+        }
+        for candidate in ["2026-10-09T12:00:01Z", "2026-10-09T12:00:00+08:00"] {
+            assert_eq!(trace_owner_and_time_fields(&markdown.replace("2026-10-09 12:00", candidate), &source).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        }
+        assert_eq!(restore_supported_owner_and_time_fields(markdown, &markdown.replace("2026-10-09 12:00", "会议未提及"), &traces), "任务：完成接口回归测试；截止时间：10月9日12点");
+        assert_eq!(trace_owner_and_time_fields(&markdown.replace("09", "08"), &source).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；截止时间：14点30分", &t06_source(&["完成接口回归测试讨论到现在14点30分，会议结束。"])).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+    }
+
+    #[test]
+    fn t06_recovery_requires_a_unique_assertion_and_preserves_existing_columns() {
+        let source = t06_source(&["林舟负责完成接口回归测试，截止时间为周五，验收标准是阻断问题为0。"]);
+        let missing = "任务：完成接口回归测试；负责人：会议未提及；截止时间：会议未提及；验收标准：会议未提及";
+        let recovered = recover_missing_action_fields(missing, &source, &["林舟".into(), "陈岚".into()]).unwrap();
+        assert_eq!(recovered, "任务：完成接口回归测试；负责人：林舟；截止时间：周五；验收标准：阻断问题为0");
+        assert_eq!(recover_missing_action_fields("任务：完成接口回归测试；说明：会议未提及", &source, &[]).unwrap(), "任务：完成接口回归测试；说明：会议未提及");
+        let conflict = t06_source(&["完成接口回归测试截止时间为周五。", "完成接口回归测试截止时间为周六。"]);
+        assert_eq!(recover_missing_action_fields(missing, &conflict, &[]).unwrap(), missing);
+    }
+
+    #[test]
+    fn t06_owner_proof_cannot_borrow_a_dependency_object_or_another_clause() {
+        for text in ["陈岚负责发布邀请，依赖完成接口回归测试。", "林舟负责完成接口回归测试，陈岚负责发布邀请。"] {
+            assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；负责人：陈岚", &t06_source(&[text])).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        }
+        let mut source = t06_source(&["我负责发布邀请，完成接口回归测试只是举例。"]);
+        source.segments[0].bound_display_name = Some("陈岚".into());
+        source.segments[0].bound_person_id = Some("person_chen".into());
+        source.speaker_binding_sha256 = source.computed_speaker_binding_sha256();
+        assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；负责人：陈岚", &source).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
     }
 
     fn segments() -> Vec<TranscriptEvidenceSegment> {
@@ -1688,7 +1916,11 @@ mod tests {
         let masked = "| 行动任务 | 截止时间/验收标准 |
 | --- | --- |
 | 整理报告 | 会议未提及 |";
-        assert_eq!(restore_supported_owner_and_time_fields(original, masked, &traces), masked);
+        // T06 keeps only the proven component; the other candidate still needs review.
+        assert_eq!(restore_supported_owner_and_time_fields(original, masked, &traces), masked.replace("会议未提及", "截止时间：周五；验收标准：待核对"));
+        let bare = original.replace("截止时间：周五；验收标准：100个用例通过", "周五 / 100个用例通过");
+        let traces = trace_owner_and_time_fields(&bare, &source).unwrap();
+        assert_eq!(restore_supported_owner_and_time_fields(&bare, masked, &traces), masked.replace("会议未提及", "周五 / 待核对"));
     }
     #[test]
     fn t03_inline_restoration_keeps_the_unsupported_slot_masked() {
@@ -1697,7 +1929,7 @@ mod tests {
         let traces = trace_owner_and_time_fields(original, &source).unwrap();
         let masked = "任务：整理报告；责任人：会议未提及；负责人：会议未提及；截止日期：会议未提及";
         let restored = restore_supported_owner_and_time_fields(original, masked, &traces);
-        assert_eq!(restored, "任务：整理报告；责任人：会议未提及；负责人：Rayson；截止日期：周五");
+        assert_eq!(restored, "任务：整理报告；责任人：待核对；负责人：Rayson；截止日期：周五");
     }
     #[test]
     fn t03_fenced_tables_are_examples_not_field_claims() {
@@ -1761,7 +1993,7 @@ mod tests {
         let traces = trace_owner_and_time_fields(original, &source).unwrap();
         let restored = restore_supported_owner_and_time_fields(original, sanitized, &traces);
         assert!(restored.contains("| 整理报告 | Rayson | 周五 |"));
-        assert!(restored.contains("| 发布版本 | 会议未提及 | 会议未提及 |"));
+        assert!(restored.contains("| 发布版本 | 待核对 | 待核对 |"));
     }
 
     #[test]
