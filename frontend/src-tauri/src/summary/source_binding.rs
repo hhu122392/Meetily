@@ -700,7 +700,8 @@ pub fn trace_owner_and_time_fields(
     source: &TranscriptVersionSnapshot,
 ) -> Result<Vec<SummaryFieldTrace>, SummarySourceBindingError> {
     source.validate_active()?;
-    let mut traces = Vec::new();
+    let mut claims = Vec::new();
+    let mut tasks = BTreeSet::new();
     let mut table_schema: Option<TableTraceSchema> = None;
     let lines = markdown.lines().collect::<Vec<_>>();
     let mut fence = None;
@@ -721,11 +722,12 @@ pub fn trace_owner_and_time_fields(
             if let Some(schema) = table_schema.as_ref() {
                 let anchors = schema.action_anchor_columns.iter().filter_map(|column| cells.get(*column))
                     .filter(|value| !is_review_placeholder(value)).cloned().collect::<Vec<_>>();
+                tasks.extend(anchors.iter().map(|task| normalize_evidence(task)));
                 for (column, fields) in &schema.fields {
                     if let Some(value) = cells.get(*column) {
                         for (field, value) in cell_field_values(fields, value) {
-                            if !is_review_placeholder(value) {
-                                traces.push(trace_field_value(field, value, markdown_line, Some(*column), &anchors, source));
+                            if !is_field_placeholder(field, value) {
+                                claims.push((field, value.to_owned(), markdown_line, Some(*column), anchors.clone()));
                             }
                         }
                     }
@@ -735,15 +737,17 @@ pub fn trace_owner_and_time_fields(
         }
         table_schema = None;
         let anchors = inline_action_anchors(line);
+        tasks.extend(anchors.iter().map(|task| normalize_evidence(task)));
         for (label, start, end) in inline_labels(line) {
             for (field, value) in cell_field_values(&label_fields(label), &line[start..end]) {
-                if !is_review_placeholder(value) {
-                    traces.push(trace_field_value(field, value, markdown_line, None, &anchors, source));
+                if !is_field_placeholder(field, value) {
+                    claims.push((field, value.to_owned(), markdown_line, None, anchors.clone()));
                 }
             }
         }
     }
-    Ok(traces)
+    let tasks = tasks.into_iter().collect::<Vec<_>>();
+    Ok(claims.into_iter().map(|(field, value, line, column, anchors)| trace_field_value(field, &value, line, column, &anchors, &tasks, source)).collect())
 }
 
 /// Restores only evidence-supported action fields after the existing
@@ -768,6 +772,8 @@ pub fn restore_supported_owner_and_time_fields(
                 // A proven deadline cannot also restore an unproven criterion in the same cell.
                 if !cell_checks.is_empty() && cell_checks.iter().all(|trace| trace.status == SummaryTraceStatus::Supported) {
                     sanitized_cells[column] = original_cells[column].clone();
+                } else if cell_checks.len() == 1 && matches!(cell_checks[0].field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+                    sanitized_cells[column] = review_label(&sanitized_cells[column]).to_owned();
                 }
             }
             *line = format!("| {} |", sanitized_cells.join(" | "));
@@ -778,10 +784,14 @@ pub fn restore_supported_owner_and_time_fields(
                 let fields = label_fields(label);
                 if fields.is_empty() || fields != label_fields(safe_label) || !is_review_placeholder(&line[*safe_start..*safe_end]) { return None; }
                 let values = cell_field_values(&fields, &original_line[*start..*end]);
-                values.iter().all(|(field, value)| is_review_placeholder(value) || checks.iter().any(|trace| {
+                let supported = values.iter().all(|(field, value)| is_field_placeholder(*field, value) || checks.iter().any(|trace| {
                     trace.markdown_column.is_none() && trace.field == *field && trace.status == SummaryTraceStatus::Supported
-                        && normalize_evidence(&trace.value) == normalize_evidence(value)
-                })).then_some((*safe_start, *safe_end, &original_line[*start..*end]))
+                        && normalize_field_value(*field, &trace.value) == normalize_field_value(*field, value)
+                }));
+                if supported { Some((*safe_start, *safe_end, &original_line[*start..*end])) }
+                else if fields.len() == 1 && matches!(fields[0], SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+                    Some((*safe_start, *safe_end, review_label(&line[*safe_start..*safe_end])))
+                } else { None }
             }).collect::<Vec<_>>();
             for (start, end, value) in replacements.into_iter().rev() { line.replace_range(start..end, value); }
         }
@@ -797,6 +807,7 @@ fn trace_field_value(
     markdown_line: usize,
     markdown_column: Option<usize>,
     action_anchors: &[String],
+    all_tasks: &[String],
     source: &TranscriptVersionSnapshot,
 ) -> SummaryFieldTrace {
     let normalized_value = normalize_evidence(value);
@@ -805,7 +816,9 @@ fn trace_field_value(
         .map(|anchor| normalize_evidence(anchor))
         .filter(|anchor| anchor.chars().count() >= 2)
         .collect::<Vec<_>>();
-    let evidence = source
+    let evidence = if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+        stated_attribute_evidence(field, value, &normalized_anchors, all_tasks, source)
+    } else { source
         .segments
         .iter()
         .filter(|segment| {
@@ -839,7 +852,7 @@ fn trace_field_value(
             end_ms: segment.end_ms,
             excerpt_sha256: sha256_text(segment.text.trim()),
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>() };
     let related_evidence = if evidence.is_empty() {
         let texts: Vec<_> = source.segments.iter().map(|segment| segment.text.as_str()).collect();
         rank_related_segments(action_anchors, &texts).into_iter().map(|index| &source.segments[index]).map(|segment| SummaryEvidenceReference {
@@ -863,6 +876,101 @@ fn trace_field_value(
         task: action_anchors.join(" / "),
         related_evidence,
     }
+}
+
+fn review_label(placeholder: &str) -> &'static str {
+    if placeholder.is_ascii() { "Needs review" } else { "待核对" }
+}
+
+/// Literal attribute assertions only; retrieval and nearby task mentions are not proof.
+fn stated_attribute_evidence(
+    field: SummaryTraceField,
+    value: &str,
+    anchors: &[String],
+    all_tasks: &[String],
+    source: &TranscriptVersionSnapshot,
+) -> Vec<SummaryEvidenceReference> {
+    static ATTRIBUTE: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)验收标准|验收条件|放行标准|当前状态|任务状态|状态|截止时间|截止日期|依赖|前提|需要先|卡点|acceptance criteria|acceptance criterion|current status|status|deadline|due date|dependencies|dependency|requires|prerequisite|blocker"
+    ).unwrap());
+    static ACCEPTANCE: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)(?:验收标准|验收条件|放行标准|acceptance criteri(?:a|on))\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
+    ).unwrap());
+    static STATUS: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)(?:当前状态|任务状态|状态|current status|status)\s*(?:(?:改为|是|为|[:：]|is\b)\s*)?(?P<value>[^，,。；;\n]+)"
+    ).unwrap());
+    static CONDITIONAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:if|provided|example)\b").unwrap());
+    let pattern = if field == SummaryTraceField::Acceptance { &*ACCEPTANCE } else { &*STATUS };
+    let mut assertions = Vec::new();
+    for segment in &source.segments {
+        for sentence in evidence_sentences(&segment.text) {
+            if sentence.trim_end().ends_with(['?', '？']) { continue; }
+            let first_attribute = ATTRIBUTE.find_iter(sentence).find(|found| {
+                let prefix = normalize_evidence(&sentence[..found.start()]);
+                all_tasks.iter().any(|task| prefix.contains(task))
+            }).map_or(sentence.len(), |found| found.start());
+            let subject = normalize_evidence(&sentence[..first_attribute]);
+            let subjects = all_tasks.iter().filter(|task| subject.contains(task.as_str())).collect::<Vec<_>>();
+            let subjects = subjects.iter().filter(|task| !subjects.iter().any(|other| other != *task && other.contains(task.as_str()))).collect::<Vec<_>>();
+            let qualifiers = all_tasks.iter().fold(subject.clone(), |text, task| text.replace(task, ""));
+            if !subjects.iter().any(|task| anchors.contains(*task))
+                || ["如果", "假如", "若", "假设", "例如", "没说", "不是说", "不要说"].iter().any(|word| qualifiers.contains(word))
+                || (field == SummaryTraceField::Status && qualifiers.contains("计划"))
+                || CONDITIONAL.is_match(&sentence[..first_attribute]) {
+                continue;
+            }
+            let mut values = pattern.captures_iter(sentence).filter(|capture| capture.get(0).unwrap().start() >= first_attribute).map(|capture| {
+                let matched = capture.get(0).unwrap();
+                let correction = matched.as_str().contains("改为") || ["更正", "不对", "correction"].iter()
+                    .any(|word| sentence[..matched.start()].to_lowercase().contains(word));
+                (matched.start(), capture["value"].trim().trim_end_matches(['.', '!']).to_owned(), correction)
+            }).collect::<Vec<_>>();
+            let fallback = (field == SummaryTraceField::Acceptance).then(|| {
+                    ["尚未确定验收条件", "未约定验收条件", "尚未确定验收标准", "未约定验收标准"].iter()
+                        .find(|word| sentence.contains(**word)).map(|word| (*word).to_owned())
+                }).flatten()
+                .or_else(|| {
+                    if field != SummaryTraceField::Status { return None; }
+                    let normalized = normalize_evidence(sentence);
+                    let (_, tail) = normalized.rsplit_once(anchors.first()?.as_str())?;
+                    let tail = tail.trim_end_matches(['。', '！', '？']);
+                    let tail = tail.strip_prefix("目前").or_else(|| tail.strip_prefix("现在")).unwrap_or(tail);
+                    ["进行中", "正在进行", "未开始", "已完成", "已经完成", "尚未完成", "未完成", "已暂停", "已取消", "inprogress", "notstarted", "completed", "unfinished"].contains(&tail).then(|| tail.to_owned())
+                });
+            if values.is_empty() {
+                if let Some(value) = fallback { values.push((first_attribute, value, sentence.contains("更正"))); }
+            }
+            for (start, assertion, correction) in values {
+                let intervening = normalize_evidence(&sentence[first_attribute..start]);
+                if all_tasks.iter().any(|task| !anchors.contains(task) && intervening.contains(task)) { break; }
+                // ponytail: explicit labels and literal values; arbitrary paraphrases stay for review.
+                let end = ATTRIBUTE.find_iter(sentence).find(|found| found.start() > start).map_or(sentence.len(), |found| found.start());
+                let confidence = format!("{}{}", qualifiers, normalize_evidence(&sentence[start..end]));
+                let certain = subjects.len() == 1
+                    && !["可能", "预计", "尚未确认", "未经确认", "未核实", "尚未核实", "unconfirmed", "notconfirmed"].iter().any(|word| confidence.contains(word))
+                    && !["计划", "希望", "如果", "假设", "planned", "expected", "might", "would"].iter().any(|word| assertion.to_lowercase().contains(word));
+                assertions.push((segment, normalize_field_value(field, &assertion), correction, certain));
+            }
+        }
+    }
+    let Some((_, final_value, _, certain)) = assertions.last() else { return Vec::new(); };
+    let decisive = assertions.iter().rposition(|(_, _, corrected, _)| *corrected).unwrap_or(0);
+    if !certain || *final_value != normalize_field_value(field, value)
+        || assertions[decisive..].iter().any(|(_, assertion, _, certain)| !certain || assertion != final_value) {
+        return Vec::new();
+    }
+    let mut seen = BTreeSet::new();
+    assertions.into_iter().filter(|(segment, _, _, _)| seen.insert(segment.segment_id.clone())).map(|(segment, _, _, _)| SummaryEvidenceReference {
+        segment_id: segment.segment_id.clone(), start_ms: segment.start_ms, end_ms: segment.end_ms,
+        excerpt_sha256: sha256_text(segment.text.trim()),
+    }).collect()
+}
+
+fn normalize_field_value(field: SummaryTraceField, value: &str) -> String {
+    if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status) {
+        value.trim().trim_end_matches(['。', '.', '！', '!']).nfkc().flat_map(char::to_lowercase)
+            .filter(|character| !character.is_whitespace() && *character != '*').collect()
+    } else { normalize_evidence(value) }
 }
 
 struct TableTraceSchema {
@@ -922,6 +1030,12 @@ fn is_review_placeholder(value: &str) -> bool {
             | "tobeconfirmed"
             | "needsreview"
     )
+}
+
+fn is_field_placeholder(field: SummaryTraceField, value: &str) -> bool {
+    if matches!(field, SummaryTraceField::Acceptance | SummaryTraceField::Status)
+        && matches!(normalize_evidence(value).as_str(), "尚未确定" | "未定" | "未决定") { return false; }
+    is_review_placeholder(value)
 }
 
 fn normalize_evidence(value: &str) -> String {
@@ -1299,6 +1413,126 @@ mod tests {
                 SummaryStaleReason::TemplateChanged,
             ]
         );
+    }
+
+    #[test]
+    fn t04_acceptance_and_status_use_explicit_task_attributes() {
+        let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+            segment_id: "criteria_source".into(), start_ms: Some(1_000), end_ms: Some(3_000), wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "整理报告，验收标准是100个用例通过，当前状态是进行中。发布版本，验收标准是20名客户收到邀请，当前状态是未开始。".into(),
+        }]);
+        let markdown = "| 行动任务 | 验收标准 | 当前状态 |\n| --- | --- | --- |\n| 整理报告 | 100个用例通过 | 进行中 |\n| 发布版本 | 20名客户收到邀请 | 未开始 |";
+        let traces = trace_owner_and_time_fields(markdown, &source).unwrap();
+        assert_eq!(traces.len(), 4);
+        assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported && trace.evidence[0].segment_id == "criteria_source" && trace.evidence[0].excerpt_sha256.len() == 64));
+    }
+
+    #[test]
+    fn t04_future_negation_uncertainty_and_other_tasks_are_not_proof() {
+        for (text, value) in [
+            ("整理报告计划下周开始。", "进行中"),
+            ("整理报告当前状态预计为已完成。", "已完成"),
+            ("整理报告尚未完成。", "已完成"),
+            ("如果整理报告当前状态是已完成，就通知客户。", "已完成"),
+            ("发布版本的前提是整理报告通过，当前状态是未开始。", "未开始"),
+            ("整理报告和发布版本，当前状态是进行中。", "进行中"),
+            ("整理报告当前状态是进行中，但尚未确认。", "进行中"),
+        ] {
+            let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+                segment_id: "negative_source".into(), start_ms: None, end_ms: None, wall_clock: None,
+                anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: text.into(),
+            }]);
+            let markdown = format!("任务：整理报告；当前状态：{value}\n任务：发布版本；当前状态：会议未提及");
+            let traces = trace_owner_and_time_fields(&markdown, &source).unwrap();
+            assert_eq!(traces.len(), 1, "{text}");
+            assert_eq!(traces[0].status, SummaryTraceStatus::NeedsReview, "{text}");
+        }
+    }
+
+    #[test]
+    fn t04_direct_states_and_later_uncertain_corrections_are_distinct() {
+        for (text, value, expected) in [
+            ("整理报告目前进行中。", "进行中", SummaryTraceStatus::Supported),
+            ("整理报告已完成。", "已完成", SummaryTraceStatus::Supported),
+            ("整理报告尚未完成。", "尚未完成", SummaryTraceStatus::Supported),
+            ("整理报告已完成后才开始下一步。", "已完成", SummaryTraceStatus::NeedsReview),
+            ("我没说整理报告已完成。", "已完成", SummaryTraceStatus::NeedsReview),
+            ("整理报告当前状态是进行中。更正，整理报告当前状态可能是进行中。", "进行中", SummaryTraceStatus::NeedsReview),
+            ("整理报告当前状态是进行中。更正，整理报告当前状态尚未确定。", "进行中", SummaryTraceStatus::NeedsReview),
+            ("整理报告当前状态是进行中。更正，整理报告当前状态尚未确定。", "尚未确定", SummaryTraceStatus::Supported),
+            ("整理报告当前状态是进行中，不对，当前状态改为未开始。", "未开始", SummaryTraceStatus::Supported),
+            ("整理报告当前状态是进行中，不对，当前状态改为未开始。", "进行中", SummaryTraceStatus::NeedsReview),
+            ("整理报告当前状态是进行中，当前状态是未开始。", "进行中", SummaryTraceStatus::NeedsReview),
+        ] {
+            let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+                segment_id: "direct_source".into(), start_ms: None, end_ms: None, wall_clock: None,
+                anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: text.into(),
+            }]);
+            let traces = trace_owner_and_time_fields(&format!("任务：整理报告；当前状态：{value}"), &source).unwrap();
+            assert_eq!(traces.len(), 1, "{text}");
+            assert_eq!(traces[0].status, expected, "{text}");
+        }
+    }
+
+    #[test]
+    fn t04_comparison_operators_decimals_and_questions_keep_their_meaning() {
+        for (text, field, value, expected) in [
+            ("整理报告验收标准是阻断问题=0。", "验收标准", "阻断问题>0", SummaryTraceStatus::NeedsReview),
+            ("整理报告验收标准是响应时间不超过2.0秒。", "验收标准", "响应时间不超过20秒", SummaryTraceStatus::NeedsReview),
+            ("整理报告验收标准是响应时间不超过2.0秒。", "验收标准", "响应时间不超过2.0秒", SummaryTraceStatus::Supported),
+            ("整理报告进行中？", "当前状态", "进行中", SummaryTraceStatus::NeedsReview),
+        ] {
+            let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+                segment_id: "numeric_source".into(), start_ms: None, end_ms: None, wall_clock: None,
+                anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: text.into(),
+            }]);
+            let traces = trace_owner_and_time_fields(&format!("任务：整理报告；{field}：{value}"), &source).unwrap();
+            assert_eq!(traces[0].status, expected, "{text}");
+        }
+    }
+
+    #[test]
+    fn t04_attribute_words_inside_task_names_do_not_change_the_subject() {
+        for task in ["制定行动计划", "整理状态报告"] {
+            let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+                segment_id: "task_words".into(), start_ms: None, end_ms: None, wall_clock: None,
+                anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+                text: format!("{task}验收标准是提交1份报告，当前状态是进行中。"),
+            }]);
+            let traces = trace_owner_and_time_fields(&format!("任务：{task}；验收标准：提交1份报告；当前状态：进行中"), &source).unwrap();
+            assert_eq!(traces.len(), 2);
+            assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported), "{task}");
+        }
+    }
+
+    #[test]
+    fn t04_uncertainty_is_checked_for_each_field_not_the_whole_sentence() {
+        for (text, acceptance) in [
+            ("整理报告验收标准是阻断问题为0，当前状态是进行中，依赖尚未确认。", SummaryTraceStatus::Supported),
+            ("整理报告验收标准可能是阻断问题为0，当前状态是进行中。", SummaryTraceStatus::NeedsReview),
+        ] {
+            let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+                segment_id: "field_scope".into(), start_ms: None, end_ms: None, wall_clock: None,
+                anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: text.into(),
+            }]);
+            let traces = trace_owner_and_time_fields("任务：整理报告；验收标准：阻断问题为0；当前状态：进行中", &source).unwrap();
+            assert_eq!(traces[0].status, acceptance);
+            assert_eq!(traces[1].status, SummaryTraceStatus::Supported);
+        }
+    }
+
+    #[test]
+    fn t04_status_correction_keeps_decisive_and_prior_references() {
+        let source = TranscriptVersionSnapshot::legacy_whisper("attributes", ["整理报告当前状态是进行中。", "更正，整理报告当前状态改为未开始。", "整理报告当前状态是未开始。"].iter().enumerate().map(|(index, text)| TranscriptEvidenceSegment {
+            segment_id: format!("correction_{index}"), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: (*text).into(),
+        }).collect());
+        let traces = trace_owner_and_time_fields("任务：整理报告；当前状态：未开始", &source).unwrap();
+        assert_eq!(traces[0].status, SummaryTraceStatus::Supported);
+        assert_eq!(traces[0].evidence.len(), 3);
+        let old = trace_owner_and_time_fields("任务：整理报告；当前状态：进行中", &source).unwrap();
+        assert_eq!(old[0].status, SummaryTraceStatus::NeedsReview);
     }
 
     #[test]

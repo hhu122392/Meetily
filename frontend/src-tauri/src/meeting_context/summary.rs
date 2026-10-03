@@ -416,6 +416,15 @@ pub fn validate_summary_markdown_with_transcript(
     context: Option<&SummaryMeetingContext>,
     transcript: &str,
 ) -> ValidatedSummaryMarkdown {
+    validate_summary_with_transcript(markdown, context, transcript, false)
+}
+
+fn validate_summary_with_transcript(
+    markdown: &str,
+    context: Option<&SummaryMeetingContext>,
+    transcript: &str,
+    fields_checked_separately: bool,
+) -> ValidatedSummaryMarkdown {
     let mut validated = validate_summary_markdown(markdown, context);
     let transcript = transcript.trim();
 
@@ -456,7 +465,8 @@ pub fn validate_summary_markdown_with_transcript(
             "summary:factValidation.unsupportedOrganization",
         );
     }
-    if contains_unsupported_status_claim(&grounding_markdown, &normalized_transcript, context) {
+    let status_markdown = if fields_checked_separately { mask_action_fields(&grounding_markdown) } else { grounding_markdown.clone() };
+    if contains_unsupported_status_claim(&status_markdown, &normalized_transcript, context) {
         push_fact_warning(
             &mut validated.validation,
             "unsupported_status_claim",
@@ -578,7 +588,7 @@ pub fn validate_summary_markdown_with_source(
     source: &TranscriptVersionSnapshot,
 ) -> Result<ValidatedSummaryMarkdown, SummarySourceBindingError> {
     let transcript = source.render_for_summary()?;
-    let mut validated = validate_summary_markdown_with_transcript(markdown, context, &transcript);
+    let mut validated = validate_summary_with_transcript(markdown, context, &transcript, true);
     let evidence_markdown = context
         .map(|context| {
             let normalized = context.normalize_known_aliases(markdown);
@@ -3029,6 +3039,42 @@ mod tests {
             .markdown
             .contains("判断口径：会议未提及；负责人：会议未提及"));
         assert!(!validated.markdown.contains("技术对接"));
+    }
+
+    #[test]
+    fn t04_structured_attributes_do_not_borrow_the_prose_status_check() {
+        let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+            segment_id: "attributes_1".into(), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "整理报告验收标准是100个用例通过，当前状态是进行中。旧平台已完成。".into(),
+        }]);
+        let input = "任务：整理报告；验收标准：100个用例通过；当前状态：进行中";
+        let validated = validate_summary_markdown_with_source(input, None, &source).unwrap();
+        assert_eq!(validated.markdown, input);
+        assert!(!validated.validation.warnings.iter().any(|warning| warning.code == "unsupported_status_claim"));
+        let prose = validate_summary_markdown_with_source(&format!("新平台已完成。\n{input}"), None, &source).unwrap();
+        assert!(prose.validation.warnings.iter().any(|warning| warning.code == "unsupported_status_claim"));
+        let unsupported = validate_summary_markdown_with_source("任务：整理报告；验收标准：提高10倍；当前状态：已完成", None, &source).unwrap();
+        assert!(unsupported.markdown.contains("验收标准：待核对；当前状态：待核对"));
+        assert!(unsupported.validation.field_traces.iter().all(|trace| trace.status == SummaryTraceStatus::NeedsReview));
+        let numbers = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+            segment_id: "numbers".into(), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None, text: "整理报告验收标准是阻断问题=0。".into(),
+        }]);
+        let duplicate = validate_summary_markdown_with_source("任务：整理报告；验收标准：阻断问题=0；验收条件：阻断问题>0", None, &numbers).unwrap();
+        assert!(duplicate.markdown.contains("验收标准：阻断问题=0；验收条件：待核对"));
+    }
+
+    #[test]
+    fn t04_explicitly_undetermined_acceptance_is_preserved() {
+        let source = TranscriptVersionSnapshot::legacy_whisper("attributes", vec![TranscriptEvidenceSegment {
+            segment_id: "attributes_1".into(), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "整理报告验收标准是尚未确定。".into(),
+        }]);
+        let validated = validate_summary_markdown_with_source("任务：整理报告；验收标准：尚未确定", None, &source).unwrap();
+        assert!(validated.markdown.ends_with("验收标准：尚未确定"));
+        assert_eq!(validated.validation.field_traces[0].status, SummaryTraceStatus::Supported);
     }
 
     #[test]
