@@ -160,7 +160,12 @@ MEETING CONTEXT RULES:
                     if alias.is_ascii() {
                         replace_ascii_alias(&text, alias, canonical)
                     } else {
-                        text.replace(alias, canonical)
+                        // Match the longer spelling first, without expanding a canonical name again.
+                        let mut spellings = [canonical, alias];
+                        spellings.sort_by(|a, b| b.len().cmp(&a.len()));
+                        Regex::new(&spellings.map(regex::escape).join("|"))
+                            .expect("escaped alias regex must compile")
+                            .replace_all(&text, |_: &regex::Captures<'_>| canonical).into_owned()
                     }
                 });
         self.recognition_dictionary
@@ -480,7 +485,7 @@ fn validate_summary_with_transcript(
             "summary:factValidation.unsupportedTranscriptTerm",
         );
     }
-    if contains_unsupported_organization_value(&grounding_markdown, &support_corpus) {
+    if contains_unsupported_organization_value(&grounding_markdown, &normalized_transcript, context) {
         push_fact_warning(
             &mut validated.validation,
             "unsupported_organization",
@@ -731,6 +736,36 @@ fn fill_verified_people_fields(
             }
         };
         let values = [names(&facts.attending), names(&facts.absent), names(&facts.host.iter().cloned().collect::<Vec<_>>())];
+        // A person-only list under an explicit people heading is the field itself.
+        // Replace it from verified facts; do not append a second conflicting roster.
+        if section.format == "list" {
+            if let Some(field) = people_field_index(&section.title).filter(|field| requested[*field]
+                && requested.iter().filter(|requested| **requested).count() == 1) {
+                let people_only = lines[start..end].iter().filter(|line| !line.trim().is_empty()).all(|line| {
+                    let Some(item) = line.trim().strip_prefix('-').or_else(|| line.trim().strip_prefix('*')) else { return false; };
+                    let item = context.normalize_known_aliases(item.trim());
+                    context.recognition_dictionary.people.iter().any(|person| item.strip_prefix(&person.display_name).is_some_and(|tail| {
+                        let tail = tail.trim();
+                        tail.is_empty() || (tail.starts_with('(') && tail.ends_with(')')) || (tail.starts_with('（') && tail.ends_with('）'))
+                    }))
+                });
+                if people_only {
+                    let people = match field { 0 => facts.attending.as_slice(), 1 => facts.absent.as_slice(), _ => facts.host.as_slice() };
+                    let mut replacement = vec![String::new()];
+                    replacement.extend(people.iter().map(|person| format!("- {}{}", person.display_name,
+                        person.role.as_ref().map_or(String::new(), |role| format!(" ({role})")))));
+                    if people.is_empty() { replacement.push(format!("- {missing}")); }
+                    replacement.push(String::new());
+                    lines.splice(start..end, replacement);
+                    continue;
+                }
+                if !lines[start..end].iter().any(|line| line.split([':', '：']).next().is_some_and(|prefix|
+                    people_field_index(prefix.trim().trim_start_matches(['-', '*']).trim()).is_some())) {
+                    unresolved = true;
+                    continue;
+                }
+            }
+        }
         let mut filled = [false; 3];
         let mut columns: Vec<(usize, usize)> = Vec::new();
         let mut fence = None;
@@ -1026,8 +1061,28 @@ fn extract_uppercase_identifiers(input: &str) -> BTreeSet<String> {
         .collect()
 }
 
-fn contains_unsupported_organization_value(markdown: &str, support_corpus: &str) -> bool {
-    let normalized_support = normalize_evidence_text(support_corpus);
+fn organization_value_has_context(value: &str, transcript: &str, context: Option<&SummaryMeetingContext>) -> bool {
+    static LABEL: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)^(?:\[\d+:\d+(?::\d+)?\]\s*)?(?:部门(?:/小组)?|小组|团队|业务线|department(?:/group)?|group|team|business unit)\s*(?:是|为|[:：]|is\b)\s*(?P<value>.+)$"
+    ).unwrap());
+    static KIND: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:department|group|team|business unit)\b").unwrap());
+    let normalized = normalize_evidence_text(value);
+    if context.is_some_and(|context| {
+        let facts = &context.verified_meeting_facts;
+        facts.attending.iter().chain(facts.absent.iter()).chain(facts.host.iter())
+            .filter_map(|person| person.department.as_deref())
+            .any(|department| normalize_evidence_text(department) == normalized)
+    }) { return true; }
+    // This remains a review-only lexical check, not proof of task ownership.
+    // A task word occurring in the transcript does not make it a department.
+    (normalize_evidence_text(transcript).contains(&normalized)
+        && (["部", "组", "团队", "业务线"].iter().any(|suffix| value.trim().ends_with(*suffix)) || KIND.is_match(value)))
+        || transcript.split(['，', ',', '。', '；', ';', '\n']).any(|clause|
+            LABEL.captures(clause.trim()).is_some_and(|captures|
+                normalize_evidence_text(&captures["value"]) == normalized))
+}
+
+fn contains_unsupported_organization_value(markdown: &str, transcript: &str, context: Option<&SummaryMeetingContext>) -> bool {
     let mut organization_columns: Option<Vec<usize>> = None;
 
     for line in markdown.lines() {
@@ -1062,7 +1117,7 @@ fn contains_unsupported_organization_value(markdown: &str, support_corpus: &str)
                 let normalized_value = normalize_evidence_text(value);
                 if !normalized_value.is_empty()
                     && !is_review_placeholder(&normalized_value)
-                    && !normalized_support.contains(&normalized_value)
+                    && !organization_value_has_context(value, transcript, context)
                 {
                     return true;
                 }
@@ -1991,13 +2046,19 @@ fn remove_unverified_person_annotations(markdown: &str, context: &SummaryMeeting
                 ""
             };
             let pattern = format!(
-                r"{}{}\s*[\(（]\s*[^\)）]+\s*[\)）]",
+                r"{}{}\s*[\(（]\s*(?P<annotation>[^\)）]+)\s*[\)）]",
                 case_flag,
                 regex::escape(&person.display_name)
             );
             Regex::new(&pattern)
                 .expect("verified person annotation regex must compile")
-                .replace_all(&text, person.display_name.as_str())
+                .replace_all(&text, |capture: &regex::Captures<'_>| {
+                    let annotation = capture["annotation"].trim().to_lowercase();
+                    let attending = context.verified_meeting_facts.attending.iter().any(|verified| verified.person_id == person.person_id);
+                    let verified = if attending { ["出席", "attending", "present"].contains(&annotation.as_str()) }
+                        else { ["缺席", "absent"].contains(&annotation.as_str()) };
+                    if verified { capture[0].to_owned() } else { person.display_name.clone() }
+                })
                 .into_owned()
         })
 }
@@ -2405,6 +2466,31 @@ mod tests {
     }
 
     #[test]
+    fn t08_people_only_lists_use_verified_attendance_and_keep_known_annotations() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        assert_eq!(context.normalize_known_aliases("QA测试嘉宾、测试嘉宾"), "QA测试嘉宾、QA测试嘉宾");
+        assert_eq!(context.normalize_known_aliases("QA测试嘉宾、QA测试嘉宾"), "QA测试嘉宾、QA测试嘉宾");
+        let mut longer_alias = context.clone();
+        longer_alias.recognition_dictionary.people[0].display_name = "张".into();
+        longer_alias.recognition_dictionary.people[0].aliases = vec!["张三".into()];
+        assert_eq!(longer_alias.normalize_known_aliases("张、张三"), "张、张");
+        let mut template = t02_people_template("list");
+        template.sections[0].title = "Attendees".into();
+        template.sections[0].instruction = "List attendees with roles".into();
+        let (text, unresolved) = fill_verified_people_fields("**Attendees**\n\n* MeiL\n* QA测试嘉宾\n* Nick（缺席）\n", Some(&context), &template);
+        assert!(!unresolved);
+        assert!(text.contains("- MeiL"));
+        assert!(text.contains("- QA测试嘉宾"));
+        assert!(!text.contains("Nick"));
+        assert!(!text.contains("- Attendees:"));
+        assert_eq!(fill_verified_people_fields(&text, Some(&context), &template), (text, false));
+        let unknown = "**Attendees**\n- Unknown person\n";
+        assert_eq!(fill_verified_people_fields(unknown, Some(&context), &template), (unknown.into(), true));
+        assert_eq!(remove_unverified_person_annotations("Nick（缺席）; QA测试嘉宾 (present)", &context), "Nick（缺席）; QA测试嘉宾 (present)");
+        assert_eq!(remove_unverified_person_annotations("Nick（项目经理）; Nick (present)", &context), "Nick; Nick");
+    }
+
+    #[test]
     fn t02_prose_and_fenced_examples_are_preserved() {
         let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
         let original = "## 会议信息\n讨论参会人员：Rayson的姓名识别。\n```text\n参会人员：代码示例\n```\n";
@@ -2671,6 +2757,27 @@ mod tests {
             SummaryFactValidationStatus::Passed
         );
         assert!(validated.validation.warnings.is_empty());
+    }
+
+    #[test]
+    fn t08_task_terms_do_not_silently_pass_as_departments() {
+        let context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        for (value, transcript, expected) in [
+            ("接口回归测试", "林舟负责完成接口回归测试。", false),
+            ("试点邀请", "陈岚负责发布试点邀请。", false),
+            ("市场部", "市场部负责整理报告。", true),
+            ("接口回归测试", "[00:01] 部门：接口回归测试。", true),
+            ("质量保障", "会议讨论测试安排。", true),
+            ("Analytics", "Team: Analytics.", true),
+            ("Analytics", "If team is Analytics, review the plan.", false),
+        ] {
+            assert_eq!(organization_value_has_context(value, transcript, Some(&context)), expected, "{value}: {transcript}");
+        }
+        let markdown = "| 部门/小组 | 行动任务 | 自定义备注 |\n| --- | --- | --- |\n| 接口回归测试 | 完成接口回归测试 | 保持原样 |";
+        let result = validate_summary_markdown_with_transcript(markdown, Some(&context), "林舟负责完成接口回归测试。");
+        assert!(result.validation.warnings.iter().any(|warning| warning.code == "unsupported_organization"));
+        assert_eq!(result.markdown, markdown); // Review warning preserves the template and authored values.
+        assert!(!contains_unsupported_organization_value("| 自定义备注 |\n| --- |\n| 接口回归测试 |", "", Some(&context)));
     }
 
     #[test]

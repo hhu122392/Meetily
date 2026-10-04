@@ -704,8 +704,75 @@ pub fn trace_owner_and_time_fields(
 
 /// Generation alone can recover missing slots, using the same proof as filled slots.
 pub fn recover_missing_action_fields(markdown: &str, source: &TranscriptVersionSnapshot, owners: &[String]) -> Result<String, SummarySourceBindingError> {
-    let traces = trace_action_fields(markdown, source, Some(owners))?;
-    Ok(restore_supported_owner_and_time_fields(markdown, markdown, &traces))
+    source.validate_active()?;
+    let markdown = recover_missing_action_rows(markdown, source, owners);
+    let traces = trace_action_fields(&markdown, source, Some(owners))?;
+    Ok(restore_supported_owner_and_time_fields(&markdown, &markdown, &traces))
+}
+
+/// Only literal, uniquely assigned tasks can add rows to one recognized action table.
+/// Unknown columns/layouts and authored saves are never reconstructed.
+fn recover_missing_action_rows(markdown: &str, source: &TranscriptVersionSnapshot, owners: &[String]) -> String {
+    // Revoked assignments need review; do not infer which earlier task survives.
+    if source.segments.iter().any(|segment| ["取消", "撤回", "作废", "暂缓", "不再负责", "不执行", "cancel", "withdrawn"].iter().any(|word| segment.text.to_lowercase().contains(word))) { return markdown.to_owned(); }
+    let lines = markdown.lines().collect::<Vec<_>>();
+    let mut fence = None;
+    let tables = lines.iter().enumerate().filter_map(|(index, line)| {
+        if advance_fence(&mut fence, line) || fence.is_some() || !table_header(&lines, index) { return None; }
+        let header = table_cells(line);
+        let anchors = header.iter().enumerate().filter_map(|(column, label)| is_task_label(label).then_some(column)).collect::<Vec<_>>();
+        (!anchors.is_empty()).then_some((index, header, anchors))
+    }).collect::<Vec<_>>();
+    if tables.len() != 1 { return markdown.to_owned(); }
+    let (start, header, anchors) = &tables[0];
+    if anchors.len() != 1 || header.len() < 2 || header.iter().enumerate().any(|(column, label)| column != anchors[0]
+        && (label_fields(label).is_empty() || label_fields(label).iter().any(|field| matches!(field, SummaryTraceField::Criteria | SummaryTraceField::Escalation)))) {
+        return markdown.to_owned();
+    }
+    let anchor = anchors[0];
+    // Decisions are not a catch-all destination for omitted action tasks.
+    if ["决策", "结论", "decision"].iter().any(|label| header[anchor].trim().trim_matches('*').trim().eq_ignore_ascii_case(label)) { return markdown.to_owned(); }
+    let end = (*start+2..lines.len()).find(|index| table_cells(lines[*index]).is_empty()).unwrap_or(lines.len());
+    if lines[*start+2..end].iter().any(|line| table_cells(line).len() != header.len()) { return markdown.to_owned(); }
+    let existing = lines[*start+2..end].iter().map(|line| normalize_task(&table_cells(line)[anchor])).collect::<Vec<_>>();
+    let mut candidates = Vec::new();
+    for sentence in source.segments.iter().flat_map(|segment| evidence_sentences(&segment.text)) {
+        if hypothetical_assignment(sentence, &[]) || ["若", "举例", "假定", "尚未确认", "尚未确定", "未决定", "不是说", "仅供"].iter().any(|word| sentence.contains(word)) { continue; }
+        for clause in sentence.split(['，', ',']) {
+            for owner in owners {
+                let Some(tail) = clause.trim().strip_prefix(owner.as_str()) else { continue; };
+                let Some(task) = ["负责", "承担", "is responsible for ", "will ", "owns "].iter()
+                    .find_map(|role| tail.trim_start().strip_prefix(role)) else { continue; };
+                let task = task.trim().trim_end_matches(['。', '.', '！', '!', '；', ';']).trim();
+                if !(4..=80).contains(&task.chars().count()) || task.contains(['|', ':', '：'])
+                    || ["并", "以及", "和", "或", "可能", "考虑", "建议", "是否", " and ", " or "].iter().any(|word| task.contains(word))
+                    || ACTION_FIELDS.iter().flat_map(|field| field_labels(*field)).any(|label| task_matches(task, label)) { continue; }
+                let candidate = (task.to_owned(), owner.clone());
+                if !candidates.contains(&candidate) { candidates.push(candidate); }
+            }
+        }
+    }
+    candidates.retain(|(task, _)| {
+        let task = normalize_task(task); let core = task_evidence_key(&task, std::slice::from_ref(&task));
+        !existing.iter().any(|task| task_evidence_key(task, std::slice::from_ref(task)) == core)
+    });
+    let tasks = existing.iter().cloned().chain(candidates.iter().map(|(task, _)| normalize_task(task))).collect::<BTreeSet<_>>().into_iter().collect::<Vec<_>>();
+    let keys = tasks.iter().map(|task| task_evidence_key(task, &tasks)).collect::<Vec<_>>();
+    let mut rows = Vec::new();
+    for (task, owner) in candidates {
+        let key = task_evidence_key(&normalize_task(&task), &tasks);
+        if source.segments.iter().any(|segment| task_matches(&segment.text, &key)
+            && ["不负责", "不承担", "没有约定", "未约定", "not responsible"].iter().any(|word| segment.text.to_lowercase().contains(word))) { continue; }
+        if recover_field_value(SummaryTraceField::Owner, &[key], &keys, source, owners).as_deref() != Some(owner.as_str()) { continue; }
+        let missing = if header.iter().all(|label| label.is_ascii()) { "Not mentioned" } else { "会议未提及" };
+        let mut cells = vec![missing.to_owned(); header.len()]; cells[anchor] = task;
+        rows.push(format!("| {} |", cells.join(" | ")));
+    }
+    if rows.is_empty() { return markdown.to_owned(); }
+    let mut output = lines[..end].join("\n"); output.push('\n'); output.push_str(&rows.join("\n"));
+    if end < lines.len() { output.push('\n'); output.push_str(&lines[end..].join("\n")); }
+    if markdown.ends_with('\n') { output.push('\n'); }
+    output
 }
 
 fn trace_action_fields(markdown: &str, source: &TranscriptVersionSnapshot, recover_owners: Option<&[String]>) -> Result<Vec<SummaryFieldTrace>, SummarySourceBindingError> {
@@ -852,12 +919,49 @@ fn source_reference(segment: &TranscriptEvidenceSegment) -> SummaryEvidenceRefer
     SummaryEvidenceReference { segment_id: segment.segment_id.clone(), start_ms: segment.start_ms, end_ms: segment.end_ms, excerpt_sha256: sha256_text(segment.text.trim()) }
 }
 
+fn assignment_task<'a>(clause: &str, tasks: &'a [String]) -> Option<&'a String> {
+    let lower = clause.to_lowercase();
+    if ["不负责", "不承担", "not responsible", "will not", "does not own"].iter().any(|word| lower.contains(word)) { return None; }
+    let role = ["负责", "承担", "will ", "is responsible", "owns "].iter().filter_map(|role| lower.find(role).map(|start| start + role.len())).min()?;
+    let matches = tasks.iter().filter(|task| task_matches(&lower[role..], task)).collect::<Vec<_>>();
+    (matches.len() == 1).then(|| matches[0])
+}
+
+fn hypothetical_assignment(text: &str, tasks: &[String]) -> bool {
+    static CONDITIONAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:if|provided|example|suppose)\b").unwrap());
+    let qualifiers = tasks.iter().fold(normalize_evidence(text), |text, task| text.replace(normalize_evidence(task).as_str(), ""));
+    ["如果", "假如", "假设", "例如", "没说"].iter().any(|word| qualifiers.contains(word))
+        || CONDITIONAL.is_match(text) || text.trim_end().ends_with(['?', '？'])
+}
+
+fn assignment_scopes<'a>(sentence: &'a str, tasks: &[String]) -> Vec<&'a str> {
+    let mut start = 0;
+    let mut scopes = Vec::new();
+    let first = sentence.split(['，', ',']).next().unwrap_or(sentence);
+    let mut task = assignment_task(first, tasks);
+    // A condition/example may govern the whole paragraph, including later clauses.
+    if hypothetical_assignment(first, tasks) { return vec![sentence]; }
+    for (offset, separator) in sentence.char_indices().filter(|(_, ch)| matches!(ch, '，' | ',')) {
+        let next = offset + separator.len_utf8();
+        let clause = sentence[next..].split(['，', ',']).next().unwrap();
+        if let Some(assigned) = assignment_task(clause, tasks) {
+            if task.is_some_and(|prior| prior != assigned) {
+                scopes.push(&sentence[start..offset]);
+                start = next;
+            }
+            task = Some(assigned);
+        }
+    }
+    scopes.push(&sentence[start..]);
+    scopes
+}
+
 fn scoped_source_statements(source: &TranscriptVersionSnapshot, all_tasks: &[String]) -> Vec<ScopedStatement> {
     let mut statements = Vec::new();
     let mut previous: Option<(String, SummaryEvidenceReference, Option<String>)> = None;
     for segment in &source.segments {
         let speaker = segment.effective_speaker().or(segment.anonymous_speaker.as_deref()).map(str::to_owned);
-        for sentence in evidence_sentences(&segment.text).into_iter().filter(|sentence| !sentence.trim().is_empty()) {
+        for sentence in evidence_sentences(&segment.text).into_iter().flat_map(|sentence| assignment_scopes(sentence, all_tasks)).filter(|sentence| !sentence.trim().is_empty()) {
             let normalized = normalize_evidence(sentence);
             let mut subjects = all_tasks.iter().filter(|task| task_matches(sentence, task)).collect::<Vec<_>>();
             let reference = source_reference(segment);
@@ -865,6 +969,10 @@ fn scoped_source_statements(source: &TranscriptVersionSnapshot, all_tasks: &[Str
             let continuation = normalized.strip_prefix("更正").unwrap_or(&normalized);
             let continuation = continuation.trim_start_matches(['，', ',']);
             let starts_with_field = ACTION_FIELDS.iter().flat_map(|field| field_labels(*field)).any(|label| continuation.starts_with(&normalize_evidence(label)));
+            // ASR can omit punctuation between a field value and a new assignment.
+            // Do not borrow its following fields or invent the missing boundary.
+            if starts_with_field && assignment_task(sentence.split(['，', ',']).next().unwrap(), all_tasks).is_some()
+                && sentence.contains(['，', ',']) { previous = None; continue; }
             // A task named in a field value is its object, not a new subject.
             if starts_with_field && !subjects.iter().any(|task| normalized.starts_with(normalize_evidence(task).as_str())) { subjects.clear(); }
             let mut text = sentence.to_owned();
@@ -880,8 +988,7 @@ fn scoped_source_statements(source: &TranscriptVersionSnapshot, all_tasks: &[Str
                     let start = normalized.find(normalize_evidence(task).as_str()).unwrap();
                     let prefix = &normalized[..start];
                     let object_only = ["依赖", "前提", "卡在", "dependson", "blockedby"].iter().any(|word| prefix.contains(word));
-                    let qualifiers = normalized.replace(normalize_evidence(task).as_str(), "");
-                    let hypothetical = ["如果", "假如", "假设", "例如", "没说", "if", "example"].iter().any(|word| qualifiers.contains(word)) || sentence.trim_end().ends_with(['?', '？']);
+                    let hypothetical = hypothetical_assignment(sentence, all_tasks);
                     (!object_only && !hypothetical).then(|| (task.clone(), reference.clone(), speaker.clone()))
                 } else { None };
             }
@@ -1005,11 +1112,13 @@ fn trace_field_value(
                         .is_some_and(|speaker| normalize_evidence(speaker) == normalized_value)
                     && contains_first_person_commitment(sentence);
                 if !action_matches { return false; }
+                if field == SummaryTraceField::Owner && (hypothetical_assignment(sentence.split(['，', ',']).next().unwrap(), all_tasks)
+                    || sentence.trim_end().ends_with(['?', '？'])) { return false; }
                 match field {
                     SummaryTraceField::Owner => sentence.split(['，', ',', '；', ';']).any(|clause| {
                         let end = ["依赖", "前提", "卡在", "depends on", "blocked by"].iter().filter_map(|label| clause.find(label)).min().unwrap_or(clause.len());
                         let subject = &clause[..end];
-                        normalized_anchors.iter().any(|anchor| task_matches(subject, anchor))
+                        !hypothetical_assignment(clause, all_tasks) && normalized_anchors.iter().any(|anchor| task_matches(subject, anchor))
                             && ((speaker_matches && contains_first_person_commitment(clause)) || (text_matches && explicit_owner_statement(clause, value)))
                     }),
                     SummaryTraceField::Time => false,
@@ -1065,7 +1174,7 @@ fn stated_attribute_assertion(
     static STATUS: Lazy<Regex> = Lazy::new(|| Regex::new(
         r"(?i)(?:当前状态|任务状态|状态|current status|status)\s*(?:(?:改为|是|为|[:：]|is\b)\s*)?(?P<value>[^，,。；;\n]+)"
     ).unwrap());
-    static CONDITIONAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:if|provided|example)\b").unwrap());
+    static CONDITIONAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(?:if|provided|example|suppose)\b").unwrap());
     static DEPENDENCY: Lazy<Regex> = Lazy::new(|| Regex::new(
         r"(?i)(?:依赖|前提(?:条件)?|需要先|(?:要|需要)?等|depends on|dependencies|dependency|requires|prerequisites?)\s*(?:(?:改为|是|为|[:：]|is\b|are\b)\s*)?(?P<value>[^，,。；;\n]+)"
     ).unwrap());
@@ -1217,6 +1326,7 @@ fn inline_action_anchors(line: &str) -> Vec<String> {
 
 fn contains_first_person_commitment(text: &str) -> bool {
     let normalized = text.to_ascii_lowercase();
+    if ["i will not", "i will never", "i'll not"].iter().any(|phrase| normalized.contains(phrase)) { return false; }
     [
         "我负责",
         "我来",
@@ -1276,7 +1386,7 @@ fn normalize_evidence(value: &str) -> String {
     static CLOCK: Lazy<Regex> = Lazy::new(|| Regex::new(
         r"(?P<h>\d{1,2})(?:(?:[:：](?P<m>\d{2}))|(?:[点时](?:(?P<cm>\d{1,2})分?)?))"
     ).unwrap());
-    let width_normalized: String = value.nfkc().collect();
+    let width_normalized: String = value.nfkc().filter(|character| !character.is_whitespace()).collect();
     let normalized_clock = CLOCK.replace_all(&width_normalized, |caps: &regex::Captures<'_>| {
         let hour = caps["h"].parse::<u32>().unwrap_or(99);
         let minute = caps.name("m").or_else(|| caps.name("cm"))
@@ -1294,6 +1404,13 @@ fn normalize_evidence(value: &str) -> String {
 #[cfg(test)]
 mod source_review_regressions {
     use super::*;
+
+    #[test]
+    fn t08_clock_spacing_does_not_change_deadline_evidence() {
+        assert_eq!(normalize_evidence("10 月 9 日 18 点"), normalize_evidence("10月9日18点"));
+        assert_eq!(normalize_evidence("10 月 9 日 18 点 30 分"), normalize_evidence("10月9日18点30分"));
+        assert_ne!(normalize_evidence("10 月 9 日 18 点 30 分"), normalize_evidence("10月9日18点"));
+    }
 
     #[test]
     fn absent_dependencies_are_not_claims_needing_review() {
@@ -1354,7 +1471,7 @@ fn evidence_sentences(text: &str) -> Vec<&str> {
 fn explicit_owner_statement(sentence: &str, owner: &str) -> bool {
     let text = normalize_evidence(sentence);
     let name = normalize_evidence(owner);
-    if ["不负责", "不是负责人", "notresponsible"].iter().any(|negative| text.contains(negative)) {
+    if ["不负责", "不承担", "不是负责人", "notresponsible", "willnot", "willnever", "doesnotown"].iter().any(|negative| text.contains(negative)) {
         return false;
     }
     let assigned = ["负责", "承担", "will", "isresponsible", "owns"].iter()
@@ -1566,6 +1683,45 @@ mod tests {
     }
 
     #[test]
+    fn t08_omitted_rows_require_literal_unique_assignments_and_known_layout() {
+        let owners = vec!["林舟".into(), "陈岚".into()];
+        let header = "| **Deliverable** | **Owner** | **Due Date** |\n| --- | --- | --- |";
+        let draft = format!("{header}\n| 接口回归测试 | 林舟 | 10月9日18点 |\n");
+        let source = t06_source(&["林舟负责完成接口回归测试，截止时间为10月9日18点。", "陈岚负责发布试点邀请。", "截止时间为10月10日12点。"]);
+        let recovered = recover_missing_action_fields(&draft, &source, &owners).unwrap();
+        assert!(recovered.contains("| 发布试点邀请 | 陈岚 | 10月10日12点 |"));
+        assert_eq!(table_cells(recovered.lines().nth(0).unwrap()), table_cells(header.lines().next().unwrap()));
+        assert_eq!(recovered.lines().filter(|line| line.contains("接口回归测试")).count(), 1);
+        let traces = trace_owner_and_time_fields(&recovered, &source).unwrap();
+        assert_eq!(traces.len(), 4); assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported));
+        assert_eq!(recover_missing_action_fields(&recovered, &source, &owners).unwrap(), recovered);
+        let empty = recover_missing_action_fields(header, &source, &owners).unwrap();
+        assert_eq!(trace_owner_and_time_fields(&empty, &source).unwrap().len(), 4);
+        for text in ["如果林舟负责完成接口回归测试，陈岚负责发布试点邀请。", "例如陈岚负责发布试点邀请。", "陈岚负责发布试点邀请？", "陈岚不负责发布试点邀请。", "陈岚负责发布试点邀请和发送纪要。", "陈岚负责发布试点邀请，只是举例。", "陈岚负责发布试点邀请，但尚未确认。", "陌生甲负责发布试点邀请。", "我负责发布试点邀请。", "若审批通过，陈岚负责发布试点邀请。"] {
+            assert_eq!(recover_missing_action_fields(&draft, &t06_source(&[text]), &owners).unwrap(), draft, "{text}");
+        }
+        let conflict = t06_source(&["陈岚负责发布试点邀请。", "林舟负责发布试点邀请。"]);
+        assert_eq!(recover_missing_action_fields(&draft, &conflict, &owners).unwrap(), draft);
+        for revoked in ["发布试点邀请取消。", "陈岚不负责发布试点邀请。", "发布试点邀请没有约定。", "该任务取消。"] {
+            assert_eq!(recover_missing_action_fields(&draft, &t06_source(&["陈岚负责发布试点邀请。", revoked]), &owners).unwrap(), draft);
+        }
+        for layout in [draft.replace("**Due Date**", "Success Metric"), format!("{draft}\n{draft}"), format!("```\n{draft}```\n"), draft.replace("**Deliverable**", "Decision")] {
+            assert_eq!(recover_missing_action_fields(&layout, &source, &owners).unwrap(), layout);
+        }
+        assert_eq!(recover_missing_action_rows(&draft, &source, &[]), draft);
+        for text in ["陈岚 will not send invitations.", "陈岚 will never send invitations.", "陈岚不承担发布试点邀请。"] {
+            assert_eq!(recover_missing_action_fields(header, &t06_source(&[text]), &owners).unwrap(), header);
+        }
+        assert_eq!(trace_owner_and_time_fields("Task: send invitations; Owner: 陈岚", &t06_source(&["陈岚 will not send invitations."])).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        for text in ["I will not send invitations.", "I will never send invitations.", "I'll not send invitations."] {
+            let mut source = t06_source(&[text]);
+            source.segments[0].bound_person_id = Some("person_chen".into()); source.segments[0].bound_display_name = Some("陈岚".into());
+            source.speaker_binding_sha256 = source.computed_speaker_binding_sha256();
+            assert_eq!(trace_owner_and_time_fields("Task: send invitations; Owner: 陈岚", &source).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+        }
+    }
+
+    #[test]
     fn t06_owner_proof_cannot_borrow_a_dependency_object_or_another_clause() {
         for text in ["陈岚负责发布邀请，依赖完成接口回归测试。", "林舟负责完成接口回归测试，陈岚负责发布邀请。"] {
             assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；负责人：陈岚", &t06_source(&[text])).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
@@ -1575,6 +1731,38 @@ mod tests {
         source.segments[0].bound_person_id = Some("person_chen".into());
         source.speaker_binding_sha256 = source.computed_speaker_binding_sha256();
         assert_eq!(trace_owner_and_time_fields("任务：完成接口回归测试；负责人：陈岚", &source).unwrap()[0].status, SummaryTraceStatus::NeedsReview);
+    }
+
+    #[test]
+    fn t08_merged_asr_task_assignments_do_not_mix_attributes() {
+        let markdown = "| 行动任务 | 负责人 | 截止时间 | 验收标准 | 当前状态 | 依赖或卡点 |\n| --- | --- | --- | --- | --- | --- |\n| 完成接口回归测试 | 林舟 | 10月9日18点 | 阻断问题为0 | 进行中 | 供应商审批通过 |\n| 发布试点邀请 | 陈岚 | 10月10日12点 | 20名试点客户全部收到邀请 | 未开始 | 接口回归测试通过 |";
+        let source = t06_source(&["林舟负责完成接口回归测试，截止时间是10月9日18点，验收标准是阻断问题为0，当前状态是进行中，依赖供应商审批通过，陈岚负责发布试点邀请，截止时间是10月10日12点，验收标准是20名试点客户全部收到邀请，当前状态是未开始，依赖接口回归测试通过，其他任务没有约定。"]);
+        let traces = trace_owner_and_time_fields(markdown, &source).unwrap();
+        assert_eq!(traces.len(), 10);
+        assert!(traces.iter().all(|trace| trace.status == SummaryTraceStatus::Supported));
+        assert!(traces.iter().all(|trace| trace.evidence[0].segment_id == source.segments[0].segment_id));
+        assert!(traces.iter().all(|trace| trace.evidence[0].excerpt_sha256 == sha256_text(source.segments[0].text.trim())));
+        let swapped = "| 行动任务 | 负责人 | 截止时间 | 验收标准 | 当前状态 | 依赖或卡点 |\n| --- | --- | --- | --- | --- | --- |\n| 完成接口回归测试 | 林舟 | 10月10日12点 | 20名试点客户全部收到邀请 | 未开始 | 接口回归测试通过 |\n| 发布试点邀请 | 陈岚 | 10月9日18点 | 阻断问题为0 | 进行中 | 供应商审批通过 |";
+        let swapped = trace_owner_and_time_fields(swapped, &source).unwrap();
+        assert!(swapped.iter().filter(|trace| trace.field != SummaryTraceField::Owner).all(|trace| trace.status == SummaryTraceStatus::NeedsReview));
+        for prefix in ["如果", "例如", "If ", "Provided ", "Suppose "] {
+            let conditional = t06_source(&[&format!("{prefix}{}", source.segments[0].text)]);
+            assert!(trace_owner_and_time_fields(markdown, &conditional).unwrap().iter()
+                .all(|trace| trace.status == SummaryTraceStatus::NeedsReview));
+        }
+
+        // Actual E01 ASR omitted the boundary before the second assignment and
+        // misheard both names. Preserve the first task's clear attributes, while
+        // the ambiguous dependency/next assignment and unmatched names need review.
+        let source = t06_source(&["林州负责完成接口回归测试，截止时间是10月9日18点，验收标准是阻断问题为0，当前状态是进行中，依赖供应商审批通过陈兰负责发布试点邀请，截止时间是10月10日12点，验收标准是20名试点客户全部收到邀请，当前状态是未开始，依赖接口回归测试通过，其他任务没有约定，这些都是虚构测试材料。"]);
+        let traces = trace_owner_and_time_fields(markdown, &source).unwrap();
+        assert_eq!(traces.iter().map(|trace| trace.status).collect::<Vec<_>>(), vec![
+            SummaryTraceStatus::NeedsReview, SummaryTraceStatus::Supported,
+            SummaryTraceStatus::Supported, SummaryTraceStatus::Supported,
+            SummaryTraceStatus::NeedsReview, SummaryTraceStatus::NeedsReview,
+            SummaryTraceStatus::NeedsReview, SummaryTraceStatus::NeedsReview,
+            SummaryTraceStatus::NeedsReview, SummaryTraceStatus::NeedsReview,
+        ]);
     }
 
     fn segments() -> Vec<TranscriptEvidenceSegment> {

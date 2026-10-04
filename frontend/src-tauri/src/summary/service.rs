@@ -66,7 +66,7 @@ fn strip_title_if_present(markdown: &str) -> String {
 }
 
 const ENGLISH_CACHE_FIELD: &str = "english_cache";
-const SUMMARY_PIPELINE_VERSION: u32 = 2026100401;
+const SUMMARY_PIPELINE_VERSION: u32 = 2026100410;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct SummaryCacheSource {
@@ -1134,7 +1134,7 @@ mod tests {
     #[test]
     fn t07_previous_pipeline_cache_is_rejected_without_rewriting_stored_body() {
         let current = sample_cache_source();
-        assert_eq!(current.pipeline_version, 2026100401);
+        assert_eq!(current.pipeline_version, 2026100410);
         let mut old = current.clone(); old.pipeline_version = 2026091306;
         let raw = build_summary_result_json("人工保留正文", "# Old English\nBody", old, Some("fr")).to_string();
         assert_eq!(extract_cached_english_markdown(&raw, &current, Some("de")).unwrap(), None);

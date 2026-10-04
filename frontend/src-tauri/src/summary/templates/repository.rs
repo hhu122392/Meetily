@@ -925,17 +925,7 @@ impl TemplateRepository {
     }
 
     fn read_custom_file(&self, template_id: &str) -> TemplateRepositoryResult<Vec<u8>> {
-        let path = self.custom_template_path(template_id)?;
-        if !path_entry_exists(&path) {
-            return Err(not_found("the custom template does not exist"));
-        }
-        reject_reparse_point(&path)?;
-        if !path.is_file() {
-            return Err(TemplateRepositoryError::new(
-                TemplateRepositoryErrorKind::PathRejected,
-                "the template path is not a regular file",
-            ));
-        }
+        let path = safe_existing_template_path(&self.root, template_id)?;
         fs::read(path).map_err(map_io_error)
     }
 

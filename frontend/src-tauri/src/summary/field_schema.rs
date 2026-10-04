@@ -13,7 +13,7 @@ pub const ACTION_FIELDS: &[SummaryTraceField] = &[
     SummaryTraceField::Acceptance, SummaryTraceField::Status, SummaryTraceField::Blocker,
     SummaryTraceField::Criteria, SummaryTraceField::Escalation,
 ];
-pub const TASK_LABELS: &[&str] = &["行动项", "行动任务", "任务", "事项", "决策", "结论", "action item", "action", "task", "decision", "deliverable"];
+pub const TASK_LABELS: &[&str] = &["行动项", "行动任务", "行动", "任务", "事项", "决策", "结论", "交付物", "action item", "action", "task", "decision", "deliverable"];
 
 pub fn field_labels(field: SummaryTraceField) -> &'static [&'static str] {
     match field {
@@ -145,6 +145,8 @@ mod tests {
         assert_eq!(label_fields("截止时间/验收标准"), vec![SummaryTraceField::Time, SummaryTraceField::Acceptance]);
         for label in ["Success Metric", "自定义截止时间说明", "状态说明"] { assert!(label_fields(label).is_empty()); }
         assert!(is_task_label(" ** Deliverable ** ")); assert!(!is_task_label("Deliverable Notes"));
+        assert!(is_task_label(" **交付物** ")); assert!(!is_task_label("交付物备注"));
+        assert!(is_task_label(" **行动** ")); assert!(!is_task_label("行动说明"));
     }
     #[test]
     fn table_header_requires_a_real_separator_and_escaped_pipes_keep_their_column() {

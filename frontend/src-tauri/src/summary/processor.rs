@@ -16,7 +16,7 @@ static THINKING_TAG_REGEX: Lazy<Regex> =
 const ENGLISH_BASE_SUMMARY_INSTRUCTION: &str =
     "**Write the summary/report in English regardless of transcript language; non-English prose is invalid.**";
 const TEMPLATE_LANGUAGE_PRECEDENCE_INSTRUCTION: &str =
-    "Template content controls section structure and meaning only; it never overrides the requested summary language.";
+    "Template content controls section structure and meaning only; it never overrides the requested summary language. Copy standalone section titles and table column headers exactly from the template, even when their language differs from the requested output language. Translate only prose, list items and table data cells.";
 
 fn resolve_cached_english<'a>(
     cached: Option<&'a str>,
@@ -66,11 +66,22 @@ fn prompt_in_output_language(prompt: String, language: Option<&str>) -> String {
     )
 }
 
+fn report_prose_for_language_detection(markdown: &str, template: &Template) -> String {
+    let lines: Vec<_> = markdown.lines().collect();
+    lines.iter().enumerate().filter(|(index, line)| {
+        let text = line.trim();
+        !text.starts_with('#')
+            && !template.sections.iter().any(|section| text.trim_matches('*').trim() == section.title.trim())
+            && !super::field_schema::table_header(&lines, *index)
+            && !super::field_schema::table_separator(&super::field_schema::table_cells(text))
+    }).map(|(_, line)| *line).collect::<Vec<_>>().join("\n")
+}
+
 fn english_normalization_system_prompt() -> &'static str {
     r#"You are a precise English Markdown editor. Convert the provided Markdown document into English while preserving structure exactly.
 
 **CRITICAL RULES:**
-1. Translate any non-English prose into English.
+1. Translate any non-English prose into English. Leave standalone section headings and table column headers unchanged; they identify the chosen template.
 2. Preserve the Markdown structure EXACTLY: keep every `#`, `**`, `-`, `|`, code fence marker, and table pipe in the same position.
 3. Do NOT translate: proper nouns (names of people, products, companies), code identifiers, file paths, URLs, numeric values, or text inside backticks.
 4. If the document is already English, lightly preserve it without rewriting meaning.
@@ -146,7 +157,7 @@ fn translation_system_prompt(target_language: &str) -> String {
         r#"You are a precise translator. Translate the provided Markdown document into {target_language} while preserving structure exactly.
 
 **CRITICAL RULES:**
-1. Translate every sentence, heading, list item, and table cell into {target_language}.
+1. Translate prose, list items, and table data cells into {target_language}. Leave standalone section headings and table column headers unchanged; they identify the chosen template.
 2. Preserve the Markdown structure EXACTLY: keep every `#`, `**`, `-`, `|`, code fence marker, and table pipe in the same position.
 3. Do NOT translate: proper nouns (names of people, products, companies), code identifiers, file paths, URLs, numeric values, or text inside backticks.
 4. Do not add commentary or explanation. Output ONLY the translated Markdown.
@@ -266,11 +277,11 @@ fn build_final_report_system_prompt(
 7a. If no `<meeting_context>` block is present, extract meeting information only from explicit statements in the transcript, including a self-introduction stating who is hosting. Do not confuse a person mentioned with an attendee, or a discussed date with the meeting date.
 8. A recognition-dictionary entry controls spelling only. It does not prove attendance, speaking, ownership, role, or any other meeting fact.
 9. Fill each template section per its instructions only when source evidence supports the content. An overview or core takeaways section summarizes the actual topic and main ideas, including a lecture or interview with no meeting decisions. Keep decisions and action items separate: no decisions does not mean no summary.
-10. If a section has no relevant info, write "None noted in this section."
+10. If a section has no relevant info, write a short "not mentioned" placeholder in the requested output language.
 11. Output **only** the completed Markdown report.
 12. Preserve explicitly unresolved matters and corrections. Use the final corrected number or decision, and retain any conditions. Do not invent benefits, dependencies or failure causes.
 13. Keep deadlines with their own task. Preserve the source's time expression; do not replace "today" with a guessed date, or a deadline with the meeting end time. Keep dependency direction: a prerequisite belongs to the task that requires it.
-14. For each action (including sending minutes or follow-up), use labeled fields on one line: Task; Owner; Deadline; Dependency. Translate these labels into the requested language and separate fields with semicolons. Include a dependency only if explicitly stated for that task. Keep a short task phrase from the source so its evidence can be located.
+14. If the template specifies an action table, preserve its exact column headers and order and fill its rows. Include one row for every explicitly assigned task in the action or deliverable table, including communication tasks such as invitations, sending minutes or follow-up. Otherwise, for each action, use labeled fields on one line: Task; Owner; Deadline; Dependency. Translate these labels into the requested language and separate fields with semicolons. Include a dependency only if explicitly stated for that task. Keep a short task phrase from the source so its evidence can be located.
 
 **SECTION-SPECIFIC INSTRUCTIONS:**
 {section_instructions}
@@ -426,9 +437,16 @@ pub(crate) fn ensure_template_sections(
     template: &Template,
     output_language: Option<&str>,
 ) -> String {
+    let restored = restore_template_structure(markdown, template);
+    let markdown = restored.as_str();
+    let mut fence = None;
     let present_headings: Vec<String> = markdown
         .lines()
-        .filter_map(normalize_markdown_section_heading)
+        .filter_map(|line| {
+            if super::field_schema::advance_fence(&mut fence, line) || fence.is_some()
+                || line.starts_with("    ") || line.starts_with('\t') { return None; }
+            normalize_markdown_section_heading(line)
+        })
         .collect();
 
     let missing_titles: Vec<&str> = template
@@ -513,6 +531,84 @@ fn normalize_section_title(title: &str) -> String {
         .trim_matches(|character: char| matches!(character, ':' | '：'))
         .trim()
         .to_string()
+}
+
+fn section_aliases(title: &str) -> &'static [&'static str] {
+    // ponytail: exact known translations only; unfamiliar custom titles are not inferred.
+    const GROUPS: &[&[&str]] = &[
+        &["Meeting Metadata", "会议元数据", "會議元數據"],
+        &["Attendees", "参会人", "参会人员", "參會人", "參會人員"],
+        &["Client Goals & Success Criteria", "客户目标与成功标准", "客戶目標與成功標準"],
+        &["Agreed Deliverables", "约定交付物", "已确认交付物", "約定交付物", "已確認交付物"],
+        &["Commercial Terms Discussed", "已讨论的商务条款", "讨论的商业条款", "已討論的商務條款", "討論的商業條款"],
+        &["Risks & Concerns", "风险与顾虑", "风险与关注事项", "風險與顧慮", "風險與關注事項"],
+        &["Next Steps", "后续步骤", "下一步行动", "後續步驟", "下一步行動"],
+    ];
+    GROUPS.iter().copied().find(|aliases| aliases.iter().any(|alias|
+        normalize_section_title(alias).eq_ignore_ascii_case(&normalize_section_title(title))))
+        .unwrap_or(&[])
+}
+
+fn restore_template_structure(markdown: &str, template: &Template) -> String {
+    use super::field_schema::{advance_fence, label_fields, normalize_label, table_cells, table_header};
+    let mut lines: Vec<_> = markdown.split('\n').map(str::to_owned).collect();
+    let mut fence = None;
+    let headings: Vec<_> = lines.iter().enumerate().filter_map(|(index, line)| {
+        if advance_fence(&mut fence, line) || fence.is_some()
+            || line.starts_with("    ") || line.starts_with('\t') { return None; }
+        normalize_markdown_section_heading(line).map(|title| (index, title))
+    }).collect();
+    for section in &template.sections {
+        let aliases = section_aliases(&section.title);
+        if aliases.is_empty() || template.sections.iter().filter(|candidate|
+            section_aliases(&candidate.title) == aliases).count() != 1 { continue; }
+        let matches: Vec<_> = headings.iter().filter(|(_, title)| aliases.iter().any(|alias|
+            normalize_section_title(alias).eq_ignore_ascii_case(title))).collect();
+        if matches.len() == 1 && !matches[0].1.eq_ignore_ascii_case(&normalize_section_title(&section.title)) {
+            lines[matches[0].0] = format!("**{}**", section.title.trim());
+        } else if matches.is_empty() && aliases[0] == "Meeting Metadata" {
+            // The model emitted labelled metadata at the start but omitted its section heading.
+            if let Some(index) = lines.iter().position(|line| !line.trim().is_empty() && !line.trim().starts_with("# ")) {
+                if ["**会议名称**:", "**会议名称**：", "**會議名稱**:", "**會議名稱**：", "**Meeting Name**:"]
+                    .iter().any(|prefix| lines[index].trim().starts_with(prefix)) {
+                    lines[index] = format!("**{}**\n\n{}", section.title.trim(), lines[index]);
+                }
+            }
+        }
+    }
+    let refs: Vec<_> = lines.iter().map(String::as_str).collect();
+    let mut replacements = Vec::new();
+    let mut section = None;
+    fence = None;
+    for (index, line) in refs.iter().enumerate() {
+        if advance_fence(&mut fence, line) || fence.is_some()
+            || line.starts_with("    ") || line.starts_with('\t') { continue; }
+        if let Some(title) = normalize_markdown_section_heading(line) {
+            section = template.sections.iter().find(|section| normalize_section_title(&section.title).eq_ignore_ascii_case(&title));
+        }
+        if !table_header(&refs, index) { continue; }
+        let Some(format) = section.and_then(|section| section.item_format.as_deref().or(section.example_item_format.as_deref())) else { continue; };
+        let format_lines: Vec<_> = format.lines().collect();
+        let headers: Vec<_> = format_lines.iter().enumerate().filter(|(index, _)| table_header(&format_lines, *index)).map(|(_, line)| *line).collect();
+        if headers.len() != 1 { continue; }
+        let expected = table_cells(headers[0]);
+        let actual = table_cells(line);
+        let equivalent = |left: &str, right: &str| {
+            let left = normalize_label(left); let right = normalize_label(right);
+            if left == right { return true; }
+            if left.contains('/') || right.contains('/') { return false; }
+            let fields = label_fields(&left);
+            if !fields.is_empty() && fields == label_fields(&right) { return true; }
+            [ &["deliverable", "交付物"][..], &["action", "行动", "行動"][..],
+                &["concern", "顾虑", "顧慮", "关注点", "關注點"][..], &["impact", "影响", "影響"][..] ]
+                .iter().any(|aliases| aliases.contains(&left.as_str()) && aliases.contains(&right.as_str()))
+        };
+        if actual.len() == expected.len() && actual.iter().zip(&expected).all(|(left, right)| equivalent(left, right)) {
+            replacements.push((index, headers[0].to_owned()));
+        }
+    }
+    for (index, header) in replacements { lines[index] = header; }
+    lines.join("\n")
 }
 
 /// Extracts meeting name from the first heading in markdown
@@ -793,7 +889,9 @@ pub async fn generate_meeting_summary(
     // dropping a heading.
     // The historical cache field name is retained for stored-data compatibility.
     // Its draft can now be in any language; inspect the actual report, not the transcript.
-    let detected_draft = super::language_detection::detect_summary_language(&[english_markdown.clone()]);
+    let detected_draft = super::language_detection::detect_summary_language(&[
+        report_prose_for_language_detection(&english_markdown, template),
+    ]);
     english_markdown = ensure_template_sections(
         &english_markdown, template, detected_draft.language.as_deref().or(summary_language),
     );
@@ -1065,6 +1163,40 @@ mod tests {
     }
 
     #[test]
+    fn translated_template_structure_is_restored_without_guessing_custom_or_ambiguous_blocks() {
+        let template: Template = serde_json::from_str(include_str!("../../templates/en/sales_marketing_client_call.json")).unwrap();
+        let input = "# 会议\n\n**会议名称**: 虚构测试\n**会议时间**: 10月3日\n\n**参会人员**\n林舟、陈岚\n\n**客户目标与成功标准**\n阻断问题为0\n\n**已确认交付物**\n| 交付物 | 负责人 | 截止日期 |\n| --- | --- | --- |\n| 回归测试 | 林舟 | 10月9日18点 |\n\n**讨论的商业条款**\n没有约定\n\n**风险与关注事项**\n| 关注点 | 影响 | 负责人 |\n| --- | --- | --- |\n| 审批 | 阻碍测试 | 未提及 |\n\n**下一步行动**\n| 负责人 | 行动 | 截止日期 |\n| --- | --- | --- |\n| 陈岚 | 发布邀请 | 10月10日12点 |";
+        let restored = ensure_template_sections(input, &template, Some("zh-CN"));
+        for section in &template.sections {
+            assert_eq!(restored.matches(&format!("**{}**", section.title)).count(), 1);
+        }
+        for section in template.sections.iter().filter_map(|section| section.item_format.as_deref()) {
+            assert!(restored.contains(section.lines().next().unwrap()));
+        }
+        assert!(restored.contains("**Meeting Metadata**\n\n**会议名称**: 虚构测试"));
+        assert!(restored.contains("| 回归测试 | 林舟 | 10月9日18点 |"));
+        assert!(restored.contains("| 陈岚 | 发布邀请 | 10月10日12点 |"));
+        assert!(!restored.contains("会议未提及"));
+        assert_eq!(restored, ensure_template_sections(&restored, &template, Some("zh-CN")));
+        for input in [
+            "**Agreed Deliverables**\n| 交付物 | 部门 | 截止日期 |\n| --- | --- | --- |\n| A | 研发 | 明天 |",
+            "**Agreed Deliverables**\n| 负责人 | 交付物 | 截止日期 |\n| --- | --- | --- |\n| Jo | A | 明天 |",
+            "**Agreed Deliverables**\n| 交付物 | 负责人/部门 | 截止日期 |\n| --- | --- | --- |\n| A | Jo/研发 | 明天 |",
+            "**已确认交付物**\nA\n**约定交付物**\nB",
+            "```text\n**已确认交付物**\n| 交付物 | 负责人 | 截止日期 |\n| --- | --- | --- |\n```",
+            "**自定义交付备注**\n保留用户内容",
+        ] {
+            assert!(ensure_template_sections(input, &template, Some("zh-CN")).starts_with(input), "rewrote ambiguous or unknown input: {input}");
+        }
+        let mut custom = template.clone();
+        custom.sections[3].title = "自定义交付说明".into();
+        assert!(ensure_template_sections("**已确认交付物**\nA", &custom, Some("zh-CN")).starts_with("**已确认交付物**\nA"));
+        custom.sections.push(template.sections[3].clone());
+        custom.sections[3].title = "约定交付物".into();
+        assert!(ensure_template_sections("**已确认交付物**\nA", &custom, Some("zh-CN")).starts_with("**已确认交付物**\nA"));
+    }
+
+    #[test]
     fn chunk_summary_prompt_forces_english_base_output() {
         let prompt = build_chunk_summary_user_prompt("会議の内容", None);
 
@@ -1087,6 +1219,42 @@ mod tests {
         assert!(prompt.contains(ENGLISH_BASE_SUMMARY_INSTRUCTION));
         assert!(prompt.contains(TEMPLATE_LANGUAGE_PRECEDENCE_INSTRUCTION));
         assert!(prompt.contains("SECTION-SPECIFIC INSTRUCTIONS"));
+    }
+
+    #[test]
+    fn direct_localized_report_keeps_template_titles_and_table_schema() {
+        let template = "**Next Steps**\n\n| Owner | Action | Due Date |\n| --- | --- | --- |";
+        let prompt = prompt_in_output_language(
+            build_final_report_system_prompt("Actions, owners and due dates", template),
+            Some("zh-CN"),
+        );
+        assert!(prompt.contains("Write the report directly in Simplified Chinese"));
+        assert!(prompt.contains("Copy standalone section titles and table column headers exactly"));
+        assert!(prompt.contains("Translate only prose, list items and table data cells"));
+        assert!(prompt.contains("If the template specifies an action table, preserve its exact column headers and order"));
+        assert!(prompt.contains("one row for every explicitly assigned task"));
+        assert!(prompt.contains("including communication tasks such as invitations"));
+        assert!(prompt.contains("placeholder in the requested output language"));
+        assert!(prompt.contains(template));
+        assert!(!prompt.contains(ENGLISH_BASE_SUMMARY_INSTRUCTION));
+    }
+
+    #[test]
+    fn report_language_uses_body_instead_of_template_labels() {
+        let mut template = coverage_test_template();
+        template.sections[0].title = "Agreed Deliverables".into();
+        let body = "本次讨论接口回归测试与试点邀请。验收标准为阻断问题为0，20名试点客户全部收到邀请。";
+        let report = format!("# Meeting report\n**Agreed Deliverables**\n| Deliverable | Owner | Due Date |\n| --- | --- | --- |\n{body}");
+        let prose = report_prose_for_language_detection(&report, &template);
+        assert!(!prose.contains("Deliverable"));
+        assert!(prose.contains(body));
+        assert_eq!(crate::summary::language_detection::detect_summary_language(&[prose]).language.as_deref(), Some("zh"));
+        template.sections[0].title = "行动计划".into();
+        let report = "# 会议报告\n**行动计划**\n| 行动任务 | 负责人 | 截止时间 |\n| --- | --- | --- |\nThe team reviewed release blockers and agreed on the next engineering milestones.";
+        assert_eq!(crate::summary::language_detection::detect_summary_language(&[
+            report_prose_for_language_detection(report, &template),
+        ]).language.as_deref(), Some("en"));
+        assert!(report_prose_for_language_detection("**行动计划**\n| 行动任务 | 负责人 |\n| --- | --- |", &template).trim().is_empty());
     }
 
     #[test]
