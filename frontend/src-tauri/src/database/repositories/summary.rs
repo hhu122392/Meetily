@@ -202,13 +202,12 @@ impl SummaryProcessesRepository {
         // A human edit replaces the report, not the model's original output.
         // Keep only the database copy, including its pipeline version; the
         // WebView cannot supply or replace generation provenance.
-        if let Some(draft) = existing_summary
-            .as_ref()
-            .and_then(|value| value.get("generationDraft"))
-        {
-            object.insert("generationDraft".to_owned(), draft.clone());
-        } else {
-            object.remove("generationDraft");
+        for key in ["generationDraft", "sourceFacts"] {
+            if let Some(value) = existing_summary.as_ref().and_then(|value| value.get(key)) {
+                object.insert(key.to_owned(), value.clone());
+            } else {
+                object.remove(key);
+            }
         }
         // `summary` originates in the WebView and is therefore not trusted to
         // declare its own validation status. Only the native command may pass
@@ -1065,6 +1064,7 @@ mod generation_tests {
             });
             if has_stored_draft {
                 original["generationDraft"] = original_draft.clone();
+                original["sourceFacts"] = serde_json::json!({"schemaVersion":1,"selection":{"sections":[]},"modelCalls":1});
             }
             sqlx::query(
                 "INSERT INTO summary_processes (meeting_id, status, created_at, updated_at, result) VALUES (?, 'completed', 'now', 'now', ?)",
@@ -1073,6 +1073,7 @@ mod generation_tests {
             // model's original draft.
             for markdown in ["first human edit", "second human edit"] {
                 let mut edit = serde_json::json!({"markdown": markdown});
+                edit["sourceFacts"] = serde_json::json!({"modelCalls":0,"forged":true});
                 if let Some(draft) = &supplied_draft {
                     edit["generationDraft"] = draft.clone();
                 }
@@ -1086,6 +1087,7 @@ mod generation_tests {
                 assert_eq!(saved["markdown"], markdown);
                 assert_eq!(saved.get("generationDraft"),
                     has_stored_draft.then_some(&original_draft), "{meeting_id}");
+                assert_eq!(saved.get("sourceFacts"), original.get("sourceFacts"), "{meeting_id}");
             }
             let revisions: Vec<String> = sqlx::query_scalar(
                 "SELECT summary_json FROM summary_manual_revisions WHERE meeting_id = ?"
@@ -1095,6 +1097,7 @@ mod generation_tests {
                 let revision: Value = serde_json::from_str(&raw).unwrap();
                 assert_eq!(revision.get("generationDraft"),
                     has_stored_draft.then_some(&original_draft), "{meeting_id}");
+                assert_eq!(revision.get("sourceFacts"), original.get("sourceFacts"), "{meeting_id}");
             }
         }
     }
