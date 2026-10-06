@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-06",
+  "exe": "C:\\Users\\zhoua\\Desktop\\Meetily-程序员交接-20260908\\_ux_audit\\会议摘要未提及修复验收-20261003\\T08\\final-v11\\packaged-desktop\\meetily.exe",
+  "sha256": "4fa5f53b5dabc8fb60ed8e1b13aeac2bf9cde9ca455c86cc6600154c92c27046",
+  "source_commit": "8b43751fd878c94e2dce85c9ddc76492d1437091",
+  "row_counts": {
+    "meetings": 22,
+    "summary_processes": 13,
+    "summary_generation_history": 67,
+    "summary_manual_revisions": 29,
+    "transcripts": 58
+  },
+  "test_scope": "Actual Windows desktop restart, functional regression; no source edits, no original other-PC replay, no clean-OS installer claim"
+}

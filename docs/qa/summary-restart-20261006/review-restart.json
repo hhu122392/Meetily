@@ -1,0 +1,74 @@
+{
+  "status": "PASS",
+  "row_diffs": {
+    "meetings": {
+      "before": 22,
+      "after": 23,
+      "removed": [],
+      "changed": {
+        "meeting-1bed57b2-bba7-4530-9b8a-aa66093ac7ff": [
+          "updated_at"
+        ]
+      },
+      "added_ids": [
+        "meeting-95062328-96be-454e-8e99-61b5e8b5913a"
+      ]
+    },
+    "summary_processes": {
+      "before": 13,
+      "after": 14,
+      "removed": [],
+      "changed": {
+        "meeting-1bed57b2-bba7-4530-9b8a-aa66093ac7ff": [
+          "updated_at",
+          "result",
+          "start_time",
+          "end_time",
+          "processing_time",
+          "metadata"
+        ]
+      },
+      "added_ids": [
+        "meeting-95062328-96be-454e-8e99-61b5e8b5913a"
+      ]
+    },
+    "summary_generation_history": {
+      "before": 67,
+      "after": 69,
+      "removed": [],
+      "changed": {},
+      "added_ids": [
+        "gen_f3fda8d84bbb40bb9ce17fb5e1ffa0c6",
+        "gen_2c4c6be3959043e3ae5f3705ffcc9d71"
+      ]
+    },
+    "summary_manual_revisions": {
+      "before": 29,
+      "after": 30,
+      "removed": [],
+      "changed": {},
+      "added_ids": [
+        "revision_40c9a791aed84fb0a6671857df59cb63"
+      ]
+    },
+    "transcripts": {
+      "before": 58,
+      "after": 61,
+      "removed": [],
+      "changed": {},
+      "added_ids": [
+        "transcript-db541000-c2a7-41de-b1a0-20c5a8237bac",
+        "transcript-cbeb7521-500f-44f7-95a2-3d25fd0fd569",
+        "transcript-83286774-5566-416a-bf5a-8992b7fe24d4"
+      ]
+    }
+  },
+  "original_templates_unchanged": 14,
+  "original_meeting_files_unchanged": 65,
+  "saved_result_equal_after_restart": true,
+  "marker": "20261006 重启验收人工补充（虚构），验证保存和语言切换。",
+  "historical_template": "repro_not_mentioned_20261003",
+  "current_default_template": "standard_meeting",
+  "new_recording_id": "meeting-95062328-96be-454e-8e99-61b5e8b5913a",
+  "new_recording_preserved": true
+}
