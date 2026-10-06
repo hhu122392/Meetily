@@ -3,7 +3,8 @@
 use crate::api::TranscriptSegment;
 use crate::audio::decoder::{decode_audio_file, decode_audio_file_with_progress};
 use crate::audio::vad::get_speech_chunks_with_progress;
-use crate::config::{DEFAULT_PARAKEET_MODEL, DEFAULT_WHISPER_MODEL};
+use crate::audio::transcription::provider::TranscriptionProvider;
+use crate::config::{DEFAULT_PARAKEET_MODEL, DEFAULT_SENSEVOICE_MODEL, DEFAULT_WHISPER_MODEL};
 use crate::parakeet_engine::ParakeetEngine;
 use crate::state::AppState;
 use crate::whisper_engine::WhisperEngine;
@@ -615,10 +616,14 @@ async fn start_import_with_guard<R: Runtime>(
     IMPORT_CANCELLED.store(false, Ordering::SeqCst);
 
     let use_parakeet = provider.as_deref() == Some("parakeet");
+    let keep_sensevoice_loaded = provider.as_deref() == Some("sensevoice");
     let result = run_import(app.clone(), source_path, title, language, model, provider).await;
 
     // Unload the engine after the batch job (success, failure, or cancellation)
-    super::common::unload_engine_after_batch(use_parakeet).await;
+    // Match retranscription: SenseVoice is shared with the live engine.
+    if !keep_sensevoice_loaded {
+        super::common::unload_engine_after_batch(use_parakeet).await;
+    }
 
     // Guard will automatically clear flag on drop
     // No need for manual: IMPORT_IN_PROGRESS.store(false, Ordering::SeqCst);
@@ -651,6 +656,22 @@ async fn start_import_with_guard<R: Runtime>(
     result
 }
 
+/// Resolve the UI provider without silently sending a supported engine to Whisper.
+fn resolve_import_provider(provider: Option<&str>, language: Option<&str>) -> Result<&'static str> {
+    match provider {
+        None | Some("whisper" | "localWhisper") => Ok("whisper"),
+        Some("parakeet") => {
+            super::transcription::parakeet_provider::validate_parakeet_language(language)?;
+            Ok("parakeet")
+        }
+        Some("sensevoice") => {
+            super::transcription::sensevoice_provider::validate_sensevoice_language(language)?;
+            Ok("sensevoice")
+        }
+        Some(other) => Err(anyhow!("Unsupported import provider: {other}")),
+    }
+}
+
 /// Internal function to run import
 async fn run_import<R: Runtime>(
     app: AppHandle<R>,
@@ -674,11 +695,9 @@ async fn run_import<R: Runtime>(
 
     // Keep the reusable native entry point protected as well as the Tauri
     // command wrapper. Future native callers must not bypass this validation.
-    let use_parakeet = provider.as_deref() == Some("parakeet");
-    if use_parakeet {
-        super::transcription::parakeet_provider::validate_parakeet_language(language.as_deref())
-            .map_err(|error| anyhow!(error.to_string()))?;
-    }
+    let resolved_provider = resolve_import_provider(provider.as_deref(), language.as_deref())?;
+    let use_parakeet = resolved_provider == "parakeet";
+    let use_sensevoice = resolved_provider == "sensevoice";
 
     // Import follows the same saved-directory contract as live recording. The
     // root is validated once and then frozen for the entire batch operation.
@@ -686,11 +705,10 @@ async fn run_import<R: Runtime>(
         .await
         .map_err(|error| anyhow!("Import save folder is unavailable: {error}"))?;
 
-    // Determine which provider to use (default to whisper)
-    let resolved_provider = if use_parakeet { "parakeet" } else { "whisper" }.to_string();
+    // Freeze the selected engine and model in the import provenance.
     let resolved_model = match model {
         Some(model) => model,
-        None => get_configured_model(&app, &resolved_provider).await?,
+        None => get_configured_model(&app, resolved_provider).await?,
     };
     let resolved_language = language.clone().unwrap_or_else(|| "auto".to_string());
 
@@ -888,13 +906,27 @@ async fn run_import<R: Runtime>(
     emit_progress(&app, "transcribing", 30, "Loading transcription engine...");
 
     // Initialize the appropriate engine
-    let whisper_engine = if !use_parakeet && total_segments > 0 {
+    let whisper_engine = if !use_parakeet && !use_sensevoice && total_segments > 0 {
         Some(get_or_init_whisper(&app, Some(&resolved_model)).await?)
     } else {
         None
     };
     let parakeet_engine = if use_parakeet && total_segments > 0 {
         Some(get_or_init_parakeet(&app, Some(&resolved_model)).await?)
+    } else {
+        None
+    };
+
+    let sensevoice_provider = if use_sensevoice && total_segments > 0 {
+        crate::sensevoice_engine::commands::sensevoice_init()
+            .await
+            .map_err(|error| anyhow!("Failed to initialize SenseVoice engine: {error}"))?;
+        let engine = crate::sensevoice_engine::commands::get_engine()
+            .ok_or_else(|| anyhow!("SenseVoice engine not initialized"))?;
+        if engine.get_current_model().await.as_deref() != Some(resolved_model.as_str()) {
+            engine.load_model(&resolved_model).await?;
+        }
+        Some(super::transcription::sensevoice_provider::SenseVoiceProvider::new(engine))
     } else {
         None
     };
@@ -969,6 +1001,13 @@ async fn run_import<R: Runtime>(
                 .await
                 .map_err(|e| anyhow!("Parakeet transcription failed on segment {}: {}", i, e))?;
             (text, 0.9f32)
+        } else if use_sensevoice {
+            let result = sensevoice_provider.as_ref().unwrap()
+                .transcribe(segment.samples.clone(), language.clone())
+                .await
+                .map_err(|error| anyhow!("SenseVoice transcription failed on segment {i}: {error}"))?;
+            // No token probabilities are exposed by SenseVoice; do not invent them.
+            (result.text, result.confidence.unwrap_or(0.0))
         } else {
             let engine = whisper_engine.as_ref().unwrap();
             let (text, conf, _) = engine
@@ -1045,7 +1084,7 @@ async fn run_import<R: Runtime>(
         canonical_pcm_sample_count,
         normalized_transcript_sha256: normalized_transcript_sha256.clone(),
         transcript_normalization: TRANSCRIPT_NORMALIZATION_CONTRACT.to_string(),
-        provider: resolved_provider,
+        provider: resolved_provider.to_string(),
         model: resolved_model,
         language: resolved_language,
         vad_redemption_time_ms: VAD_REDEMPTION_TIME_MS,
@@ -1310,26 +1349,24 @@ async fn get_configured_model<R: Runtime>(
             .await
             .map_err(|e| anyhow!("Failed to query config: {}", e))?;
 
+    let default_model = match provider_type {
+        "parakeet" => DEFAULT_PARAKEET_MODEL,
+        "sensevoice" => DEFAULT_SENSEVOICE_MODEL,
+        _ => DEFAULT_WHISPER_MODEL,
+    };
     match result {
         Some((provider, model)) => {
             if (provider_type == "whisper" && (provider == "localWhisper" || provider == "whisper"))
                 || (provider_type == "parakeet" && provider == "parakeet")
+                || (provider_type == "sensevoice" && provider == "sensevoice")
             {
                 Ok(model)
             } else {
                 // Return default model for the requested type
-                Ok(if provider_type == "parakeet" {
-                    DEFAULT_PARAKEET_MODEL.to_string()
-                } else {
-                    DEFAULT_WHISPER_MODEL.to_string()
-                })
+                Ok(default_model.to_string())
             }
         }
-        None => Ok(if provider_type == "parakeet" {
-            DEFAULT_PARAKEET_MODEL.to_string()
-        } else {
-            DEFAULT_WHISPER_MODEL.to_string()
-        }),
+        None => Ok(default_model.to_string()),
     }
 }
 
@@ -1440,10 +1477,8 @@ pub async fn start_import_audio_command<R: Runtime>(
     // command or a recording acquired the gate first in the background.
     let guard = ImportGuard::acquire()?;
 
-    if provider.as_deref() == Some("parakeet") {
-        super::transcription::parakeet_provider::validate_parakeet_language(language.as_deref())
-            .map_err(|error| error.to_string())?;
-    }
+    resolve_import_provider(provider.as_deref(), language.as_deref())
+        .map_err(|error| error.to_string())?;
 
     // Spawn import in background
     tauri::async_runtime::spawn(async move {
@@ -1480,6 +1515,18 @@ pub async fn is_import_in_progress_command() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn import_routes_the_selected_engine_and_rejects_unsupported_hints() {
+        assert_eq!(resolve_import_provider(Some("sensevoice"), Some("zh")).unwrap(), "sensevoice");
+        assert_eq!(resolve_import_provider(Some("parakeet"), Some("auto")).unwrap(), "parakeet");
+        assert!(resolve_import_provider(Some("parakeet"), Some("en")).is_err());
+        assert_eq!(resolve_import_provider(Some("localWhisper"), Some("auto-translate")).unwrap(), "whisper");
+        assert_eq!(resolve_import_provider(None, None).unwrap(), "whisper");
+        assert!(resolve_import_provider(Some("sensevoice"), Some("auto-translate")).is_err());
+        assert!(resolve_import_provider(Some("sensevoice"), Some("de")).is_err());
+        assert!(resolve_import_provider(Some("unknown"), None).is_err());
+    }
 
     #[test]
     fn recording_and_import_are_mutually_exclusive() {
