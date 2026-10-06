@@ -10,6 +10,7 @@ import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
 import { SummaryEvidencePanel } from './SummaryEvidencePanel';
 import Analytics from '@/lib/analytics';
+import { emptySummarySections } from '@/lib/blocknote-markdown';
 import { useEffect, useMemo, useRef, useState, RefObject } from 'react';
 import { toast } from 'sonner';
 import { Languages, ChevronDown } from 'lucide-react';
@@ -56,6 +57,8 @@ const factWarningTranslationKeys = {
   untraceable_action_dependency: 'factValidation.untraceableActionDependency',
   untraceable_action_field: 'factValidation.untraceableActionField',
   unmapped_people_fields: 'factValidation.unmappedPeopleFields',
+  source_name_spelling_unverified: 'factValidation.sourceNameSpellingUnverified',
+  source_unit_unverified: 'factValidation.sourceUnitUnverified',
   manual_high_risk_fields_unverified: 'factValidation.manualHighRiskFieldsUnverified',
   summary_validation_unavailable: 'factValidation.validationUnavailable',
   summary_markdown_unavailable: 'factValidation.summaryMarkdownUnavailable',
@@ -354,31 +357,19 @@ export function SummaryPanel({
         ? 'completed'
         : summaryStatus;
 
-  // P1-8：整篇小节几乎都是「未提及」时，多半是模板和这场会议的内容不匹配。
-  // 这里只做"解释 + 一键换模板"的兜底，不改模型的生成逻辑。
+  // Only whole empty sections trigger this notice; unknown table fields are normal.
   const emptySummaryNotice = useMemo(() => {
     if (!aiSummary || isSummaryLoading || summaryStatus === 'error') return null;
     const record = aiSummary as unknown as {
       markdown?: unknown;
       english_cache?: { markdown?: unknown };
     };
-    // 顶层 markdown 有时是精简版（用「本节未注明」这类短写法），
-    // english_cache.markdown 才是完整版，所以取更长的那份来判断。
+    // Check the current report first, falling back only for legacy records.
     const candidates = [record.markdown, record.english_cache?.markdown].filter(
       (value): value is string => typeof value === 'string' && value.trim().length > 0,
     );
     if (!candidates.length) return null;
-    const markdown = candidates.reduce((longest, value) =>
-      value.length > longest.length ? value : longest,
-    );
-    const placeholders = (
-      markdown.match(/未提及|未注明|未记录|not mentioned|none noted|not specified/gi) ?? []
-    ).length;
-    const boldSections = (markdown.match(/^\*\*[^*\n]+\*\*\s*$/gm) ?? []).length;
-    const headingSections = (markdown.match(/^#{1,4}\s+\S/gm) ?? []).length;
-    const sections = Math.max(boldSections, headingSections, 1);
-    if (placeholders < 3 || placeholders * 2 < sections) return null;
-    return { placeholders, sections };
+    return emptySummarySections(candidates[0]);
   }, [aiSummary, isSummaryLoading, summaryStatus]);
 
   const standardTemplate = useMemo(

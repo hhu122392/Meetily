@@ -1,5 +1,16 @@
 import type { Block } from "@blocknote/core";
 
+/** Count whole empty sections, never unknown fields inside useful content. */
+export function emptySummarySections(markdown: string) {
+  const bodies = markdown.split(/^(?:#{1,6}[ \t]+.+|\*\*[^*\r\n]+\*\*)[ \t\r]*$/m).slice(1);
+  const placeholders = bodies.filter(body => {
+    const text = body.trim().replace(/^(?:[-*+]\s+|>\s*)/, '').replace(/^\*\*|\*\*$/g, '').trim();
+    return /^(?:(?:会议|本节)?未(?:提及|注明|记录)|not mentioned|none noted|not specified)[.。!！]?$/i.test(text);
+  }).length;
+  const sections = bodies.length;
+  return placeholders >= 3 && placeholders * 2 > sections ? { placeholders, sections } : null;
+}
+
 interface MarkdownCapableEditor {
   blocksToMarkdownLossy: (blocks: Block[]) => Promise<string>;
 }

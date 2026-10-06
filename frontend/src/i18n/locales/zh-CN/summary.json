@@ -154,7 +154,7 @@
   },
   "emptySummary": {
     "title": "这篇摘要大部分小节都是「未提及」",
-    "description": "当前模板「{{template}}」和这场会议的内容不太匹配（共 {{count}} 处「未提及」）。换用「标准会议纪要」重新生成通常立刻就有内容。",
+    "description": "当前模板「{{template}}」中有 {{count}} 个小节未找到对应内容。请核对转写是否完整，以及模板是否适用。",
     "switchAction": "换用{{template}}重新生成"
   },
   "progress": {
@@ -300,6 +300,8 @@
     "fields": { "owner": "负责人", "time": "截止时间", "dependency": "依赖", "acceptance": "验收标准", "status": "当前状态", "blocker": "卡点", "criteria": "判断口径", "escalation": "升级条件" }
   },
   "factValidation": {
+    "sourceNameSpellingUnverified": "部分原文姓名写法尚未核验，请对照原文依据；不会自动猜姓名或职务。",
+    "sourceUnitUnverified": "原文有异常数字或单位写法，尚未核验，请对照原文依据；不能视为确定的数字或单位。",
     "untraceableActionField": "有行动字段无法从对应任务的原文核验，请查看原文依据。",
     "unmappedPeopleFields": "模板要求的人员字段无法准确定位，请核对名单与本次会议设置。",
     "needsReviewTitle": "此摘要需检查事实",

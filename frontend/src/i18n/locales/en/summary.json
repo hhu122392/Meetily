@@ -154,7 +154,7 @@
   },
   "emptySummary": {
     "title": "Most sections in this summary say \"not mentioned\"",
-    "description": "The template \"{{template}}\" does not look like a match for this meeting ({{count}} empty sections). Regenerating with \"Standard meeting minutes\" usually produces real content right away.",
+    "description": "The template \"{{template}}\" has {{count}} sections without matching content. Check whether the transcript is complete and the template fits the meeting.",
     "switchAction": "Regenerate with {{template}}"
   },
   "progress": {
@@ -300,6 +300,8 @@
     "fields": { "owner": "Owner", "time": "Deadline", "dependency": "Dependency", "acceptance": "Acceptance criteria", "status": "Current status", "blocker": "Blocker", "criteria": "Evaluation criteria", "escalation": "Escalation condition" }
   },
   "factValidation": {
+    "sourceNameSpellingUnverified": "Some source name spellings are unverified. Check the source evidence; names and roles are not guessed.",
+    "sourceUnitUnverified": "Unusual source numbers or units are unverified. Check the source evidence before treating them as confirmed values.",
     "untraceableActionField": "An action field could not be verified for the corresponding task. Check its source evidence.",
     "unmappedPeopleFields": "The template’s people fields could not be located reliably. Check them against this meeting’s settings.",
     "needsReviewTitle": "This summary needs a fact check",
