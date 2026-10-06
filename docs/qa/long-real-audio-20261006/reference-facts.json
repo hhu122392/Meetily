@@ -1,0 +1,139 @@
+{
+  "frozen_at": "2026-10-06T11:18:16.656005+00:00",
+  "method": "independent-official-written-materials; not fed to app; not a verbatim transcript",
+  "sources": {
+    "video": "https://www.youtube.com/watch?v=7ppBEcZDit4",
+    "solar": "https://www.ey.gov.tw/Page/448DE008087A1971/b013cce7-3b3a-4636-bfb8-1db2f71050ac",
+    "solar_action": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16544853-eaea-4568-a15f-0c9cfb335ca3",
+    "award": "https://www.ey.gov.tw/Page/448DE008087A1971/a0f340b5-0333-48b4-af3d-2d983dd2c70f",
+    "award_action": "https://www.ey.gov.tw/Page/9277F759E41CCD91/a0321403-ac16-4674-8e09-5160952a4643"
+  },
+  "facts": [
+    {
+      "id": "Q01",
+      "field": "主持人",
+      "expected": "李慧芝",
+      "source": "video"
+    },
+    {
+      "id": "Q02",
+      "field": "经济部出席人",
+      "expected": "连锦漳",
+      "source": "video"
+    },
+    {
+      "id": "Q03",
+      "field": "国科会出席人",
+      "expected": "苏振纲",
+      "source": "video"
+    },
+    {
+      "id": "Q04",
+      "field": "报告一主题",
+      "expected": "家户屋顶设置太阳光电加速计划",
+      "source": "video"
+    },
+    {
+      "id": "Q05",
+      "field": "报告二主题",
+      "expected": "2024行政院杰出科技贡献奖",
+      "source": "video"
+    },
+    {
+      "id": "Q06",
+      "field": "报告三主题",
+      "expected": "台湾与贝里斯经济合作协定第1号决议文",
+      "source": "video"
+    },
+    {
+      "id": "Q07",
+      "field": "奖励屋顶面积条件",
+      "expected": "1000平方米以下",
+      "source": "solar"
+    },
+    {
+      "id": "Q08",
+      "field": "每千瓦奖励",
+      "expected": "3000元",
+      "source": "solar"
+    },
+    {
+      "id": "Q09",
+      "field": "每案最高奖励",
+      "expected": "30万元",
+      "source": "solar"
+    },
+    {
+      "id": "Q10",
+      "field": "四年总经费",
+      "expected": "40.8亿元",
+      "source": "solar"
+    },
+    {
+      "id": "Q11",
+      "field": "每年经费",
+      "expected": "10.2亿元",
+      "source": "solar"
+    },
+    {
+      "id": "Q12",
+      "field": "计划期间",
+      "expected": "114至117年，即2025至2028年",
+      "source": "solar"
+    },
+    {
+      "id": "Q13",
+      "field": "预计新增装置量",
+      "expected": "1.2GW",
+      "source": "solar"
+    },
+    {
+      "id": "Q14",
+      "field": "预计增加年发电量",
+      "expected": "15亿度",
+      "source": "solar"
+    },
+    {
+      "id": "Q15",
+      "field": "预计带动投资",
+      "expected": "720亿元",
+      "source": "solar"
+    },
+    {
+      "id": "Q16",
+      "field": "预计扩散家户",
+      "expected": "12万户",
+      "source": "solar"
+    },
+    {
+      "id": "Q17",
+      "field": "科技奖申报数量",
+      "expected": "45组",
+      "source": "award"
+    },
+    {
+      "id": "Q18",
+      "field": "获奖数量",
+      "expected": "2组",
+      "source": "award"
+    },
+    {
+      "id": "Q19",
+      "field": "屋顶计划后续协调责任",
+      "expected": "经济部、内政部及地方政府继续沟通",
+      "source": "solar_action"
+    },
+    {
+      "id": "Q20",
+      "field": "后续核定条件",
+      "expected": "如需子法或实施要点，依程序再送核定",
+      "source": "solar_action"
+    },
+    {
+      "id": "Q21",
+      "field": "科研人才后续责任",
+      "expected": "国科会、教育部与国发会共同推动科研人才环境",
+      "source": "award_action"
+    }
+  ]
+}
