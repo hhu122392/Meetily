@@ -5,6 +5,7 @@ import Analytics from '@/lib/analytics';
 import { applyPinnedSummaryLanguageToMeeting } from '@/lib/summary-language-preferences';
 import { toast } from 'sonner';
 import { i18n } from '@/i18n';
+import { useImportDialog } from '@/contexts/ImportDialogContext';
 
 export interface AudioFileInfo {
   path: string;
@@ -74,6 +75,7 @@ export function useImportAudio({
   onComplete,
   onError,
 }: UseImportAudioOptions = {}): UseImportAudioReturn {
+  const { prepareImportMeetingMetadata } = useImportDialog();
   const [status, setStatus] = useState<ImportStatus>('idle');
   const [fileInfo, setFileInfo] = useState<AudioFileInfo | null>(null);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
@@ -238,6 +240,7 @@ export function useImportAudio({
       setProgress(null);
 
       try {
+        const metadata = await prepareImportMeetingMetadata();
         if (fileInfo) {
           await Analytics.track('import_audio_started', {
             file_size_bytes: fileInfo.size_bytes.toString(),
@@ -254,6 +257,8 @@ export function useImportAudio({
           language: language || null,
           model: model || null,
           provider: provider || null,
+          templateSelection: metadata.templateSelection,
+          meetingContextDraft: metadata.meetingContextDraft,
         });
       } catch (err: any) {
         setStatus('error');
@@ -266,7 +271,7 @@ export function useImportAudio({
         onErrorRef.current?.('startFailed');
       }
     },
-    [fileInfo]
+    [fileInfo, prepareImportMeetingMetadata]
   );
 
   // Cancel ongoing import

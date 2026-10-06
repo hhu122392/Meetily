@@ -5,6 +5,7 @@ use crate::audio::decoder::{decode_audio_file, decode_audio_file_with_progress};
 use crate::audio::vad::get_speech_chunks_with_progress;
 use crate::audio::transcription::provider::TranscriptionProvider;
 use crate::config::{DEFAULT_PARAKEET_MODEL, DEFAULT_SENSEVOICE_MODEL, DEFAULT_WHISPER_MODEL};
+use crate::meeting_context::{ResolvedRecordingMetadata, RecordingTemplateSelection, RecordingMeetingContextDraft};
 use crate::parakeet_engine::ParakeetEngine;
 use crate::state::AppState;
 use crate::whisper_engine::WhisperEngine;
@@ -600,7 +601,9 @@ pub async fn start_import<R: Runtime>(
     provider: Option<String>,
 ) -> Result<ImportResult> {
     let guard = ImportGuard::acquire().map_err(|e| anyhow!(e))?;
-    start_import_with_guard(app, source_path, title, language, model, provider, guard).await
+    start_import_with_guard(app, source_path, title, language, model, provider, ResolvedRecordingMetadata {
+        summary_template: None, meeting_context: None,
+    }, guard).await
 }
 
 async fn start_import_with_guard<R: Runtime>(
@@ -610,6 +613,7 @@ async fn start_import_with_guard<R: Runtime>(
     language: Option<String>,
     model: Option<String>,
     provider: Option<String>,
+    meeting_metadata: ResolvedRecordingMetadata,
     _guard: ImportGuard,
 ) -> Result<ImportResult> {
     // Reset cancellation flag
@@ -617,7 +621,7 @@ async fn start_import_with_guard<R: Runtime>(
 
     let use_parakeet = provider.as_deref() == Some("parakeet");
     let keep_sensevoice_loaded = provider.as_deref() == Some("sensevoice");
-    let result = run_import(app.clone(), source_path, title, language, model, provider).await;
+    let result = run_import(app.clone(), source_path, title, language, model, provider, meeting_metadata).await;
 
     // Unload the engine after the batch job (success, failure, or cancellation)
     // Match retranscription: SenseVoice is shared with the live engine.
@@ -680,6 +684,7 @@ async fn run_import<R: Runtime>(
     language: Option<String>,
     model: Option<String>,
     provider: Option<String>,
+    meeting_metadata: ResolvedRecordingMetadata,
 ) -> Result<ImportResult> {
     let source = PathBuf::from(&source_path);
 
@@ -1112,6 +1117,7 @@ async fn run_import<R: Runtime>(
         &dest_filename,
         "import",
         &import_contract,
+        &meeting_metadata,
     )
     .map_err(|error| anyhow!("Failed to write metadata.json: {error}"))?;
 
@@ -1379,12 +1385,13 @@ fn write_import_metadata(
     audio_filename: &str,
     source: &str,
     import_contract: &ImportDeterminismContract,
+    meeting_metadata: &ResolvedRecordingMetadata,
 ) -> Result<()> {
     let metadata_path = folder.join("metadata.json");
     let temp_path = folder.join(".metadata.json.tmp");
     let now = chrono::Utc::now().to_rfc3339();
 
-    let json = serde_json::json!({
+    let mut json = serde_json::json!({
         "version": "1.0",
         "meeting_id": meeting_id,
         "meeting_name": title,
@@ -1397,6 +1404,12 @@ fn write_import_metadata(
         "source": source,
         "import_contract": import_contract
     });
+    if let Some(preference) = &meeting_metadata.summary_template {
+        json["summary_template"] = serde_json::to_value(preference)?;
+    }
+    if let Some(context) = &meeting_metadata.meeting_context {
+        json["meeting_context"] = serde_json::to_value(context)?;
+    }
 
     let json_string = serde_json::to_string_pretty(&json)?;
     std::fs::write(&temp_path, &json_string)?;
@@ -1468,6 +1481,8 @@ pub async fn start_import_audio_command<R: Runtime>(
     language: Option<String>,
     model: Option<String>,
     provider: Option<String>,
+    template_selection: Option<RecordingTemplateSelection>,
+    meeting_context_draft: Option<RecordingMeetingContextDraft>,
 ) -> Result<ImportStarted, String> {
     if super::recording_commands::is_recording().await {
         return Err("Audio import is unavailable while a recording is active".to_string());
@@ -1480,10 +1495,23 @@ pub async fn start_import_audio_command<R: Runtime>(
     resolve_import_provider(provider.as_deref(), language.as_deref())
         .map_err(|error| error.to_string())?;
 
+    // Freeze the same validated template/person snapshot used by live recording,
+    // before creating files. Legacy callers without a selection stay unchanged.
+    let meeting_metadata = if template_selection.is_none() && meeting_context_draft.is_none() {
+        ResolvedRecordingMetadata { summary_template: None, meeting_context: None }
+    } else {
+        let state = app.state::<crate::summary::template_commands_v2::TemplateServiceState>();
+        let service = state.service()
+            .map_err(|error| format!("RECORDING_TEMPLATE_SERVICE_UNAVAILABLE: {error:?}"))?;
+        crate::meeting_context::resolve_recording_metadata(
+            &service, template_selection, meeting_context_draft, chrono::Utc::now(),
+        )?
+    };
+
     // Spawn import in background
     tauri::async_runtime::spawn(async move {
         let result =
-            start_import_with_guard(app, source_path, title, language, model, provider, guard)
+            start_import_with_guard(app, source_path, title, language, model, provider, meeting_metadata, guard)
                 .await;
 
         if let Err(e) = result {
@@ -1813,6 +1841,7 @@ mod tests {
             "audio.mp4",
             "import",
             &import_contract,
+            &ResolvedRecordingMetadata { summary_template: None, meeting_context: None },
         );
         assert!(result.is_ok(), "write_import_metadata failed: {:?}", result);
 
@@ -1844,6 +1873,47 @@ mod tests {
             parsed["import_contract"]["windows_volume_dependency"],
             "none"
         );
+        assert!(parsed.get("summary_template").is_none());
+        assert!(parsed.get("meeting_context").is_none());
+
+        let profile = crate::meeting_context::normalize_and_validate_profile(
+            serde_json::from_value(serde_json::json!({
+                "schema_version": 1,
+                "people": [
+                    {"person_id":"person_alpha", "display_name":"Alpha", "aliases":["A"]},
+                    {"person_id":"person_beta", "display_name":"Beta", "aliases":[]}
+                ],
+                "terms": []
+            })).unwrap(),
+        ).unwrap();
+        let draft = serde_json::from_value(serde_json::json!({
+            "expectedProfileSha256": crate::meeting_context::profile_sha256(&profile),
+            "attendance": [
+                {"personId":"person_alpha", "attendance":"attending"},
+                {"personId":"person_beta", "attendance":"absent"}
+            ],
+            "hostPersonId":null, "guests":[], "additionalTerms":[]
+        })).unwrap();
+        let context = crate::meeting_context::MeetingContextContainer::from_profile_with_recording_draft(
+            profile, "import_test".into(), 3, "c".repeat(64), chrono::Utc::now(), Some(draft),
+        ).unwrap();
+        let selected = ResolvedRecordingMetadata {
+            summary_template: Some(crate::meeting_context::RecordingSummaryTemplatePreference {
+                schema_version:1, mode:"meeting_override".into(), template_id:Some("import_test".into()),
+                template_version:Some(3), template_file_sha256:Some("c".repeat(64)), selected_at:chrono::Utc::now().to_rfc3339(),
+            }),
+            meeting_context: Some(context.clone()),
+        };
+        write_import_metadata(dir.path(), "meeting-123", "Test Meeting", 1800.0, "audio.mp4", "import", &import_contract, &selected).unwrap();
+        let saved: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved["summary_template"], serde_json::to_value(selected.summary_template).unwrap());
+        let restored: crate::meeting_context::MeetingContextContainer = serde_json::from_value(saved["meeting_context"].clone()).unwrap();
+        assert_eq!(restored, context);
+        assert_eq!(restored.recording_context().unwrap().people[0].attendance, crate::meeting_context::AttendanceStatus::Attending);
+        assert_eq!(restored.recording_context().unwrap().people[1].attendance, crate::meeting_context::AttendanceStatus::Absent);
+        assert_eq!(restored.recording_context().unwrap().people[0].aliases, vec!["A"]);
+        assert_eq!(saved["import_contract"], parsed["import_contract"]);
+        assert!(!dir.path().join(".metadata.json.tmp").exists());
     }
 
     #[test]

@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { RecordingMeetingSetup } from '@/components/MeetingContext/RecordingMeetingSetup';
+import { useImportDialog } from '@/contexts/ImportDialogContext';
 
 export default function Home() {
   const { t } = useTranslation('transcription');
@@ -46,6 +47,11 @@ export default function Home() {
   const { modals, messages, showModal, hideModal } = useModalState(transcriptModelConfig);
   const { isRecordingDisabled, setIsRecordingDisabled } = useRecordingStateSync(isRecording, setIsRecordingState, setIsMeetingActive);
   const recordingMeetingSetup = useRecordingMeetingSetup();
+  const { setMeetingSetupPreparation } = useImportDialog();
+  useEffect(() => {
+    setMeetingSetupPreparation(recordingMeetingSetup.prepareRecordingMetadata);
+    return () => setMeetingSetupPreparation(null);
+  }, [recordingMeetingSetup.prepareRecordingMetadata, setMeetingSetupPreparation]);
   const { handleRecordingStart } = useRecordingStart(
     isRecording,
     setIsRecordingState,
