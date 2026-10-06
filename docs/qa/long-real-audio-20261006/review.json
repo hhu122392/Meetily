@@ -1,0 +1,41 @@
+{
+  "status": "PASS_DATA_BOUNDARIES_AND_RELOAD_ONLY",
+  "does_not_prove_semantic_accuracy": true,
+  "meeting_id": "meeting-3838425a-8b78-4458-b653-7b1e5890a896",
+  "old_files_unchanged": 144,
+  "row_diffs": {
+    "meetings": {
+      "before": 23,
+      "after": 24,
+      "original_rows_unchanged": true,
+      "added": 1
+    },
+    "summary_processes": {
+      "before": 14,
+      "after": 15,
+      "original_rows_unchanged": true,
+      "added": 1
+    },
+    "summary_generation_history": {
+      "before": 69,
+      "after": 70,
+      "original_rows_unchanged": true,
+      "added": 1
+    },
+    "summary_manual_revisions": {
+      "before": 30,
+      "after": 30,
+      "original_rows_unchanged": true,
+      "added": 0
+    },
+    "transcripts": {
+      "before": 61,
+      "after": 123,
+      "original_rows_unchanged": true,
+      "added": 62
+    }
+  },
+  "real_asr_segments": 62,
+  "summary_equal_after_ui_reload": true,
+  "reference_facts_sha256": "459593173783cd932b8cbe4df2914af9682e18d203aaa9e6acb3650503e17e61"
+}
