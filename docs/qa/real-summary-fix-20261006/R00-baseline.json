@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-06T12:27:13.362442+00:00",
+  "product_commit": "8b43751fd878c94e2dce85c9ddc76492d1437091",
+  "checkout_commit": "ba24bc41b9a99d1b76b7ff2a60d5fc2a6d6a3512",
+  "meeting": "meeting-3838425a-8b78-4458-b653-7b1e5890a896",
+  "generation": "gen_f3c297332aa143d490c5ac94f9ec023b",
+  "pipeline": 2026100410,
+  "source_kind": "sensevoice",
+  "context": null,
+  "model": "qwen3.5:4b",
+  "table_counts": {
+    "meetings": 24,
+    "summary_processes": 15,
+    "summary_generation_history": 70,
+    "summary_manual_revisions": 30,
+    "transcripts": 123
+  },
+  "file_count": 1086,
+  "expectations_sha256": "647082f26b85471ea734ee2ffc642406ce3d4b5a9f0360bf509a37ad636f3c1d",
+  "status": "frozen; old product remains failing",
+  "desktop_executable": "C:\\Users\\zhoua\\Desktop\\Meetily-程序员交接-20260908\\_ux_audit\\会议摘要未提及修复验收-20261003\\T08\\final-v11\\packaged-desktop\\meetily.exe",
+  "desktop_sha256": "4fa5f53b5dabc8fb60ed8e1b13aeac2bf9cde9ca455c86cc6600154c92c27046",
+  "old_controls": {
+    "matched": 8,
+    "total": 8
+  },
+  "desired_regressions": {
+    "passed": 13,
+    "failed": [
+      "ACTUAL_DRAFT_FIELD_REPLAY",
+      "TIME_ORAL_RELATIVE",
+      "TASK_PARAPHRASE",
+      "OWNER_REQUEST_WORDING",
+      "OWNER_COMBINED"
+    ],
+    "total": 18
+  }
+}
