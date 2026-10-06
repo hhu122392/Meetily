@@ -1,0 +1,27 @@
+{
+  "frozen_at": "2026-10-06T11:28:14.472368+00:00",
+  "scope": "Additional school-milk reference discovered during recording, before summary generation",
+  "source_url": "https://www.ey.gov.tw/Page/4EC2394BE4EE9DD0/c25e678e-aa33-43ce-af55-02f6331932d8",
+  "facts": [
+    {
+      "id": "Q29",
+      "field": "乳品计划协调期限",
+      "expected": "一周内"
+    },
+    {
+      "id": "Q30",
+      "field": "乳品计划协调责任单位",
+      "expected": "农业部会同教育部"
+    },
+    {
+      "id": "Q31",
+      "field": "继续推动的前提",
+      "expected": "与所有地方政府沟通并取得合作意愿后再决定"
+    },
+    {
+      "id": "Q32",
+      "field": "执行风险",
+      "expected": "乳品配送、冷链和儿童饮用安全仍需解决"
+    }
+  ]
+}

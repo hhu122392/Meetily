@@ -1,0 +1,48 @@
+{
+  "frozen_at": "2026-10-06T11:25:44.801570+00:00",
+  "scope": "Supplemental reference discovered during recording, before summary generation; original 21-point reference is unchanged",
+  "facts": [
+    {
+      "id": "Q22",
+      "field": "修订偏乡医疗计划的责任单位",
+      "expected": "卫福部",
+      "source_url": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16d34604-b0cc-49ba-8a67-d0133b22c01c"
+    },
+    {
+      "id": "Q23",
+      "field": "修订计划提交期限",
+      "expected": "一个月内",
+      "source_url": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16d34604-b0cc-49ba-8a67-d0133b22c01c"
+    },
+    {
+      "id": "Q24",
+      "field": "实施前置条件",
+      "expected": "送行政院核定后实施",
+      "source_url": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16d34604-b0cc-49ba-8a67-d0133b22c01c"
+    },
+    {
+      "id": "Q25",
+      "field": "原计划当前状态",
+      "expected": "停止适用",
+      "source_url": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16d34604-b0cc-49ba-8a67-d0133b22c01c"
+    },
+    {
+      "id": "Q26",
+      "field": "服务范围",
+      "expected": "55个没有牙医执业的偏乡",
+      "source_url": "https://www.ey.gov.tw/Page/9277F759E41CCD91/16d34604-b0cc-49ba-8a67-d0133b22c01c"
+    },
+    {
+      "id": "Q27",
+      "field": "国外牙医毕业生实习名额",
+      "expected": "每年50名保持不变",
+      "source_url": "https://www.ey.gov.tw/Page/4EC2394BE4EE9DD0/c25e678e-aa33-43ce-af55-02f6331932d8"
+    },
+    {
+      "id": "Q28",
+      "field": "科技奖得奖团队代表姓名",
+      "expected": "吴明贤",
+      "source_url": "https://www.ey.gov.tw/Page/448DE008087A1971/a0f340b5-0333-48b4-af3d-2d983dd2c70f"
+    }
+  ]
+}
