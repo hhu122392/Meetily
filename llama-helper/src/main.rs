@@ -36,6 +36,7 @@ enum Request {
         repeat_penalty: Option<f32>,
         penalty_last_n: Option<i32>,
         stop_tokens: Option<Vec<String>>,
+        grammar: Option<String>,
     },
     Ping,
     Shutdown,
@@ -351,6 +352,7 @@ impl ModelState {
         max_tokens: i32,
         sampling: SamplingConfig,
         stop_tokens: Vec<String>,
+        grammar: Option<String>,
     ) -> Result<String> {
         let start_time = Instant::now();
         let model = self.model.as_ref().context("Model not loaded")?;
@@ -445,6 +447,11 @@ impl ModelState {
                 LlamaSampler::dist(seed),
             ])
         };
+        let sampler = if let Some(grammar) = grammar {
+            let grammar_sampler = LlamaSampler::grammar(model, &grammar, "root")
+                .context("Invalid output grammar")?;
+            LlamaSampler::chain_simple([grammar_sampler, sampler])
+        } else { sampler };
         let mut sampler = pin!(sampler);
 
         loop {
@@ -454,8 +461,9 @@ impl ModelState {
                 break;
             }
 
+            // sample() already accepts the token; accepting it again advances
+            // a grammar twice and also counts repetition penalties twice.
             let token = sampler.as_mut().sample(&ctx, batch.n_tokens() - 1);
-            sampler.as_mut().accept(token);
 
             if model.is_eog_token(token) {
                 eprintln!(
@@ -607,6 +615,7 @@ fn main() -> Result<()> {
                         repeat_penalty,
                         penalty_last_n,
                         stop_tokens,
+                        grammar,
                     }) => {
                         let max_tokens = max_tokens.unwrap_or(512);
                         let context_size = context_size.unwrap_or(2048);
@@ -636,7 +645,7 @@ fn main() -> Result<()> {
                         }
 
                         // Generate response with sampling parameters
-                        match state.generate(prompt, max_tokens, sampling, stop_tokens) {
+                        match state.generate(prompt, max_tokens, sampling, stop_tokens, grammar) {
                             Ok(text) => {
                                 send_response(&Response::Response { text, error: None })?;
                             }
@@ -685,6 +694,7 @@ mod tests {
         let json =
             r#"{"type":"generate","prompt":"summarize","temperature":0.5,"top_k":20,"top_p":0.8}"#;
         let request: Request = serde_json::from_str(json).unwrap();
+        assert!(matches!(&request, Request::Generate { grammar:None, .. }));
         let Request::Generate {
             temperature,
             top_k,
