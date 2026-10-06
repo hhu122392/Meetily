@@ -1,0 +1,27 @@
+{
+  "method": "observed before/after plus literal anchor check; not a full Rust replay",
+  "action_rows": 4,
+  "traces": 8,
+  "supported": 0,
+  "needs_review": 8,
+  "relative_deadlines_present_in_raw_draft_and_asr": true,
+  "relative_deadlines_masked_in_final_table": true,
+  "task_anchor_observations": [
+    {
+      "task": "优化偏乡医疗精进计划，依照三项原则（增加巡回医疗量能；预算用于设备更新及薪资保障；鼓励在地牙医回乡服务）修订计划",
+      "normalized_task_literal_found_in_source": false
+    },
+    {
+      "task": "与地方政府妥善沟通，检讨乳品专案执行相关问题（品质、配送、冷链等）是否改善",
+      "normalized_task_literal_found_in_source": false
+    },
+    {
+      "task": "针对嘉护屋顶设置太阳光电加速计划，就执法或作业实施办法进行沟通；如需要则送核定",
+      "normalized_task_literal_found_in_source": false
+    },
+    {
+      "task": "与地方政府进行充分的说明与讨论，关于乳品专案新年度由中央提供预算、地方依实际需求执行的构想",
+      "normalized_task_literal_found_in_source": false
+    }
+  ]
+}

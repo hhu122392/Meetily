@@ -1,0 +1,35 @@
+{
+  "case": "generated",
+  "generation_id": "gen_f3c297332aa143d490c5ac94f9ec023b",
+  "pipeline_version": 2026100410,
+  "model": "qwen3.5:4b",
+  "source_reference_hashes_verified": true,
+  "generation_result_binding_matches_snapshot": true,
+  "references_checked_including_related": 14,
+  "unique_referenced_segments": 7,
+  "related_references_do_not_certify_field_values": true,
+  "fields": 8,
+  "supported": 0,
+  "needs_review": 8,
+  "headers": [
+    "| **负责人** | **任务** | **截止时间** | **对应转录片段** | **片段时间戳** |"
+  ],
+  "warnings": [
+    "missing_meeting_context",
+    "untraceable_action_owner",
+    "untraceable_action_time"
+  ],
+  "summary_sha256": "8f14d50998d9d3702fcfb3f07045be71253a39225450925ea5aabbab0b255a2b",
+  "synthetic_transcripts": false,
+  "meeting_source_files": {
+    "metadata.json": "c5d671d2878c731847ebeab32a84557fd32581e6dc0d1e932c728e8f99cfe272",
+    "transcripts.json": "589f2d1eb9ee17ba6b4565f8da80588eb0667f8473725e27e3e2e69d857c822c"
+  },
+  "audio": [
+    {
+      "name": "audio.mp4",
+      "bytes": 34540959,
+      "sha256": "caab415d98d0da72e1076d63144ed4b2f2394b1c34c0053ddf34201ca0c3724d"
+    }
+  ]
+}

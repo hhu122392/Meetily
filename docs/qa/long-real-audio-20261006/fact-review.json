@@ -1,0 +1,525 @@
+{
+  "method": "manual semantic review; script only formats judgments",
+  "overall_accuracy_percentage": null,
+  "reference_points": 32,
+  "counts": {
+    "错误": 5,
+    "部分保留": 9,
+    "正确": 9,
+    "未核验": 3,
+    "遗漏": 6
+  },
+  "semantic_acceptance": "FAIL",
+  "facts": [
+    {
+      "id": "Q01",
+      "field": "主持人",
+      "expected": "李慧芝",
+      "status": "错误",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_1",
+          "startSeconds": 331.4100000667572,
+          "endSeconds": 366.07000019073485
+        }
+      ],
+      "note": "转写和摘要均为李慧之，官方姓名为李慧芝。"
+    },
+    {
+      "id": "Q02",
+      "field": "经济部出席人",
+      "expected": "连锦漳",
+      "status": "错误",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_1",
+          "startSeconds": 331.4100000667572,
+          "endSeconds": 366.07000019073485
+        },
+        {
+          "segmentId": "seg_14",
+          "startSeconds": 638.3500001525879,
+          "endSeconds": 668.0599998855591
+        }
+      ],
+      "note": "转写姓名为联警张；摘要进一步混为经济部能源署张次长。官方出席人为经济部连锦漳次长。"
+    },
+    {
+      "id": "Q03",
+      "field": "国科会出席人",
+      "expected": "苏振纲",
+      "status": "错误",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_1",
+          "startSeconds": 331.4100000667572,
+          "endSeconds": 366.07000019073485
+        }
+      ],
+      "note": "转写和摘要均为苏正刚，官方姓名为苏振纲。"
+    },
+    {
+      "id": "Q04",
+      "field": "报告一主题",
+      "expected": "家户屋顶设置太阳光电加速计划",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_1",
+          "startSeconds": 331.4100000667572,
+          "endSeconds": 366.07000019073485
+        },
+        {
+          "segmentId": "seg_3",
+          "startSeconds": 388.7199998092651,
+          "endSeconds": 406.0300002288819
+        },
+        {
+          "segmentId": "seg_15",
+          "startSeconds": 668.0599998855591,
+          "endSeconds": 694.1899999999999
+        }
+      ],
+      "note": "主题可辨，但最终报告名称仍反复写成嘉护屋顶。"
+    },
+    {
+      "id": "Q05",
+      "field": "报告二主题",
+      "expected": "2024行政院杰出科技贡献奖",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_4",
+          "startSeconds": 406.0300002288819,
+          "endSeconds": 424.6900000762939
+        },
+        {
+          "segmentId": "seg_7",
+          "startSeconds": 458.54999994277955,
+          "endSeconds": 494.71
+        },
+        {
+          "segmentId": "seg_21",
+          "startSeconds": 814.2700003242492,
+          "endSeconds": 832.3600002670288
+        }
+      ],
+      "note": "2024年杰出科技贡献奖主题保留。"
+    },
+    {
+      "id": "Q06",
+      "field": "报告三主题",
+      "expected": "台湾与贝里斯经济合作协定第1号决议文",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_7",
+          "startSeconds": 458.54999994277955,
+          "endSeconds": 494.71
+        }
+      ],
+      "note": "协定第1号决议文主题保留；这不表示另一个问题中的核备措辞正确。"
+    },
+    {
+      "id": "Q07",
+      "field": "奖励屋顶面积条件",
+      "expected": "1000平方米以下",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_17",
+          "startSeconds": 717.6900003051759,
+          "endSeconds": 741.9099996948243
+        },
+        {
+          "segmentId": "seg_51",
+          "startSeconds": 1467.199999961853,
+          "endSeconds": 1487.290000152588
+        }
+      ],
+      "note": "1000平方米以下奖励对象保留。"
+    },
+    {
+      "id": "Q08",
+      "field": "每千瓦奖励",
+      "expected": "3000元",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_17",
+          "startSeconds": 717.6900003051759,
+          "endSeconds": 741.9099996948243
+        }
+      ],
+      "note": "3000元数值保留，单位仍写每K瓦，没有规范为每千瓦。"
+    },
+    {
+      "id": "Q09",
+      "field": "每案最高奖励",
+      "expected": "30万元",
+      "status": "未核验",
+      "transcriptReferences": [],
+      "note": "书面每案上限30万元在转写和摘要均未见；未独立确认本段语音说过，不能判摘要漏掉。"
+    },
+    {
+      "id": "Q10",
+      "field": "四年总经费",
+      "expected": "40.8亿元",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_19",
+          "startSeconds": 764.0800007247925,
+          "endSeconds": 790.1600003814697
+        }
+      ],
+      "note": "四年总经费40.8亿元保留。"
+    },
+    {
+      "id": "Q11",
+      "field": "每年经费",
+      "expected": "10.2亿元",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_18",
+          "startSeconds": 741.9099996948243,
+          "endSeconds": 764.0800007247925
+        }
+      ],
+      "note": "每年10.2亿元在转写明确存在，最终摘要没有保留。"
+    },
+    {
+      "id": "Q12",
+      "field": "计划期间",
+      "expected": "114至117年，即2025至2028年",
+      "status": "未核验",
+      "transcriptReferences": [],
+      "note": "书面114–117年在转写和摘要均未见；没有独立口述证据，不按遗漏计。"
+    },
+    {
+      "id": "Q13",
+      "field": "预计新增装置量",
+      "expected": "1.2GW",
+      "status": "错误",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_19",
+          "startSeconds": 764.0800007247925,
+          "endSeconds": 790.1600003814697
+        }
+      ],
+      "note": "1200数值虽保留，但单位沿用mgawa；没有输出可确认的1200MW或1.2GW。"
+    },
+    {
+      "id": "Q14",
+      "field": "预计增加年发电量",
+      "expected": "15亿度",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_19",
+          "startSeconds": 764.0800007247925,
+          "endSeconds": 790.1600003814697
+        }
+      ],
+      "note": "15亿度数值保留；官方资料的年度发电维度未写。语音是否明确说过年维度未独立核验。"
+    },
+    {
+      "id": "Q15",
+      "field": "预计带动投资",
+      "expected": "720亿元",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_20",
+          "startSeconds": 790.1600003814697,
+          "endSeconds": 814.2700003242492
+        }
+      ],
+      "note": "720亿元预期带动投资在转写明确存在，最终摘要未保留。"
+    },
+    {
+      "id": "Q16",
+      "field": "预计扩散家户",
+      "expected": "12万户",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_20",
+          "startSeconds": 790.1600003814697,
+          "endSeconds": 814.2700003242492
+        }
+      ],
+      "note": "12万户预期家户在转写明确存在，最终摘要未保留。"
+    },
+    {
+      "id": "Q17",
+      "field": "科技奖申报数量",
+      "expected": "45组",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_22",
+          "startSeconds": 832.3600002670288,
+          "endSeconds": 845.6200000190735
+        }
+      ],
+      "note": "45组申请在转写存在，最终摘要未保留；属于细节覆盖，不单凭这一项判整体失败。"
+    },
+    {
+      "id": "Q18",
+      "field": "获奖数量",
+      "expected": "2组",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_22",
+          "startSeconds": 832.3600002670288,
+          "endSeconds": 845.6200000190735
+        },
+        {
+          "segmentId": "seg_26",
+          "startSeconds": 925.119999961853,
+          "endSeconds": 934.5700002479554
+        }
+      ],
+      "note": "最终摘要列出白台瑞团队和吴明贤团队两组得奖者。"
+    },
+    {
+      "id": "Q19",
+      "field": "屋顶计划后续协调责任",
+      "expected": "经济部、内政部及地方政府继续沟通",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_2",
+          "startSeconds": 366.07000019073485,
+          "endSeconds": 388.7199998092651
+        },
+        {
+          "segmentId": "seg_3",
+          "startSeconds": 388.7199998092651,
+          "endSeconds": 406.0300002288819
+        }
+      ],
+      "note": "经济部、内政部与地方政府责任在正文保留；对应行动表负责人却为待核对。"
+    },
+    {
+      "id": "Q20",
+      "field": "后续核定条件",
+      "expected": "如需子法或实施要点，依程序再送核定",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_3",
+          "startSeconds": 388.7199998092651,
+          "endSeconds": 406.0300002288819
+        },
+        {
+          "segmentId": "seg_37",
+          "startSeconds": 1126.1800002670288,
+          "endSeconds": 1161.599999771118
+        }
+      ],
+      "note": "需要子法或实施办法时再送核定的前提保留。"
+    },
+    {
+      "id": "Q21",
+      "field": "科研人才后续责任",
+      "expected": "国科会、教育部与国发会共同推动科研人才环境",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_7",
+          "startSeconds": 458.54999994277955,
+          "endSeconds": 494.71
+        }
+      ],
+      "note": "国科会、教育部和国发会共同营造科研人才环境在转写存在，最终摘要未形成此项后续行动。"
+    },
+    {
+      "id": "Q22",
+      "field": "修订偏乡医疗计划的责任单位",
+      "expected": "卫福部",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_8",
+          "startSeconds": 497.85,
+          "endSeconds": 516.7800003051758
+        },
+        {
+          "segmentId": "seg_9",
+          "startSeconds": 516.7800003051758,
+          "endSeconds": 544.0699994277954
+        },
+        {
+          "segmentId": "seg_11",
+          "startSeconds": 560.8199996566773,
+          "endSeconds": 588.06
+        }
+      ],
+      "note": "正文沿用卫服部的转写错字；行动表负责人待核对。"
+    },
+    {
+      "id": "Q23",
+      "field": "修订计划提交期限",
+      "expected": "一个月内",
+      "status": "错误",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_11",
+          "startSeconds": 560.8199996566773,
+          "endSeconds": 588.06
+        }
+      ],
+      "note": "正文保存一个月内修订，但风险段扩大为最终核定结果也要一个月内完成；原文没有这个审批完成期限。行动表期限还被标为待核对。"
+    },
+    {
+      "id": "Q24",
+      "field": "实施前置条件",
+      "expected": "送行政院核定后实施",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_11",
+          "startSeconds": 560.8199996566773,
+          "endSeconds": 588.06
+        }
+      ],
+      "note": "送院核定后实施的前置条件在关键决策保留。"
+    },
+    {
+      "id": "Q25",
+      "field": "原计划当前状态",
+      "expected": "停止适用",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_11",
+          "startSeconds": 560.8199996566773,
+          "endSeconds": 588.06
+        }
+      ],
+      "note": "原计划停止适用只在行动表引文以停止试用错字出现，没有清楚进入决策或状态正文。"
+    },
+    {
+      "id": "Q26",
+      "field": "服务范围",
+      "expected": "55个没有牙医执业的偏乡",
+      "status": "遗漏",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_10",
+          "startSeconds": 544.0699994277954,
+          "endSeconds": 560.8199996566773
+        }
+      ],
+      "note": "55个没有牙医的偏乡在转写存在，摘要未保留这个服务范围。55,000成本数字不是本项依据。"
+    },
+    {
+      "id": "Q27",
+      "field": "国外牙医毕业生实习名额",
+      "expected": "每年50名保持不变",
+      "status": "未核验",
+      "transcriptReferences": [],
+      "note": "书面每年50名不变在转写和摘要未见；不能证明本段讲话说过，不据此判遗漏。"
+    },
+    {
+      "id": "Q28",
+      "field": "科技奖得奖团队代表姓名",
+      "expected": "吴明贤",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_6",
+          "startSeconds": 437.91000003814696,
+          "endSeconds": 458.54999994277955
+        },
+        {
+          "segmentId": "seg_26",
+          "startSeconds": 925.119999961853,
+          "endSeconds": 934.5700002479554
+        }
+      ],
+      "note": "第一次转写无名贤，后续段落已正确写吴明贤；最终摘要名字正确，不能声称由模型独自纠错。"
+    },
+    {
+      "id": "Q29",
+      "field": "乳品计划协调期限",
+      "expected": "一周内",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_14",
+          "startSeconds": 638.3500001525879,
+          "endSeconds": 668.0599998855591
+        },
+        {
+          "segmentId": "seg_56",
+          "startSeconds": 1592.6200004959107,
+          "endSeconds": 1604.7099999809266
+        }
+      ],
+      "note": "正文一周内保留，行动表一周之内被标为待核对。"
+    },
+    {
+      "id": "Q30",
+      "field": "乳品计划协调责任单位",
+      "expected": "农业部会同教育部",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_14",
+          "startSeconds": 638.3500001525879,
+          "endSeconds": 668.0599998855591
+        },
+        {
+          "segmentId": "seg_56",
+          "startSeconds": 1592.6200004959107,
+          "endSeconds": 1604.7099999809266
+        }
+      ],
+      "note": "正文农业部与教育部保留，行动表负责人被标为待核对。"
+    },
+    {
+      "id": "Q31",
+      "field": "继续推动的前提",
+      "expected": "与所有地方政府沟通并取得合作意愿后再决定",
+      "status": "部分保留",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_12",
+          "startSeconds": 588.06,
+          "endSeconds": 616.4199996948242
+        },
+        {
+          "segmentId": "seg_14",
+          "startSeconds": 638.3500001525879,
+          "endSeconds": 668.0599998855591
+        }
+      ],
+      "note": "所有地方政府愿意承诺的条件出现在行动表引文，决策正文只写充分说明、检讨，没有完整展开此项继续推动前提。"
+    },
+    {
+      "id": "Q32",
+      "field": "执行风险",
+      "expected": "乳品配送、冷链和儿童饮用安全仍需解决",
+      "status": "正确",
+      "transcriptReferences": [
+        {
+          "segmentId": "seg_13",
+          "startSeconds": 616.4199996948242,
+          "endSeconds": 638.3500001525879
+        },
+        {
+          "segmentId": "seg_45",
+          "startSeconds": 1319.5700000572206,
+          "endSeconds": 1354.859999961853
+        }
+      ],
+      "note": "品质、配送和冷链问题及无法克服需检讨的风险保留。"
+    }
+  ]
+}
