@@ -1,0 +1,74 @@
+{
+  "status": "diagnostics_slice_passed_only",
+  "cases": [
+    {
+      "generationId": "gen_858ea44eda78482ea399f24aa23d74a7",
+      "localLogSha256": "8fd215a4f6706869a188393023847343626068bb45ad766234e55148afc58b31",
+      "metadata": [
+        {
+          "maxTokens": null,
+          "phase": "llm_request_metadata",
+          "provider": "Custom OpenAI",
+          "requestedModel": "deepseek-flash",
+          "temperature": null,
+          "topP": null
+        },
+        {
+          "completionTokens": 18870,
+          "finishReason": "stop",
+          "phase": "llm_response_metadata",
+          "promptTokens": 5621,
+          "responseId": "a1d82a10-aac9-4b58-8943-5daffe2f9bb3",
+          "responseModel": "deepseek-flash"
+        }
+      ]
+    },
+    {
+      "generationId": "gen_c7a2c08231c54eee8a2987e8cf5d56d7",
+      "localLogSha256": "2b4cfb038cba7149560f5a58feb43aafab4ae4f20f458309cb5455cfabadb3f5",
+      "metadata": [
+        {
+          "maxTokens": null,
+          "phase": "llm_request_metadata",
+          "provider": "Custom OpenAI",
+          "requestedModel": "deepseek-flash",
+          "temperature": null,
+          "topP": null
+        },
+        {
+          "completionTokens": 19509,
+          "finishReason": "stop",
+          "phase": "llm_response_metadata",
+          "promptTokens": 5622,
+          "responseId": "47400565-8f24-4a3c-997a-dd17ff4a678b",
+          "responseModel": "deepseek-flash"
+        }
+      ]
+    },
+    {
+      "generationId": "gen_95d813a19e3e40888217241e7067bec6",
+      "localLogSha256": "e985f7f36f3469f7b6cf88827581aee6e8314843060a473ecfa92a9f0b828eaf",
+      "metadata": [
+        {
+          "contextSize": 32768,
+          "frequencyPenalty": 0.0,
+          "grammarPresent": true,
+          "maxTokens": 4096,
+          "phase": "builtin_request_metadata",
+          "presencePenalty": 0.3,
+          "repeatPenalty": 1.05,
+          "requestedModel": "qwen3.5:4b",
+          "temperature": 0.5,
+          "topK": 20,
+          "topP": 0.8
+        }
+      ]
+    }
+  ],
+  "unitTestsPassed": 7,
+  "zeroTestFilterAttemptExcluded": true,
+  "builtinResponseStatsUnavailable": true,
+  "accuracyPassed": false,
+  "modelServerIdentityIndependentlyVerified": false,
+  "exeSha256": "feceb36a4bd8a40e90abbf6886a53c20cc76cca8fd5d84f9c8764354b3e8c152"
+}

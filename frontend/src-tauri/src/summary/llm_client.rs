@@ -31,6 +31,12 @@ pub struct ChatRequest {
 #[derive(Deserialize, Debug)]
 pub struct ChatResponse {
     pub choices: Vec<Choice>,
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub usage: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -263,6 +269,10 @@ pub async fn generate_summary(
         })
     };
 
+    crate::summary::measurement::record_source_selection(&serde_json::json!({
+        "phase":"llm_request_metadata","provider":provider_name(provider),"requestedModel":model_name,
+        "maxTokens":request_body.get("max_tokens"),"temperature":request_body.get("temperature"),"topP":request_body.get("top_p")
+    }));
     info!(
         "🐞 LLM Request to {}: model={}",
         provider_name(provider),
@@ -335,6 +345,11 @@ pub async fn generate_summary(
 
 fn chat_completion_text(response: ChatResponse) -> Result<String, String> {
     let choice = response.choices.first().ok_or("No content in LLM response")?;
+    crate::summary::measurement::record_source_selection(&serde_json::json!({
+        "phase":"llm_response_metadata","responseId":response.id,"responseModel":response.model,"finishReason":choice.finish_reason,
+        "promptTokens":response.usage.as_ref().and_then(|usage|usage.get("prompt_tokens")).and_then(serde_json::Value::as_u64),
+        "completionTokens":response.usage.as_ref().and_then(|usage|usage.get("completion_tokens")).and_then(serde_json::Value::as_u64)
+    }));
     match choice.finish_reason.as_deref() {
         Some("length") => return Err("LLM response was truncated: increase the output limit or use a non-thinking model.".to_string()),
         Some("stop") | None => {},

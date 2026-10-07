@@ -217,6 +217,14 @@ pub async fn generate_with_builtin(
     };
 
     let request_json = serde_json::to_string(&request)?;
+    let parameters: serde_json::Value = serde_json::from_str(&request_json)?;
+    crate::summary::measurement::record_source_selection(&serde_json::json!({
+        "phase":"builtin_request_metadata","requestedModel":model_name,
+        "maxTokens":parameters.get("max_tokens"),"contextSize":parameters.get("context_size"),
+        "temperature":parameters.get("temperature"),"topP":parameters.get("top_p"),"topK":parameters.get("top_k"),
+        "presencePenalty":parameters.get("presence_penalty"),"frequencyPenalty":parameters.get("frequency_penalty"),
+        "repeatPenalty":parameters.get("repeat_penalty"),"grammarPresent":output_grammar.is_some()
+    }));
 
     // Send request with timeout
     let timeout = Duration::from_secs(models::GENERATION_TIMEOUT_SECS);
