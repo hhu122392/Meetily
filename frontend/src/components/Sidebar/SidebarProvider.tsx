@@ -253,26 +253,12 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     console.log(`📊 Starting polling for meeting ${meetingId}, process ${processId}`);
 
     let pollCount = 0;
-    const MAX_POLLS = 200; // ~16.5 minutes at 5-second intervals (slightly longer than backend's 15-min timeout to avoid race conditions)
 
     const pollInterval = setInterval(async () => {
       pollCount++;
 
-      // Timeout safety: Stop after 10 minutes
-      if (pollCount >= MAX_POLLS) {
-        console.warn(`⏱️ Polling timeout for ${meetingId} after ${MAX_POLLS} iterations`);
-        clearInterval(pollInterval);
-        setActiveSummaryPolls(prev => {
-          const next = new Map(prev);
-          next.delete(meetingId);
-          return next;
-        });
-        onUpdate({
-          status: 'error',
-          error: 'Summary generation timed out after 15 minutes. Please try again or check your model configuration.'
-        });
-        return;
-      }
+      // Each backend model call has its own timeout. A long report can make
+      // several calls; elapsed page time must not invent a backend failure.
       try {
         const result = await invoke('api_get_summary', {
           meetingId: meetingId,

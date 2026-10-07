@@ -42,6 +42,42 @@ test('ordinary completed history is checked once without overwriting an editor o
   assert.deepEqual(updates, []);
 });
 
+test('completion between loading a meeting and observing its task replaces the older generation once', async t => {
+  const updates: ResumedSummaryUpdate[] = [];
+  let reads = 0;
+  const saved = { markdown: 'new seven-column report', template_snapshot: { generationId: 'new' } };
+  t.after(observeExistingSummaryTask({
+    read: async () => { reads++; return { status: 'completed', data: saved }; },
+    getDisplayedGenerationId: () => 'old',
+    onUpdate: update => updates.push(update), intervalMs: 1,
+  }));
+  await delay(10);
+  assert.deepEqual(updates, [{ status: 'completed', error: null, data: saved }]);
+  assert.equal(reads, 1);
+});
+
+test('the same completed generation does not replace unsaved manual edits', async t => {
+  const updates: ResumedSummaryUpdate[] = [];
+  t.after(observeExistingSummaryTask({
+    read: async () => ({ status: 'completed', data: { markdown: 'saved before edits', template_snapshot: { generationId: 'same' } } }),
+    getDisplayedGenerationId: () => 'same',
+    onUpdate: update => updates.push(update), intervalMs: 1,
+  }));
+  await delay(10);
+  assert.deepEqual(updates, []);
+});
+
+test('a first result completed during page load keeps its needs-review status', async t => {
+  const updates: ResumedSummaryUpdate[] = [];
+  const saved = { markdown: 'first report', template_snapshot: { generationId: 'first' }, factValidation: { status: 'needs_review' } };
+  t.after(observeExistingSummaryTask({
+    read: async () => ({ status: 'completed', data: saved }),
+    getDisplayedGenerationId: () => undefined, onUpdate: update => updates.push(update),
+  }));
+  await delay(10);
+  assert.deepEqual(updates, [{ status: 'needs_review', error: null, data: saved }]);
+});
+
 test('recovery uses the recorded start time and never invents one when it is missing', async () => {
   for (const start of ['2026-09-12T22:29:10.247791700+00:00', null, 'invalid']) {
     const received = deferred<ResumedSummaryUpdate>();

@@ -37,16 +37,18 @@ function toUpdate(snapshot: NativeSummarySnapshot): ResumedSummaryUpdate {
   return { status: 'error', error: 'generationFailed', ...(data ? { data } : {}) };
 }
 
-/** Resume observation only when the first read confirms an existing native job.
+/** Resume an existing native job, or a newer result completed during page load.
  * Stopping this observer never cancels the native generation. */
 export function observeExistingSummaryTask({
   read,
   onUpdate,
+  getDisplayedGenerationId,
   isSuperseded = () => false,
   intervalMs = 2000,
 }: {
   read: () => Promise<NativeSummarySnapshot>;
   onUpdate: (update: ResumedSummaryUpdate) => void;
+  getDisplayedGenerationId?: () => string | undefined;
   isSuperseded?: () => boolean;
   intervalMs?: number;
 }): () => void {
@@ -59,7 +61,12 @@ export function observeExistingSummaryTask({
     try {
       const snapshot = await read();
       if (inactive()) return;
-      if (!resumed && !isActive(snapshot.status)) return;
+      if (!resumed && !isActive(snapshot.status)) {
+        const generationId = (snapshot.data?.template_snapshot as { generationId?: unknown } | undefined)?.generationId;
+        // Same-generation reads must not replace the user's unsaved edits.
+        if (snapshot.status !== 'completed' || typeof generationId !== 'string' || !generationId
+          || !getDisplayedGenerationId || generationId === getDisplayedGenerationId()) return;
+      }
       resumed = true;
       onUpdate(toUpdate(snapshot));
       // Schedule after the read settles; slow reads must never overlap.

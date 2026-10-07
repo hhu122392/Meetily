@@ -164,6 +164,7 @@ export default function PageContent({
     modelConfig: modelConfig,
     isModelConfigLoading: false, // ConfigContext loads on mount
     selectedTemplate: templates.selectedTemplate,
+    aiSummary: meetingData.aiSummary,
     setAiSummary: meetingData.setAiSummary,
     onOpenModelSettings: handleOpenModelSettings,
   });

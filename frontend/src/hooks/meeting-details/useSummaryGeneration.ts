@@ -74,6 +74,7 @@ interface UseSummaryGenerationProps {
   modelConfig: ModelConfig;
   isModelConfigLoading: boolean;
   selectedTemplate: string;
+  aiSummary: Summary | null;
   setAiSummary: (summary: Summary | null) => void;
   onOpenModelSettings?: () => void;
 }
@@ -128,6 +129,7 @@ export function useSummaryGeneration({
   modelConfig,
   isModelConfigLoading,
   selectedTemplate,
+  aiSummary,
   setAiSummary,
   onOpenModelSettings,
 }: UseSummaryGenerationProps) {
@@ -138,6 +140,8 @@ export function useSummaryGeneration({
   const generationRequestInFlightRef = useRef(false);
   const activeMeasurementGenerationIdRef = useRef<string | null>(null);
   const stopResumedTaskRef = useRef<() => void>(() => {});
+  const displayedSummaryRef = useRef(aiSummary);
+  displayedSummaryRef.current = aiSummary;
 
   useEffect(() => {
     setSummaryStatus('idle');
@@ -146,6 +150,7 @@ export function useSummaryGeneration({
     const stop = observeExistingSummaryTask({
       read: () => invokeTauri<NativeSummarySnapshot>('api_get_summary', { meetingId: meeting.id }),
       isSuperseded: () => generationRequestInFlightRef.current,
+      getDisplayedGenerationId: () => (displayedSummaryRef.current as { template_snapshot?: { generationId?: string } } | null)?.template_snapshot?.generationId,
       onUpdate: update => {
         setSummaryStatus(update.status);
         setSummaryError(update.error);
