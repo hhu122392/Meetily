@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-07T20:30:49.775245+00:00",
+  "scope": "Logging startup configuration only",
+  "default": {
+    "pid": 161500,
+    "nativeWindowId": 7998328,
+    "targetId": "A5BFB8F7A2DD08AB5B96B13E0BA267AB",
+    "requestedRustLog": null,
+    "infoStartupObserved": true,
+    "debugLinesObserved": false
+  },
+  "scoped": {
+    "pid": 142072,
+    "nativeWindowId": 10552998,
+    "targetId": "7F8F14232F95E6B5BB6D8AF140E462E2",
+    "requestedRustLog": "info,app_lib::summary::summary_engine::sidecar=debug",
+    "debugHelperObserved": true
+  },
+  "exeSha256": "bcbcf04a3fad684f30c7e7c30fd170db3dc5db218fb170f3cd414472f180cf23",
+  "generationId": "gen_cfb5cb76e94249bea3c442b1db0b7d05",
+  "actualNativeHistoryButtonEvidence": "104-v7-qwen-started.json",
+  "whitelistedLogEvidence": [
+    "[2026-10-07T20:29:28Z DEBUG app_lib::summary::summary_engine::sidecar] llama-helper stderr: load_tensors:   CPU_Mapped model buffer size =  2603.50 MiB",
+    "[2026-10-07T20:29:35Z DEBUG app_lib::summary::summary_engine::sidecar] llama-helper stderr: llama_memory_recurrent:        CPU RS buffer size =    50.25 MiB",
+    "[2026-10-07T20:29:35Z DEBUG app_lib::summary::summary_engine::sidecar] llama-helper stderr: 📝 Tokenized prompt: 5661 tokens"
+  ],
+  "foregroundSamples": [
+    {
+      "startup": "v6-to-v7-default",
+      "sampledForegroundEqual": true
+    },
+    {
+      "startup": "v7-default-to-scoped",
+      "sampledForegroundEqual": true
+    }
+  ],
+  "globalInputEvents": 0,
+  "activationEvents": 0,
+  "sourceSha256": {
+    "frontend/src-tauri/src/main.rs": "ac97dfba833e18a470ded2088d2629aa96105d4b67dc5d03fa8a436f1fa87c7c",
+    "frontend/src-tauri/src/lib.rs": "8bf4b7aa315d0cdff53541cc651472e5dc41b443263d3d1fe78cf0cba30751ab"
+  },
+  "qaFocusOverride": true,
+  "summaryCoreUncommittedInCandidate": true,
+  "summaryGenerationStatusAtAcceptance": "pending",
+  "productAccuracyPassed": false
+}

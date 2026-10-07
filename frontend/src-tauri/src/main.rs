@@ -10,8 +10,7 @@ fn main() {
     if app_lib::formal_whisper_baseline::requested() {
         std::process::exit(app_lib::formal_whisper_baseline::run_cli());
     }
-    std::env::set_var("RUST_LOG", "info");
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // Async logger will be initialized lazily when first needed (after Tauri runtime starts)
     log::info!("Starting application...");

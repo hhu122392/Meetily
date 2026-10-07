@@ -443,8 +443,6 @@ mod transcription_language_preference_tests {
 }
 
 pub fn run() {
-    log::set_max_level(log::LevelFilter::Info);
-
     let mut builder = tauri::Builder::default();
 
     #[cfg(any(target_os = "macos", windows, target_os = "linux"))]
