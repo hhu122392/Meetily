@@ -19,7 +19,7 @@ const MAX_SEGMENTS_PER_RUN: usize = 60;
 
 /// 提示词版本。改提示词或输出协议时同步改这里 —— 诊断日志会写下这个串，
 /// 出问题能一眼看出"是哪版提示词跑出来的结果"。
-pub const PROMPT_VERSION: &str = "proofread-v3.1-validated-ranges";
+pub const PROMPT_VERSION: &str = "proofread-v3.3-validated-edits";
 
 /// v3 提示词：把"开放式找错"改成"逐段必答 + 受约束判断"。
 ///
@@ -213,6 +213,20 @@ pub fn parse_candidates(
             result
                 .dropped
                 .push(format!("empty-or-same: {original:?} -> {suggested:?}"));
+            return;
+        }
+        // 旧格式省略标签时沿用默认值，但显式非法值不能变成普通纠错候选。
+        if !matches!(edit.reason.as_str(), "" | "homophone" | "term" | "typo") {
+            result.dropped.push(format!("invalid-reason: {:?}", edit.reason));
+            return;
+        }
+        if !matches!(edit.confidence.as_str(), "" | "high" | "medium" | "low") {
+            result.dropped.push(format!("invalid-confidence: {:?}", edit.confidence));
+            return;
+        }
+        let punctuation = |ch: &char| !ch.is_alphanumeric() && !ch.is_whitespace();
+        if !original.chars().filter(punctuation).eq(suggested.chars().filter(punctuation)) {
+            result.dropped.push(format!("punctuation-change: {original:?} -> {suggested:?}"));
             return;
         }
 
@@ -502,6 +516,43 @@ mod tests {
         let partial = r#"{"segments":[{"segment":0,"verdict":"ok","edits":[]}]}"#;
         let parsed = parse_candidates(partial, &batch, "（无）");
         assert_eq!(parsed.missing, vec![1]);
+    }
+
+    #[test]
+    fn rejects_invalid_edit_labels_without_losing_valid_candidates() {
+        let a = row("seg-a", "运长要求国产可塑源乳品", 0.0);
+        let batch = vec![(0, &a)];
+        let raw = r#"{"segments":[{"segment":0,"verdict":"suspect","edits":[
+            {"original":"运长","suggested":"院长","reason":"homophone","confidence":"high"},
+            {"original":"国产可塑源乳品","suggested":"国产可塑源乳品（或疑似‘国产可塑化’/‘可塑型’）","reason":"term|unclear","confidence":"medium"},
+            {"original":"运长","suggested":"院长","reason":"homophone","confidence":"high|medium"}
+        ]}]}"#;
+        let parsed = parse_candidates(raw, &batch, "");
+        assert_eq!(parsed.candidates.len(), 1);
+        assert_eq!(parsed.candidates[0].suggested, "院长");
+        assert_eq!(parsed.answered, vec![0]);
+        assert!(parsed.dropped.iter().any(|reason| reason.starts_with("invalid-reason")));
+        assert!(parsed.dropped.iter().any(|reason| reason.starts_with("invalid-confidence")));
+    }
+
+    #[test]
+    fn rejects_punctuation_expansion_and_keeps_local_term_correction() {
+        let a = row("seg-a", "国产可塑源乳品 经济部能源署邮政委署长", 0.0);
+        let batch = vec![(0, &a)];
+        let raw = r#"{"segments":[{"segment":0,"verdict":"suspect","edits":[
+            {"original":"可塑源乳品","suggested":"可溯源乳品","reason":"homophone","confidence":"high"},
+            {"original":"国产可塑源乳品","suggested":"国产可塑源乳品（或疑似‘国产可塑化’/‘可塑型’）","reason":"term","confidence":"medium"},
+            {"original":"经济部能源署邮政委署长","suggested":"经济部、能源署、邮政委员会署长","reason":"homophone","confidence":"high"}
+        ]}]}"#;
+        let parsed = parse_candidates(raw, &batch, "");
+        assert_eq!(parsed.candidates.len(), 1);
+        assert_eq!(parsed.candidates[0].suggested, "可溯源乳品");
+        assert_eq!(parsed.dropped.iter().filter(|reason| reason.starts_with("punctuation-change")).count(), 2);
+
+        let raw = r#"{"segments":[{"segment":0,"verdict":"suspect","edits":[
+            {"original":"国产可塑源乳品","suggested":"国产可塑源乳品（或疑似可塑型）","reason":"term","confidence":"medium"}
+        ]}]}"#;
+        assert_eq!(parse_candidates(raw, &batch, "").missing, vec![0]);
     }
 }
 
