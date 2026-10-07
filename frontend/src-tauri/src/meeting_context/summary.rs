@@ -623,7 +623,11 @@ pub fn validate_summary_markdown_with_source(
         })
         .unwrap_or_else(|| markdown.to_owned());
     validated.markdown = mask_action_fields(&validated.markdown);
-    let traces = trace_owner_and_time_fields(&evidence_markdown, source)?;
+    let traces = match context {
+        Some(context) => crate::summary::source_binding::trace_action_fields_with_spelling(
+            &evidence_markdown, source, |text| context.normalize_known_aliases(text))?,
+        None => trace_owner_and_time_fields(&evidence_markdown, source)?,
+    };
 
     if traces.iter().any(|trace| {
         trace.field == SummaryTraceField::Owner && trace.status == SummaryTraceStatus::NeedsReview
@@ -660,7 +664,27 @@ pub fn validate_summary_markdown_with_source(
         restore_supported_owner_and_time_fields(&evidence_markdown, &validated.markdown, &traces);
     validated.validation.field_traces = traces;
     validated.validation.source_evidence = Some(source.evidence_binding()?);
+    review_source_spelling(&mut validated.validation, &evidence_markdown, context);
     Ok(validated)
+}
+
+fn review_source_spelling(validation: &mut SummaryFactValidation, markdown: &str, context: Option<&SummaryMeetingContext>) {
+    // ponytail: review recognisable name/role patterns and malformed units only;
+    // this is not general name recognition and never guesses a correction.
+    static NAME_ROLE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\p{Han}]{2,5}(?:教授|次长|副主委|署长|处长)").unwrap());
+    static SHORT_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Han}]{2,4}$").unwrap());
+    static UNIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:^|[^0-9])(?:0{2}\d*\s*(?:平方米|平方公尺|平方公里)|[a-z]{2,12}瓦|[a-z]{2,12}wa\b)").unwrap());
+    let unknown_owner = validation.field_traces.iter().filter(|trace| trace.field == SummaryTraceField::Owner)
+        .flat_map(|trace| trace.value.split(['、', ',', '，']))
+        .any(|name| SHORT_NAME.is_match(name.trim()) && !["政府", "团队", "小组", "未提及"].iter().any(|word| name.contains(word))
+            && !context.is_some_and(|context| context.recognition_dictionary.people.iter().any(|person| person.display_name == name.trim())
+                || context.recognition_dictionary.terms.iter().any(|term| term.canonical == name.trim() || term.aliases.iter().any(|alias| alias == name.trim()))));
+    if unknown_owner || NAME_ROLE.find_iter(markdown).any(|name| !context.is_some_and(|context| context.recognition_dictionary.people.iter().any(|person| name.as_str().contains(&person.display_name)))) {
+        push_fact_warning(validation, "source_name_spelling_unverified", "summary:factValidation.sourceNameSpellingUnverified");
+    }
+    if UNIT.is_match(markdown) {
+        push_fact_warning(validation, "source_unit_unverified", "summary:factValidation.sourceUnitUnverified");
+    }
 }
 
 /// Generation-only reconciliation. Manual saves keep their submitted body.
@@ -2214,6 +2238,27 @@ mod tests {
     };
     use crate::summary::source_binding::TranscriptEvidenceSegment;
     use chrono::TimeZone;
+
+    #[test]
+    fn source_spelling_checks_chinese_unit_boundary_and_unverified_department() {
+        let mut context = build_summary_meeting_context(None, None, None, None, &snapshot()).unwrap();
+        let mut validation = validate_summary_markdown("", Some(&context)).validation;
+        review_source_spelling(&mut validation, "总体达到20Gga瓦跟31G瓦", Some(&context));
+        assert!(validation.warnings.iter().any(|warning| warning.code == "source_unit_unverified"));
+        let mut valid = validate_summary_markdown("", Some(&context)).validation;
+        review_source_spelling(&mut valid, "每千瓦3000元，1000平方米，1.2GW，15亿度", Some(&context));
+        assert!(!valid.warnings.iter().any(|warning| warning.code == "source_unit_unverified"));
+        valid.field_traces.push(serde_json::from_value(serde_json::json!({
+            "field":"owner", "value":"卫服部", "markdownLine":0, "markdownColumn":null,
+            "status":"supported", "evidence":[]
+        })).unwrap());
+        review_source_spelling(&mut valid, "原文指派", Some(&context));
+        assert!(valid.warnings.iter().any(|warning| warning.code == "source_name_spelling_unverified"));
+        context.recognition_dictionary.terms.push(RecognitionDictionaryTerm { term_id:"verified-org".into(), canonical:"卫福部".into(), aliases:vec!["卫服部".into()] });
+        valid.warnings.clear();
+        review_source_spelling(&mut valid, "原文指派", Some(&context));
+        assert!(!valid.warnings.iter().any(|warning| warning.code == "source_name_spelling_unverified"));
+    }
 
     #[test]
     fn t07_people_prose_does_not_mix_separate_absence_with_attendees() {
@@ -3780,6 +3825,11 @@ mod tests {
             .filter_map(|segment| segment["text"].as_str())
             .collect::<Vec<_>>()
             .join("\n");
+        let summary_source = TranscriptVersionSnapshot::legacy_whisper("MC-R04", segments.iter().enumerate().map(|(index, segment)| TranscriptEvidenceSegment {
+            segment_id: index.to_string(), start_ms: segment["start"].as_f64().map(|seconds| (seconds * 1000.0) as u64), end_ms: None,
+            wall_clock: None, anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: segment["text"].as_str().unwrap_or_default().to_owned(),
+        }).collect());
         assert_eq!(
             segments.len(),
             139,
@@ -3847,7 +3897,7 @@ mod tests {
                 let chunk_count = saved["chunk_count"].as_i64().unwrap_or(1);
                 let saved_elapsed = saved["elapsed_seconds"].as_f64().unwrap_or_default();
                 (
-                    Ok::<(String, String, i64), String>((markdown, english_markdown, chunk_count)),
+                    Ok::<(String, String, i64, serde_json::Value), String>((markdown, english_markdown, chunk_count, saved["source_facts"].clone())),
                     saved_elapsed,
                 )
             } else {
@@ -3859,6 +3909,7 @@ mod tests {
                     &transcript,
                     "",
                     Some(&summary_context),
+                    &summary_source,
                     &template.id,
                     &runtime_template,
                     32_468,
@@ -3879,7 +3930,7 @@ mod tests {
                 (generation, elapsed)
             };
 
-        let (raw_markdown, english_markdown, chunk_count) = match generation {
+        let (raw_markdown, english_markdown, chunk_count, source_facts) = match generation {
             Ok(value) => value,
             Err(error) => {
                 let evidence = serde_json::json!({
@@ -4082,6 +4133,7 @@ mod tests {
                 "configured_roles": []
             },
             "chunk_count": chunk_count,
+            "source_facts": source_facts,
             "elapsed_seconds": elapsed_seconds,
             "raw_template_password_example_present": raw_template_password_example_present,
             "fact_validation": validated.validation,

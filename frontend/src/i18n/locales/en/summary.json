@@ -300,7 +300,7 @@
     "fields": { "owner": "Owner", "time": "Deadline", "dependency": "Dependency", "acceptance": "Acceptance criteria", "status": "Current status", "blocker": "Blocker", "criteria": "Evaluation criteria", "escalation": "Escalation condition" }
   },
   "factValidation": {
-    "sourceNameSpellingUnverified": "Some source name spellings are unverified. Check the source evidence; names and roles are not guessed.",
+    "sourceNameSpellingUnverified": "Some source person or organization name spellings are unverified. Check the source evidence; names and roles are not guessed.",
     "sourceUnitUnverified": "Unusual source numbers or units are unverified. Check the source evidence before treating them as confirmed values.",
     "untraceableActionField": "An action field could not be verified for the corresponding task. Check its source evidence.",
     "unmappedPeopleFields": "The template’s people fields could not be located reliably. Check them against this meeting’s settings.",

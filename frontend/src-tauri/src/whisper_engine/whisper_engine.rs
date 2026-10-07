@@ -639,6 +639,29 @@ impl WhisperEngine {
         language: Option<String>,
         initial_prompt: Option<String>,
     ) -> Result<(String, String, f32, bool)> {
+        self.transcribe_confidence_with_overlap(audio_data, language, initial_prompt, None).await
+    }
+
+    /// Previous text is used only to verify duplicated output, never as a prompt.
+    pub async fn transcribe_audio_with_context_overlap(
+        &self, audio_data: Vec<f32>, language: Option<String>,
+        previous: &str, leading_ms: i64, overlap_ms: i64,
+    ) -> Result<(String, f32, bool)> {
+        let (_, text, confidence, partial) = self.transcribe_confidence_with_overlap(
+            audio_data, language, None, Some((previous, leading_ms, overlap_ms))).await?;
+        Ok((text, confidence, partial))
+    }
+
+    async fn transcribe_confidence_with_overlap(
+        &self, audio_data: Vec<f32>, language: Option<String>, initial_prompt: Option<String>,
+        overlap: Option<(&str, i64, i64)>,
+    ) -> Result<(String, String, f32, bool)> {
+        let audio_duration_ms = (audio_data.len() as f64 / 16.0).ceil() as i64;
+        if let Some((_, leading, end)) = overlap {
+            if leading <= 0 || end < leading || end > audio_duration_ms {
+                return Err(anyhow!("invalid audio overlap range"));
+            }
+        }
         let ctx_lock = self.current_context.read().await;
         let ctx = ctx_lock
             .as_ref()
@@ -717,7 +740,7 @@ impl WhisperEngine {
         params.set_max_tokens(max_tokens);
         params.set_no_context(true);
         params.set_single_segment(false);
-        params.set_token_timestamps(false);
+        params.set_token_timestamps(overlap.is_some());
         params.set_temperature(0.0);
         // Keep whisper.cpp's temperature fallback enabled. With
         // temperature_inc = 0.0 a decoder that fails the entropy check
@@ -754,6 +777,8 @@ impl WhisperEngine {
             // Suppressor dropped here, stderr restored
         };
         let mut result = String::new();
+        let mut byte_bounds = [0usize; 2];
+        let mut prefix_open = [true; 2];
         let mut token_probability_sum = 0.0_f32;
         let mut token_probability_count = 0_u32;
 
@@ -787,12 +812,43 @@ impl WhisperEngine {
                 if !result.is_empty() {
                     result.push(' ');
                 }
+                if let Some((_, leading, end)) = overlap {
+                    let mut native_bytes = Vec::new();
+                    let mut ends = Vec::new();
+                    for token_index in 0..state.full_n_tokens(i)? {
+                        let data = state.full_get_token_data(i, token_index)?;
+                        if data.id >= ctx.token_eot() { continue; }
+                        let token_end = data.t1.checked_mul(WHISPER_TIMESTAMP_TICK_MS)
+                            .ok_or_else(|| anyhow!("overlap token time overflow"))?;
+                        if data.t0 < 0 || data.t1 < data.t0 || token_end > audio_duration_ms {
+                            return Err(anyhow!("invalid native overlap token time"));
+                        }
+                        native_bytes.extend_from_slice(ctx.token_to_cstr(data.id)?.to_bytes());
+                        ends.push((native_bytes.len(), token_end));
+                    }
+                    if native_bytes != segment_text.as_bytes() {
+                        return Err(anyhow!("native overlap token bytes do not reconstruct text"));
+                    }
+                    let left_trim = segment_text.len() - segment_text.trim_start().len();
+                    for (offset, token_end) in ends {
+                        for (index, limit) in [leading, end].into_iter().enumerate() {
+                            if prefix_open[index] && token_end <= limit {
+                                byte_bounds[index] = result.len() + offset.saturating_sub(left_trim).min(cleaned_text.len());
+                            } else { prefix_open[index] = false; }
+                        }
+                    }
+                }
                 result.push_str(cleaned_text);
             }
         }
 
         let final_result = result.trim().to_string();
-        let cleaned_result = Self::finalize_transcript_text(&final_result, language.as_deref());
+        let deduped = match overlap {
+            Some((previous, _, _)) => crate::audio::retranscription::dedupe_timed_overlap(
+                previous, &final_result, byte_bounds[0], byte_bounds[1]),
+            None => final_result.clone(),
+        };
+        let cleaned_result = Self::finalize_transcript_text(&deduped, language.as_deref());
 
         let avg_confidence = if token_probability_count > 0 {
             token_probability_sum / token_probability_count as f32

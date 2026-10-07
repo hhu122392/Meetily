@@ -22,9 +22,10 @@ use unicode_normalization::UnicodeNormalization;
 use uuid::Uuid;
 
 use super::audio_processing::create_meeting_folder;
-use super::common::{create_transcript_segments, split_segment_at_silence, write_transcripts_json};
+use super::common::{create_transcript_segments, split_segment_at_silence, split_segment_with_context, write_transcripts_json};
 use super::constants::AUDIO_EXTENSIONS;
 use super::recording_preferences::resolve_recording_session_preferences;
+use super::retranscription::{context_overlap_times, WHISPER_SPLIT_LEAD_IN_SAMPLES};
 
 /// Global flag to track if import is in progress
 static IMPORT_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
@@ -940,6 +941,7 @@ async fn run_import<R: Runtime>(
     // Hard cuts at arbitrary sample positions lose words at boundaries. Instead, scan
     // for the lowest-energy window near the target split point and cut there.
     const MAX_SEGMENT_SAMPLES: usize = 25 * 16000; // 25 seconds at 16kHz
+    let lead_in_samples = if use_parakeet || use_sensevoice { 0 } else { WHISPER_SPLIT_LEAD_IN_SAMPLES };
 
     let mut processable_segments: Vec<crate::audio::vad::SpeechSegment> = Vec::new();
     for segment in &speech_segments {
@@ -950,7 +952,7 @@ async fn run_import<R: Runtime>(
                 segment.samples.len()
             );
 
-            let sub_segments = split_segment_at_silence(segment, MAX_SEGMENT_SAMPLES, 0);
+            let sub_segments = split_segment_with_context(segment, MAX_SEGMENT_SAMPLES, lead_in_samples, lead_in_samples);
             debug!("Split into {} sub-segments", sub_segments.len());
             processable_segments.extend(sub_segments);
         } else {
@@ -1015,9 +1017,12 @@ async fn run_import<R: Runtime>(
             (result.text, result.confidence.unwrap_or(0.0))
         } else {
             let engine = whisper_engine.as_ref().unwrap();
-            let (text, conf, _) = engine
-                .transcribe_audio_with_confidence(segment.samples.clone(), language.clone())
-                .await
+            let result = match context_overlap_times(all_transcripts.last(), segment) {
+                Some((previous, lead, overlap)) => engine.transcribe_audio_with_context_overlap(
+                    segment.samples.clone(), language.clone(), previous, lead, overlap).await,
+                None => engine.transcribe_audio_with_confidence(segment.samples.clone(), language.clone()).await,
+            };
+            let (text, conf, _) = result
                 .map_err(|e| anyhow!("Whisper transcription failed on segment {}: {}", i, e))?;
             (text, conf)
         };

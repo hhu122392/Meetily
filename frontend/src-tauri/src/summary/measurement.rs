@@ -345,6 +345,21 @@ pub fn current_generation_id() -> Option<String> {
     CURRENT_SUMMARY_GENERATION_ID.try_with(Clone::clone).ok()
 }
 
+/// Keep raw selector and translation output beside local generation measurements,
+/// so a failure can be audited without changing the saved meeting report.
+pub fn record_source_selection(value: &serde_json::Value) {
+    let Some(id) = current_generation_id() else { return; };
+    let Ok(session) = session(&id) else { return; };
+    use std::io::Write;
+    let path = session.output_path.with_extension("source-selection.jsonl");
+    let result = (|| -> std::io::Result<()> {
+        let mut file = fs::OpenOptions::new().create(true).append(true).open(path)?;
+        serde_json::to_writer(&mut file, value)?;
+        file.write_all(b"\n")
+    })();
+    if let Err(error) = result { log::warn!("Cannot save local source selection diagnostic: {error}"); }
+}
+
 pub fn stage_guard(stage: &'static str) -> StageGuard {
     let generation_id = current_generation_id();
     if let Some(generation_id) = &generation_id {

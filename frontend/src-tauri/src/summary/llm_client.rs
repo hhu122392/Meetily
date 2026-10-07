@@ -128,6 +128,7 @@ pub async fn generate_summary(
     top_p: Option<f32>,
     summary_models_dir: Option<&PathBuf>,
     cancellation_token: Option<&CancellationToken>,
+    output_grammar: Option<&str>,
 ) -> Result<String, String> {
     // Check if cancelled before starting
     if let Some(token) = cancellation_token {
@@ -147,6 +148,7 @@ pub async fn generate_summary(
             system_prompt,
             user_prompt,
             cancellation_token,
+            output_grammar,
         )
         .await
         .map_err(|e| e.to_string());

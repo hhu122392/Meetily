@@ -18,7 +18,7 @@ pub const TASK_LABELS: &[&str] = &["行动项", "行动任务", "行动", "任�
 pub fn field_labels(field: SummaryTraceField) -> &'static [&'static str] {
     match field {
         SummaryTraceField::Owner => &["负责人", "负责人/部门", "负责人／部门", "责任人", "owner", "owner/department", "assignee"],
-        SummaryTraceField::Time => &["时间", "截止时间", "截止日期", "完成时间", "截止", "deadline", "due date", "time"],
+        SummaryTraceField::Time => &["时间", "截止时间", "截止日期", "完成时间", "截止", "deadline", "due date", "due", "time"],
         SummaryTraceField::Dependency => &["依赖", "前提条件", "dependency", "dependencies", "prerequisite", "prerequisites"],
         SummaryTraceField::Acceptance => &["验收标准", "验收条件", "acceptance criteria", "acceptance criterion"],
         SummaryTraceField::Status => &["当前状态", "任务状态", "状态", "status", "current status"],
@@ -139,7 +139,7 @@ mod tests {
     use super::*;
     #[test]
     fn aliases_are_exact_and_keep_ambiguous_metrics_unclassified() {
-        for label in ["截止时间", "截止日期", " ** Due  Date ** ", "Ｄｕｅ Ｄａｔｅ"] { assert_eq!(label_fields(label), vec![SummaryTraceField::Time]); }
+        for label in ["截止时间", "截止日期", " ** Due  Date ** ", "Ｄｕｅ Ｄａｔｅ", "Due"] { assert_eq!(label_fields(label), vec![SummaryTraceField::Time]); }
         assert_eq!(label_fields(" ** 责任人 ** "), vec![SummaryTraceField::Owner]);
         assert_eq!(label_fields("依赖或卡点"), vec![SummaryTraceField::Dependency, SummaryTraceField::Blocker]);
         assert_eq!(label_fields("截止时间/验收标准"), vec![SummaryTraceField::Time, SummaryTraceField::Acceptance]);

@@ -1,6 +1,6 @@
 // Retranscription module - allows re-processing stored audio with different settings
 
-use super::common::{create_transcript_segments, split_segment_at_silence, write_transcripts_json};
+use super::common::{create_transcript_segments, split_segment_with_context, write_transcripts_json};
 use super::constants::AUDIO_EXTENSIONS;
 use crate::audio::decoder::decode_audio_file;
 use crate::audio::transcription::provider::TranscriptionProvider;
@@ -19,6 +19,37 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
+
+pub(super) const WHISPER_SPLIT_LEAD_IN_SAMPLES: usize = 12_800;
+
+/// Only trim repeated text when the current input actually includes preceding
+/// audio and its time range touches the previous output. Keep ordinary repeats.
+pub(super) fn dedupe_context_overlap(
+    previous: Option<&(String, f64, f64)>,
+    text: String,
+    segment: &crate::audio::vad::SpeechSegment,
+) -> String {
+    let timed_samples = ((segment.end_timestamp_ms - segment.start_timestamp_ms) * 16.0).round() as usize;
+    if segment.samples.len() > timed_samples {
+        if let Some((previous, _, end)) = previous {
+            if *end + 0.001 >= segment.start_timestamp_ms {
+                return dedupe_leading_overlap(previous, &text);
+            }
+        }
+    }
+    text
+}
+
+pub(super) fn context_overlap_times<'a>(
+    previous: Option<&'a (String, f64, f64)>,
+    segment: &crate::audio::vad::SpeechSegment,
+) -> Option<(&'a str, i64, i64)> {
+    let (text, _, end) = previous?;
+    let lead = (segment.samples.len() as f64 / 16.0
+        - (segment.end_timestamp_ms - segment.start_timestamp_ms)).round() as i64;
+    if lead <= 0 || *end + 0.001 < segment.start_timestamp_ms { return None; }
+    Some((text, lead, lead + (*end - segment.start_timestamp_ms).max(0.0).round() as i64))
+}
 
 /// Global flag to track if retranscription is in progress
 static RETRANSCRIPTION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
@@ -128,18 +159,23 @@ fn normalize_requested_language(language: Option<String>) -> Option<String> {
 /// 长句被迫从中间切开时，后面的分片会多带 0.8 秒前文音频（见
 /// `split_segment_at_silence` 的 `lead_in_samples`），于是同一句话会在两个分片里
 /// 各出现一次。这里按"前一片的非标点尾部 == 后一片的非标点开头"把重复部分删掉。
-fn dedupe_leading_overlap(previous: &str, current: &str) -> String {
+pub(super) fn dedupe_leading_overlap(previous: &str, current: &str) -> String {
+    let first = current.char_indices().find(|(_, c)| c.is_alphanumeric()).map_or(0, |(offset, _)| offset);
+    dedupe_timed_overlap(previous, current, first, current.len())
+}
+
+/// Byte limits come from native token times, not character timing estimates.
+/// Only a prefix within preceding audio may be skipped before an exact match.
+pub(crate) fn dedupe_timed_overlap(
+    previous: &str, current: &str, leading_byte_limit: usize, overlap_byte_limit: usize,
+) -> String {
     const MAX_OVERLAP_CHARS: usize = 16;
     const MIN_OVERLAP_CHARS: usize = 4;
 
     let previous_significant: Vec<char> =
         previous.chars().filter(|c| c.is_alphanumeric()).collect();
-    let current_chars: Vec<char> = current.chars().collect();
-    let current_significant: Vec<usize> = current_chars
-        .iter()
-        .enumerate()
+    let current_significant: Vec<(usize, char)> = current.char_indices()
         .filter(|(_, c)| c.is_alphanumeric())
-        .map(|(index, _)| index)
         .collect();
 
     let max_check = MAX_OVERLAP_CHARS
@@ -151,13 +187,14 @@ fn dedupe_leading_overlap(previous: &str, current: &str) -> String {
 
     for length in (MIN_OVERLAP_CHARS..=max_check).rev() {
         let tail = &previous_significant[previous_significant.len() - length..];
-        let head: Vec<char> = current_significant[..length]
-            .iter()
-            .map(|index| current_chars[*index])
-            .collect();
-        if tail == head.as_slice() {
-            let cut_index = current_significant[length - 1];
-            return current_chars[cut_index + 1..].iter().collect();
+        for start in 0..=current_significant.len() - length {
+            if current_significant[start].0 > leading_byte_limit { break; }
+            let (offset, last) = current_significant[start + length - 1];
+            let cut = offset + last.len_utf8();
+            if cut > overlap_byte_limit { continue; }
+            if tail.iter().copied().eq(current_significant[start..start + length].iter().map(|(_, c)| *c)) {
+                return current[cut..].to_owned();
+            }
         }
     }
 
@@ -504,8 +541,7 @@ async fn run_retranscription<R: Runtime>(
     // Hard cuts at arbitrary sample positions lose words at boundaries. Instead, scan
     // for the lowest-energy window near the target split point and cut there.
     const MAX_SEGMENT_SAMPLES: usize = 25 * 16000; // 25 seconds at 16kHz
-    // 被迫在连续语音中间切开时，给后面的分片补 0.8 秒前文当上下文
-    const LEAD_IN_SAMPLES: usize = (16000.0 * 0.8) as usize;
+    let look_ahead_samples = if use_parakeet || use_sensevoice { 0 } else { WHISPER_SPLIT_LEAD_IN_SAMPLES };
 
     let mut processable_segments: Vec<crate::audio::vad::SpeechSegment> = Vec::new();
     for segment in &speech_segments {
@@ -517,7 +553,7 @@ async fn run_retranscription<R: Runtime>(
             );
 
             let sub_segments =
-                split_segment_at_silence(segment, MAX_SEGMENT_SAMPLES, LEAD_IN_SAMPLES);
+                split_segment_with_context(segment, MAX_SEGMENT_SAMPLES, WHISPER_SPLIT_LEAD_IN_SAMPLES, look_ahead_samples);
             debug!("Split into {} sub-segments", sub_segments.len());
             processable_segments.extend(sub_segments);
         } else {
@@ -587,9 +623,12 @@ async fn run_retranscription<R: Runtime>(
             (text, 0.9)
         } else {
             let engine = whisper_engine.as_ref().unwrap();
-            let (text, confidence, _) = engine
-                .transcribe_audio_with_confidence(segment.samples.clone(), language.clone())
-                .await
+            let result = match context_overlap_times(all_transcripts.last(), segment) {
+                Some((previous, lead, overlap)) => engine.transcribe_audio_with_context_overlap(
+                    segment.samples.clone(), language.clone(), previous, lead, overlap).await,
+                None => engine.transcribe_audio_with_confidence(segment.samples.clone(), language.clone()).await,
+            };
+            let (text, confidence, _) = result
                 .map_err(|error| {
                     anyhow!("Whisper transcription failed on segment {}: {}", i, error)
                 })?;
@@ -606,21 +645,9 @@ async fn run_retranscription<R: Runtime>(
         let text = recognition_context
             .as_ref()
             .map_or(corrected.clone(), |context| context.normalize_transcript(&corrected));
-        // 去掉"补前文音频"带来的重复开头（长句被切开时才会发生）
-        let text = match all_transcripts.last() {
-            Some((previous, _, _)) if !text.trim().is_empty() => {
-                let deduped = dedupe_leading_overlap(previous, &text);
-                if deduped.chars().count() != text.chars().count() {
-                    debug!(
-                        "Dropped {} duplicated lead-in characters on segment {}",
-                        text.chars().count() - deduped.chars().count(),
-                        i
-                    );
-                }
-                deduped
-            }
-            _ => text,
-        };
+        let text = if use_sensevoice || use_parakeet {
+            dedupe_context_overlap(all_transcripts.last(), text, segment)
+        } else { text };
         if !text.trim().is_empty() {
             all_transcripts.push((text, segment.start_timestamp_ms, segment.end_timestamp_ms));
             total_confidence += confidence;
@@ -1227,6 +1254,66 @@ mod tests {
             ),
             "，这个提升是非常大的"
         );
+    }
+
+    #[test]
+    fn context_dedupe_requires_audio_overlap_and_preserves_short_repeats() {
+        let previous = ("请在一周之内".to_owned(), 0.0, 1_800.0);
+        let mut segment = crate::audio::vad::SpeechSegment {
+            samples: vec![0.1; 32_000 + WHISPER_SPLIT_LEAD_IN_SAMPLES],
+            start_timestamp_ms: 1_000.0,
+            end_timestamp_ms: 3_000.0,
+            confidence: 0.9,
+        };
+        let text = "请在一周之内与地方政府沟通".to_owned();
+        assert_eq!(dedupe_context_overlap(Some(&previous), text.clone(), &segment), "与地方政府沟通");
+        segment.samples.truncate(32_000);
+        assert_eq!(dedupe_context_overlap(Some(&previous), text.clone(), &segment), text);
+        segment.samples.extend(vec![0.1; WHISPER_SPLIT_LEAD_IN_SAMPLES]);
+        segment.start_timestamp_ms = 2_000.0;
+        segment.end_timestamp_ms = 4_000.0;
+        assert_eq!(dedupe_context_overlap(Some(&previous), text.clone(), &segment), text);
+        segment.start_timestamp_ms = 1_000.0;
+        segment.end_timestamp_ms = 3_000.0;
+        let repeated = ("谢谢".to_owned(), 0.0, 1_800.0);
+        assert_eq!(dedupe_context_overlap(Some(&repeated), "谢谢大家".to_owned(), &segment), "谢谢大家");
+    }
+
+    #[test]
+    fn timed_overlap_preserves_unmatched_words_and_utf8_boundaries() {
+        let previous = "教育部要在一周之内";
+        let current = "外部要在一周之内与地方政府沟通";
+        // Actual native byte/time limits from the real adjacent audio clips.
+        assert_eq!(dedupe_timed_overlap(previous, current, 15, 27), "与地方政府沟通");
+        for (leading, overlap) in [(0, 27), (15, 23), (15, 0)] {
+            assert_eq!(dedupe_timed_overlap(previous, current, leading, overlap), current);
+        }
+        assert_eq!(dedupe_timed_overlap("另一项工作", current, 15, 27), current);
+        let outside_lead = "正在讨论新的任务；部要在一周之内沟通";
+        assert_eq!(dedupe_timed_overlap(previous, outside_lead, 15, outside_lead.len()), outside_lead);
+        assert_eq!(dedupe_timed_overlap("谢谢", "谢谢大家", 6, 12), "谢谢大家");
+        assert_eq!(dedupe_timed_overlap("请完成任务", "完成任务后继续", 0, 11), "完成任务后继续");
+        assert_eq!(dedupe_timed_overlap("请完成任务", "完成任务后继续", 0, 12), "后继续");
+        assert_eq!(dedupe_leading_overlap("请完成任务", "，完成任务；后继续"), "；后继续");
+    }
+
+    #[test]
+    fn context_times_require_actual_leading_audio_and_adjacent_output() {
+        let previous = ("前片实际文字".to_owned(), 0.0, 1_800.0);
+        let mut segment = crate::audio::vad::SpeechSegment {
+            samples: vec![0.1; 32_000 + WHISPER_SPLIT_LEAD_IN_SAMPLES],
+            start_timestamp_ms: 1_000.0,
+            end_timestamp_ms: 3_000.0,
+            confidence: 0.9,
+        };
+        assert_eq!(context_overlap_times(Some(&previous), &segment), Some(("前片实际文字", 800, 1600)));
+        assert_eq!(context_overlap_times(None, &segment), None);
+        segment.samples.truncate(32_000);
+        assert_eq!(context_overlap_times(Some(&previous), &segment), None);
+        segment.samples.extend(vec![0.1; WHISPER_SPLIT_LEAD_IN_SAMPLES]);
+        segment.start_timestamp_ms = 2_000.0;
+        segment.end_timestamp_ms = 4_000.0;
+        assert_eq!(context_overlap_times(Some(&previous), &segment), None);
     }
 
     #[test]

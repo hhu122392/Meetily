@@ -37,6 +37,8 @@ enum Request {
         repeat_penalty: Option<f32>,
         penalty_last_n: Option<i32>,
         stop_tokens: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        grammar: Option<String>,
     },
 }
 
@@ -136,6 +138,7 @@ pub async fn generate_with_builtin(
     system_prompt: &str,
     user_prompt: &str,
     cancellation_token: Option<&CancellationToken>,
+    output_grammar: Option<&str>,
 ) -> Result<String> {
     // Check cancellation at start
     if let Some(token) = cancellation_token {
@@ -210,6 +213,7 @@ pub async fn generate_with_builtin(
         repeat_penalty: Some(sampling.repeat_penalty),
         penalty_last_n: Some(sampling.penalty_last_n),
         stop_tokens: Some(sampling.stop_tokens),
+        grammar: output_grammar.map(str::to_owned),
     };
 
     let request_json = serde_json::to_string(&request)?;
@@ -348,6 +352,7 @@ mod tests {
             repeat_penalty: Some(1.05),
             penalty_last_n: Some(256),
             stop_tokens: Some(vec!["<end_of_turn>".to_string()]),
+            grammar: Some("root ::= \"{}\"".to_owned()),
         };
 
         let json = serde_json::to_string(&request).unwrap();
@@ -359,6 +364,7 @@ mod tests {
         assert!(json.contains("\"frequency_penalty\":0.0"));
         assert!(json.contains("\"repeat_penalty\":1.05"));
         assert!(json.contains("\"penalty_last_n\":256"));
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&json).unwrap()["grammar"], "root ::= \"{}\"");
     }
 
     #[test]

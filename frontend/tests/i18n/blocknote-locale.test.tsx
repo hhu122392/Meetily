@@ -23,7 +23,7 @@ test('actual BlockNote menu factory and placeholders follow live locale without 
   await act(async () => { renderer = TestRenderer.create(<I18nextProvider i18n={i18n}><Probe /></I18nextProvider>); });
   const dictionary = current.dictionary;
   // Run the installed library's real menu builder; editor commands are never invoked.
-  const editor = { dictionary, schema: BlockNoteSchema.create(), settings: { heading: { levels: [1, 2, 3] } } } as Parameters<typeof getDefaultSlashMenuItems>[0];
+  const editor = { dictionary, schema: BlockNoteSchema.create(), settings: { heading: { levels: [1, 2, 3] } } } as unknown as Parameters<typeof getDefaultSlashMenuItems>[0];
   const titles = () => getDefaultSlashMenuItems(editor).map(item => item.title);
   const css = () => renderer.root.findByType('style').children.join('');
   assert.ok(titles().includes(zh.slash_menu.heading.title));

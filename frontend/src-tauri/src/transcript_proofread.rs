@@ -432,6 +432,7 @@ pub async fn api_review_transcript_with_llm<R: Runtime>(
             custom_top_p,
             Some(&summary_models_dir),
             None,
+            None,
         )
         .await;
 
@@ -492,6 +493,7 @@ pub async fn api_review_transcript_with_llm<R: Runtime>(
                 custom_temperature,
                 custom_top_p,
                 Some(&summary_models_dir),
+                None,
                 None,
             )
             .await

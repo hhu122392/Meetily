@@ -32,6 +32,7 @@ pub struct CustomOpenAIConfig {
 pub mod commands;
 pub mod field_schema;
 pub mod generation_lifecycle;
+pub(crate) mod grounded_report;
 pub(crate) mod language_detection;
 pub mod llm_client;
 pub mod measurement;

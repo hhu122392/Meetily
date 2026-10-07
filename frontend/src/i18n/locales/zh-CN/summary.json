@@ -300,7 +300,7 @@
     "fields": { "owner": "负责人", "time": "截止时间", "dependency": "依赖", "acceptance": "验收标准", "status": "当前状态", "blocker": "卡点", "criteria": "判断口径", "escalation": "升级条件" }
   },
   "factValidation": {
-    "sourceNameSpellingUnverified": "部分原文姓名写法尚未核验，请对照原文依据；不会自动猜姓名或职务。",
+    "sourceNameSpellingUnverified": "部分原文人名或机构名称写法尚未核验，请对照原文依据；不会自动猜名称或职务。",
     "sourceUnitUnverified": "原文有异常数字或单位写法，尚未核验，请对照原文依据；不能视为确定的数字或单位。",
     "untraceableActionField": "有行动字段无法从对应任务的原文核验，请查看原文依据。",
     "unmappedPeopleFields": "模板要求的人员字段无法准确定位，请核对名单与本次会议设置。",

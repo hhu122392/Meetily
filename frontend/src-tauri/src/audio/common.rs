@@ -156,6 +156,17 @@ pub(crate) fn split_segment_at_silence(
     max_samples: usize,
     lead_in_samples: usize,
 ) -> Vec<crate::audio::vad::SpeechSegment> {
+    split_segment_with_context(segment, max_samples, lead_in_samples, 0)
+}
+
+/// Following audio completes words at the cut. Its range is included in the
+/// returned end time; callers remove recognized text shared by adjacent chunks.
+pub(crate) fn split_segment_with_context(
+    segment: &crate::audio::vad::SpeechSegment,
+    max_samples: usize,
+    lead_in_samples: usize,
+    look_ahead_samples: usize,
+) -> Vec<crate::audio::vad::SpeechSegment> {
     const SAMPLE_RATE: usize = 16000;
     // 100ms window for energy measurement (1600 samples at 16kHz)
     const ENERGY_WINDOW: usize = SAMPLE_RATE / 10;
@@ -277,9 +288,10 @@ pub(crate) fn split_segment_at_silence(
             (split_at + FALLBACK_OVERLAP).min(total)
         };
 
-        let chunk_samples = segment.samples[pos..chunk_end].to_vec();
+        let input_end = chunk_end.saturating_add(look_ahead_samples).min(total);
+        let chunk_samples = segment.samples[pos..input_end].to_vec();
         let chunk_start_ms = segment.start_timestamp_ms + (pos as f64 * ms_per_sample);
-        let chunk_end_ms = segment.start_timestamp_ms + (chunk_end as f64 * ms_per_sample);
+        let chunk_end_ms = segment.start_timestamp_ms + (input_end as f64 * ms_per_sample);
 
         // 被迫从连续语音中间切开时，给后面的分片补一小段前文音频当上下文，
         // 否则模型在分片开头会丢字（合并文本时由调用方去掉重复的这段）。
@@ -302,8 +314,7 @@ pub(crate) fn split_segment_at_silence(
             confidence: segment.confidence,
         });
 
-        // Advance position to where the current chunk actually ends
-        // to avoid transcribing the overlap region twice
+        // Context must not advance the logical cut or skip the following audio.
         pos = chunk_end;
     }
 
@@ -315,6 +326,38 @@ mod tests {
     use super::*;
 
     const TEST_RATE: usize = 16_000;
+
+    #[test]
+    fn split_context_covers_its_samples_without_advancing_the_cut() {
+        let segment = crate::audio::vad::SpeechSegment {
+            samples: vec![0.1; 60 * TEST_RATE],
+            start_timestamp_ms: 2_000.0,
+            end_timestamp_ms: 62_000.0,
+            confidence: 0.9,
+        };
+        let lead = 12_800;
+        let baseline = split_segment_at_silence(&segment, 25 * TEST_RATE, lead);
+        let contextual = split_segment_with_context(&segment, 25 * TEST_RATE, lead, lead);
+        assert_eq!(baseline.len(), contextual.len());
+        for (index, (old, new)) in baseline.iter().zip(&contextual).enumerate() {
+            assert_eq!(old.start_timestamp_ms, new.start_timestamp_ms);
+            let start = ((old.start_timestamp_ms - 2_000.0) * 16.0).round() as usize;
+            let input_start = if index == 0 { start } else { start.saturating_sub(lead) };
+            let expected_end = (old.end_timestamp_ms + 800.0).min(62_000.0);
+            assert_eq!(new.end_timestamp_ms, expected_end);
+            let input_end = ((expected_end - 2_000.0) * 16.0).round() as usize;
+            assert_eq!(new.samples, segment.samples[input_start..input_end]);
+        }
+        let short = crate::audio::vad::SpeechSegment {
+            samples: vec![0.1; TEST_RATE],
+            end_timestamp_ms: 3_000.0,
+            ..segment
+        };
+        let unsplit = split_segment_with_context(&short, 25 * TEST_RATE, lead, lead);
+        assert_eq!(unsplit.len(), 1);
+        assert_eq!(unsplit[0].samples, short.samples);
+        assert_eq!(unsplit[0].end_timestamp_ms, short.end_timestamp_ms);
+    }
 
     /// P: 词中间的能量低谷不能当停顿，真正的停顿才能被选中。
     #[test]

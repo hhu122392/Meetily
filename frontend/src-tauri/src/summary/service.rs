@@ -66,7 +66,7 @@ fn strip_title_if_present(markdown: &str) -> String {
 }
 
 const ENGLISH_CACHE_FIELD: &str = "english_cache";
-const SUMMARY_PIPELINE_VERSION: u32 = 2026100410;
+const SUMMARY_PIPELINE_VERSION: u32 = 2026100731;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct SummaryCacheSource {
@@ -658,6 +658,7 @@ impl SummaryService {
             &text,
             &custom_prompt,
             summary_meeting_context.as_ref(),
+            &summary_source,
             &template_id,
             &template,
             token_threshold,
@@ -680,7 +681,7 @@ impl SummaryService {
         Self::cleanup_cancellation_token(&meeting_id, &generation_id);
 
         match result {
-            Ok((final_markdown, english_markdown, num_chunks)) => {
+            Ok((final_markdown, english_markdown, num_chunks, source_facts)) => {
                 let final_markdown = normalize_simplified_chinese_script(
                     &final_markdown,
                     summary_language.as_deref(),
@@ -730,6 +731,7 @@ impl SummaryService {
                     "markdown": english_markdown,
                     "pipelineVersion": SUMMARY_PIPELINE_VERSION,
                 });
+                result_json["sourceFacts"] = source_facts;
 
                 // Update database with completed status
                 let database_body = result_json
@@ -1134,8 +1136,8 @@ mod tests {
     #[test]
     fn t07_previous_pipeline_cache_is_rejected_without_rewriting_stored_body() {
         let current = sample_cache_source();
-        assert_eq!(current.pipeline_version, 2026100410);
-        let mut old = current.clone(); old.pipeline_version = 2026091306;
+        assert_eq!(current.pipeline_version, SUMMARY_PIPELINE_VERSION);
+        let mut old = current.clone(); old.pipeline_version = current.pipeline_version - 1;
         let raw = build_summary_result_json("人工保留正文", "# Old English\nBody", old, Some("fr")).to_string();
         assert_eq!(extract_cached_english_markdown(&raw, &current, Some("de")).unwrap(), None);
         assert_eq!(serde_json::from_str::<serde_json::Value>(&raw).unwrap()["markdown"], "人工保留正文");
