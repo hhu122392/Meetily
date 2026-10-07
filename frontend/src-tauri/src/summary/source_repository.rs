@@ -217,6 +217,7 @@ fn read_metadata_provider(folder_path: &str) -> Option<String> {
     value
         .get("transcription_provider")
         .and_then(|value| value.as_str())
+        .or_else(|| value.pointer("/import_contract/provider").and_then(|value| value.as_str()))
         .map(str::to_owned)
 }
 
@@ -401,6 +402,38 @@ mod tests {
         .execute(pool)
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn imported_engine_is_stable_when_global_default_changes() {
+        let pool = test_pool().await;
+        insert_meeting_with_whisper(&pool, "真实导入的原文、时间和片段身份不能因切换默认引擎而变化").await;
+        sqlx::query("ALTER TABLE meetings ADD COLUMN folder_path TEXT")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE transcript_settings (id TEXT PRIMARY KEY, provider TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO transcript_settings VALUES ('1', 'localWhisper')")
+            .execute(&pool).await.unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        let metadata = directory.path().join("metadata.json");
+        std::fs::write(&metadata, r#"{"import_contract":{"provider":"sensevoice","model":"sensevoice-small-int8"}}"#).unwrap();
+        sqlx::query("UPDATE meetings SET folder_path = ? WHERE id = 'meeting-1'")
+            .bind(directory.path().to_str().unwrap()).execute(&pool).await.unwrap();
+        let imported = resolve_active_summary_input(&pool, "meeting-1").await.unwrap();
+        assert_eq!(imported.source.source_kind, TranscriptSourceKind::SenseVoice);
+        assert_eq!(imported.source.transcript_version_id, "legacy_sensevoice_meeting-1");
+        sqlx::query("UPDATE transcript_settings SET provider = 'parakeet'")
+            .execute(&pool).await.unwrap();
+        assert_eq!(resolve_active_summary_input(&pool, "meeting-1").await.unwrap(), imported);
+
+        // Live/legacy explicit meeting provenance retains priority over import metadata.
+        std::fs::write(&metadata, r#"{"transcription_provider":"whisper","import_contract":{"provider":"sensevoice"}}"#).unwrap();
+        let legacy = resolve_active_summary_input(&pool, "meeting-1").await.unwrap();
+        assert_eq!(legacy.source.source_kind, TranscriptSourceKind::Whisper);
+        assert_eq!(legacy.source.segments, imported.source.segments);
+        assert_eq!(legacy.source.transcript_sha256, imported.source.transcript_sha256);
+        std::fs::write(&metadata, "{}").unwrap();
+        assert_eq!(resolve_active_summary_input(&pool, "meeting-1").await.unwrap().source.source_kind, TranscriptSourceKind::Parakeet);
     }
 
     #[tokio::test]
