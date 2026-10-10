@@ -39,9 +39,9 @@
     {
       "id": "action_items",
       "title": "Action Items",
-      "instruction": "List all assigned tasks with their owners and due date. Always add reference transcript segment and timestamp in the table.",
+      "instruction": "List all assigned tasks with their owners and due date. Keep only conclusions and business fields in the report; source excerpts and timestamps remain internal.",
       "format": "list",
-      "item_format": "| **Owner** | Task | Due | Reference Transcript Segment | Segment Time stamp |\n| --- | --- | --- | --- | --- |",
+      "item_format": "| **Owner** | Task | Due |\n| --- | --- | --- |",
       "example_item_format": null,
       "required": true,
       "empty_behavior": "show_not_mentioned"
@@ -58,6 +58,6 @@
     }
   ],
   "extensions": {
-    "meetily.content_revision": 1
+    "meetily.content_revision": 3
   }
 }

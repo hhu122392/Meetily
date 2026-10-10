@@ -39,9 +39,9 @@
     {
       "id": "action_items",
       "title": "行动项",
-      "instruction": "列出所有已分配任务、负责人和截止日期，并始终在表格中附上对应的转录片段和时间戳。",
+      "instruction": "列出所有已分配任务、负责人和截止日期，只保留会议结论和行动字段。原文依据和时间戳由程序内部保存，不写入摘要正文。",
       "format": "list",
-      "item_format": "| **负责人** | **任务** | **截止时间** | **对应转录片段** | **片段时间戳** |\n| --- | --- | --- | --- | --- |",
+      "item_format": "| **负责人** | **任务** | **截止时间** |\n| --- | --- | --- |",
       "example_item_format": null,
       "required": true,
       "empty_behavior": "show_not_mentioned"
@@ -58,6 +58,6 @@
     }
   ],
   "extensions": {
-    "meetily.content_revision": 2
+    "meetily.content_revision": 3
   }
 }

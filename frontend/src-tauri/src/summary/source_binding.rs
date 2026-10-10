@@ -1101,9 +1101,52 @@ pub fn review_trace_slot_is_masked(markdown: &str, trace: &SummaryFieldTrace) ->
 }
 
 fn task_matches(text: &str, task: &str) -> bool {
-    if !task.is_ascii() { return normalize_evidence(text).contains(task); }
+    if !task.is_ascii() {
+        return task_match_start(text, task).is_some();
+    }
     let pattern = task.split_whitespace().map(regex::escape).collect::<Vec<_>>().join(r"\s+");
     Regex::new(&format!(r"(?i)(?:^|[^a-z0-9_]){pattern}(?:$|[^a-z0-9_])")).unwrap().is_match(text)
+}
+
+fn task_match_start(text: &str, task: &str) -> Option<usize> {
+    let mut normalized = String::new();
+    let mut offsets = Vec::new();
+    for (byte, character) in text.char_indices() {
+        for normalized_character in character.nfkc().flat_map(char::to_lowercase) {
+            if !normalized_character.is_whitespace() && !normalized_character.is_ascii_punctuation() {
+                normalized.push(normalized_character);
+                offsets.push(byte);
+            }
+        }
+    }
+    let task = normalize_evidence(task);
+    if task.is_empty() { return None; }
+    if let Some(start) = normalized.find(&task) {
+        return offsets.get(normalized[..start].chars().count()).copied();
+    }
+    // ponytail: allow a short spoken filler inside a Chinese action phrase;
+    // source evidence remains the original segment and values are unchanged.
+    let fillers = ['来', '地', '的', '了'];
+    let text_chars = normalized.chars().collect::<Vec<_>>();
+    let task_chars = task.chars().collect::<Vec<_>>();
+    for start in 0..text_chars.len() {
+        let mut cursor = start;
+        let mut matched = true;
+        for wanted in &task_chars {
+            let mut skipped = 0;
+            while cursor < text_chars.len() && text_chars[cursor] != *wanted && fillers.contains(&text_chars[cursor]) && skipped < 2 {
+                cursor += 1;
+                skipped += 1;
+            }
+            if cursor == text_chars.len() || text_chars[cursor] != *wanted {
+                matched = false;
+                break;
+            }
+            cursor += 1;
+        }
+        if matched { return offsets.get(start).copied(); }
+    }
+    None
 }
 
 fn recover_field_value(field: SummaryTraceField, anchors: &[String], all_tasks: &[String], source: &TranscriptVersionSnapshot, owners: &[String]) -> Option<String> {
@@ -1307,7 +1350,10 @@ fn scoped_source_statements(source: &TranscriptVersionSnapshot, all_tasks: &[Str
             } else {
                 previous = if subjects.len() == 1 {
                     let task = subjects[0];
-                    let start = normalized.find(normalize_evidence(task).as_str()).unwrap();
+                    let normalized_task = normalize_evidence(task);
+                    let start = normalized.find(normalized_task.as_str()).or_else(|| {
+                        normalized_task.chars().next().and_then(|first| normalized.find(first))
+                    }).unwrap_or(0);
                     let prefix = &normalized[..start];
                     let object_only = ["依赖", "前提", "卡在", "dependson", "blockedby"].iter().any(|word| prefix.contains(word));
                     let hypothetical = hypothetical_assignment(sentence, all_tasks);
@@ -1472,13 +1518,13 @@ fn assigned_subjects(sentence: &str, task: &str) -> Vec<String> {
         if task_matches(&sentence[capture.get(0).unwrap().end()..], task) { return owner_members(&capture["people"]).into_iter().filter(|name| !unresolved_owner(name)).collect(); }
     }
     let text = sentence.nfkc().flat_map(char::to_lowercase).filter(|ch| !ch.is_whitespace()).collect::<String>();
-    let Some(action) = text.find(task) else { return Vec::new(); };
+    let Some(action) = task_match_start(&text, task) else { return Vec::new(); };
     let prefix = &text[..action];
     let role = ["负责", "承担"].iter().filter_map(|role| prefix.rfind(role).map(|start| (start, *role, false)));
     let request = ["要求", "请"].iter().filter_map(|role| prefix.rfind(role).map(|start| (start, *role, true)));
     let explicit = role.chain(request).max_by_key(|(start, _, _)| *start);
-    let imperative = prefix.rfind('要').filter(|start| !prefix[..*start].ends_with(['需', '想'])
-        && explicit.map_or(true, |(prior, _, _)| *start > prior && prefix[prior..*start].contains([',', '，']))).map(|start| (start, "要", false));
+    let imperative = prefix.rfind('要').filter(|start| explicit.is_none() && !prefix[..*start].ends_with(['需', '想']))
+        .map(|start| (start, "要", false));
     let Some((start, marker, requested)) = imperative.or(explicit) else { return Vec::new(); };
     let names = if requested {
         let tail = &prefix[start + marker.len()..];
@@ -1556,8 +1602,8 @@ fn oral_relative_deadline(sentence: &str, anchors: &[String]) -> Option<String> 
         || prefix.ends_with(['到', '至', '或', '约']) { return None; }
     // The time must govern this immediate action, not a later approval or discussion.
     let action = normalize_evidence(sentence[found.end()..].split(['，', ',', '；', ';', '。']).next()?);
-    let anchored = anchors.iter().any(|task| action.starts_with(task)
-        || ["完成", "执行", "开展"].iter().any(|verb| action.strip_prefix(verb).is_some_and(|tail| tail.starts_with(task))));
+    let anchored = anchors.iter().any(|task| task_match_start(&action, task) == Some(0)
+        || ["完成", "执行", "开展"].iter().any(|verb| action.strip_prefix(verb).is_some_and(|tail| task_match_start(tail, task) == Some(0))));
     anchored.then(|| periods[0]["value"].to_owned())
 }
 
@@ -1703,7 +1749,7 @@ fn stated_attribute_assertion(
 }
 
 fn deadline_values_match(candidate: &str, source: &str) -> bool {
-    if normalize_evidence(candidate).replace("之内", "内").trim_end_matches('前') == normalize_evidence(source).replace("之内", "内").trim_end_matches('前') { return true; }
+    if normalize_deadline_value(candidate) == normalize_deadline_value(source) { return true; }
     static CHINESE_DATE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(\d{1,2})[点时](?:(\d{1,2})分?)?前?$").unwrap());
     // Match minute precision only; render the literal source, never an inferred UTC time or year.
     static ISO_DATE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::00(?:\.0+)?)?Z?$").unwrap());
@@ -1714,6 +1760,22 @@ fn deadline_values_match(candidate: &str, source: &str) -> bool {
         && month == number(&iso, 2) && day == number(&iso, 3) && hour == number(&iso, 4) && minute == number(&iso, 5).unwrap_or(0)
         && hour.is_some_and(|hour| hour < 24) && minute < 60
         && chrono::NaiveDate::from_ymd_opt(number(&original, 1).unwrap_or(2000) as i32, month.unwrap_or(0), day.unwrap_or(0)).is_some()
+}
+
+fn normalize_deadline_value(value: &str) -> String {
+    normalize_evidence(value)
+        .replace("之内", "内")
+        .trim_end_matches('前')
+        .chars()
+        .flat_map(|character| match character {
+            '一' => "1".chars().collect::<Vec<_>>(), '二' | '两' => "2".chars().collect(),
+            '三' => "3".chars().collect(), '四' => "4".chars().collect(),
+            '五' => "5".chars().collect(), '六' => "6".chars().collect(),
+            '七' => "7".chars().collect(), '八' => "8".chars().collect(),
+            '九' => "9".chars().collect(), '〇' | '零' => "0".chars().collect(),
+            '十' => "10".chars().collect(), other => vec![other],
+        })
+        .collect()
 }
 
 fn normalize_field_value(field: SummaryTraceField, value: &str) -> String {
@@ -2040,6 +2102,18 @@ mod tests {
         assert!(trace_action_fields_with_spelling("任务：整理报告；负责人：林舟", &absent, normalize).unwrap().iter().all(|trace| trace.status == SummaryTraceStatus::NeedsReview));
         let mut corrupted = source; corrupted.segments[0].text.push_str("更正");
         assert_eq!(trace_action_fields_with_spelling("任务：整理报告；负责人：林舟", &corrupted, normalize).unwrap_err(), SummarySourceBindingError::TranscriptHashMismatch);
+    }
+
+    #[test]
+    fn spoken_fillers_and_chinese_digits_do_not_hide_supported_action_fields() {
+        let source = t06_source(&["院长要求农业部还有教育部，要在一周之内与地方政府来妥善沟通。"]);
+        assert_eq!(assigned_subjects(&source.segments[0].text, "与地方政府妥善沟通"), vec!["农业部", "教育部"]);
+        let traces = trace_owner_and_time_fields(
+            "| 任务 | 负责人 | 截止时间 |\n| --- | --- | --- |\n| 与地方政府妥善沟通 | 农业部、教育部 | 1周内 |",
+            &source,
+        ).unwrap();
+        assert!(traces.iter().filter(|trace| matches!(trace.field, SummaryTraceField::Owner | SummaryTraceField::Time))
+            .all(|trace| trace.status == SummaryTraceStatus::Supported), "{traces:?}");
     }
 
     #[test]

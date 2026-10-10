@@ -471,13 +471,13 @@ This is application policy, not meeting evidence. Apply it immediately before re
 - Separate actions with different deadlines or prerequisites into separate rows. Preparing material, approving it, and sending it are different actions. A preparation deadline covers preparation only. A dependency means something that must happen BEFORE that row's action; a later approval/send step, an unknown date, or the consequence of missing a deadline is not a prerequisite for preparing material. Put those facts on their own action or risk, as appropriate. Do not invent a deadline or owner for the separate action.
 - Keep each personal experience and its outcome distinct. Do not attach a failure, success or cause to a different experience just because the speaker described them together.
 - For a lecture or interview, summarize its actual ideas and experiences. Rhetorical questions and scientific interests belong in the topic discussion; they are not unresolved meeting decisions or assigned follow-up work unless the source explicitly treats them that way.
-- When no verified calendar facts are available, retain explicit spoken meeting metadata by quoting its original wording. Do not infer metadata from recording timestamps or from dates, names and titles discussed as other topics.
+- Retain an explicitly stated meeting date or scheduled business time when it is part of the meeting facts. Ignore casual clock remarks, recording narration and transcript-position comments; they are not report conclusions.
 - Preserve acceptance conditions literally. Completing a test run does not mean every case passed. Do not strengthen, weaken, or reconstruct a condition in the overview: reuse its source wording or refer to the stated acceptance criteria. Preserve which group a count or subset belongs to throughout the report.
 - Explicit source support includes unambiguous pronouns and a subject carried across consecutive actions in the same utterance. If the speaker says they will prepare material and send it after approval, that speaker owns both actions; only the unprovided date remains unknown. This does not permit inferring a person's job title or assigning them unrelated work.
 - A first-person commitment identifies a named owner only when that utterance has a supplied reliable name binding or explicit self-identification. Without speaker attribution, "I" means an unidentified speaker: keep the named owner unknown. An attendee list, mentioned names, turn order or a nearby self-introduction does not bind other utterances to a person. Anonymous speaker labels are not real names. Explicit assignment to a named person can establish task ownership without identifying who spoke.
 - Separate first-person commitments in an unlabeled transcript may come from different people. Do not state that they have the same speaker or different speakers, and do not infer a speaker count. Keep each task's owner unknown independently unless explicit source evidence links it to a known person. Apply this restriction to the overview and discussion as well as the action table.
 - Keep risk descriptions and mitigations close to the source wording. Do not turn a missing mitigation, missing information or an approval condition into the cause or trigger of the risk. Only state a risk's trigger, impact or owner when explicitly supported; otherwise mark that field Not mentioned. Do not complete a risk analysis from general knowledge.
-- Do not silently correct uncertain transcript words using world knowledge. Preserve the original term with an uncertainty note, or omit a nonessential uncertain detail. A supplied recognition dictionary may establish spelling; an unverified guess does not. Do not finish a sentence that the recording cuts off.
+- Do not silently correct uncertain transcript words using world knowledge. Omit a nonessential uncertain detail, or retain only the clearly supported conclusion. Keep spelling-review notes outside the report. A supplied recognition dictionary may establish spelling; an unverified guess does not. Do not finish a sentence that the recording cuts off.
 </output_grounding_gate>"#,
     );
     prompt
@@ -527,7 +527,9 @@ fn build_final_report_system_prompt(
 11. Output **only** the completed Markdown report.
 12. Preserve explicitly unresolved matters and corrections. Use the final corrected number or decision, and retain any conditions. Do not invent benefits, dependencies or failure causes.
 13. Keep deadlines with their own task. Preserve the source's time expression; do not replace "today" with a guessed date, or a deadline with the meeting end time. Keep dependency direction: a prerequisite belongs to the task that requires it.
-14. If the template specifies an action table, preserve its exact column headers and order and fill its rows. Include one row for every explicitly assigned task in the action or deliverable table, including communication tasks such as invitations, sending minutes or follow-up. Otherwise, for each action, use labeled fields on one line: Task; Owner; Deadline; Dependency. Translate these labels into the requested language and separate fields with semicolons. Include a dependency only if explicitly stated for that task. Start each task with a short VERBATIM action phrase from the original transcript (same verb and object, same language). Put any additional display explanation in parentheses after it. Never replace that source action with a broader plan, an approval stage or a paraphrase. A related quote alone does not support a rewritten task.
+14. If the template specifies an action table, preserve its exact business column headers and order and fill its rows. Include one row only for a follow-up task that the source explicitly assigns to a person or team; a decision, report, event, background fact or discussion topic is not an action unless the source also assigns someone to do it. Otherwise use labeled fields: Task; Owner; Deadline; Dependency, in the requested language. Keep the task cell as a short verb-object phrase taken from one continuous source clause whenever possible; preserve its scope and conditions, but do not merge multiple clauses or rewrite the task into a long paraphrase. Do not turn a preparation task into a later approval or delivery task.
+
+15. Write concise conclusions, not a transcript excerpt collection. Remove greetings, filler, repetitions and moderator handoffs. Do not add recording timestamps, source IDs, verbatim transcript columns, audit commentary or spelling-review notes to the report. Business dates and task deadlines must remain. Summarize each discussion topic in one or two sentences; do not repeat the decision or action table in the discussion. Missing optional metadata needs no explanatory aside in prose.
 
 **SECTION-SPECIFIC INSTRUCTIONS:**
 {section_instructions}
@@ -648,11 +650,23 @@ pub fn clean_llm_markdown_output(markdown: &str) -> String {
 }
 
 fn clean_summary_draft(markdown: &str) -> Result<String, String> {
-    let cleaned = clean_llm_markdown_output(markdown);
+    static REPORT_META_NOTE: Lazy<Regex> = Lazy::new(|| Regex::new(
+        r"(?i)[（(][^（）()\n]*(?:转写|录音|时间戳|来源|原始录音|transcript|recording|timestamp|source)[^（）()\n]*[）)]"
+    ).expect("report metadata note regex must compile"));
+    let cleaned = REPORT_META_NOTE.replace_all(&clean_llm_markdown_output(markdown), "").to_string();
     if cleaned.is_empty() {
         return Err("LLM returned no report content after removing reasoning and Markdown wrappers.".to_string());
     }
     Ok(cleaned)
+}
+
+#[test]
+fn cleaned_summary_removes_transcript_meta_parentheticals() {
+    assert_eq!(
+        clean_summary_draft("核心结论（转写开头出现‘十一点半了’）已确认。\n\n| 来源 | 结论 |\n| --- | --- |\n| 录音 | 已完成 |")
+            .unwrap(),
+        "核心结论已确认。\n\n| 来源 | 结论 |\n| --- | --- |\n| 录音 | 已完成 |",
+    );
 }
 
 #[test]
@@ -933,86 +947,208 @@ pub async fn generate_meeting_summary(
         .map(SummaryMeetingContext::to_prompt_block)
         .transpose()?;
 
+    summary_source.validate_active().map_err(|e| e.to_string())?;
     let total_tokens = rough_token_count(text);
     info!("Transcript length: {} tokens", total_tokens);
 
-    // ponytail: extractive facts protect source meaning; a free-form second pass
-    // previously changed deadlines and joined unrelated topics. Selection itself
-    // can still omit a fact, so assignments and critical facts are restored from
-    // source statements before rendering and checked independently in acceptance.
-    // Old text caches do not contain verifiable sentence selections.
-    let _ = cached_english;
-    use super::grounded_report::{source_sentences, selection_prompt, selection_grammar, selection_limit, parse_selection, parse_section_selection, action_section_index, render_selection, complete_assigned_actions, complete_critical_facts, complete_background_focus, FactSelection};
-    let sentences = source_sentences(summary_source);
-    let mut chunks = Vec::new();
-    let mut start = 0;
-    let mut size = 0;
-    let limit = token_threshold.saturating_sub(1500).max(1000);
-    for (index, sentence) in sentences.iter().enumerate() {
-        let tokens = rough_token_count(&sentence.text) + 40;
-        if size > 0 && size + tokens > limit { chunks.push(&sentences[start..index]); start = index; size = 0; }
-        size += tokens;
-    }
-    if start < sentences.len() { chunks.push(&sentences[start..]); }
-    if chunks.is_empty() { return Err("No source sentences available".into()); }
-    let context = format!("{}\n{}", summary_context_prompt.as_deref().unwrap_or_default(), custom_prompt);
-    let mut facts = FactSelection::default();
-    let mut selector_responses = Vec::new();
-    let mut model_calls = 0;
-    let chunk_stage = measurement::stage_guard("chunk_summaries");
-    for (chunk_index, chunk) in chunks.iter().enumerate() {
-      for index in 0..template.sections.len() {
-        if Some(index) == action_section_index(template) { continue; }
-        // Each later section gets new facts instead of spending its limit on
-        // the same sentences already rendered in earlier sections.
-        let remaining = chunk.iter().filter(|sentence| !facts.sections.iter().any(|section| section.sentences.contains(&sentence.id))).cloned().collect::<Vec<_>>();
-        if remaining.is_empty() { continue; }
-        let prompt = selection_prompt(&remaining, template, &context, index);
-        let grammar = selection_grammar(&remaining, selection_limit(template, index));
-        measurement::record_source_selection(&serde_json::json!({"phase":"selection_input","chunk":chunk_index,"section":index,"prompt":prompt,"grammar":grammar}));
-        let mut parsed = None;
-        let mut error = String::new();
-        for attempt in 0..2 {
-            let user_prompt = if attempt == 0 { prompt.clone() } else { format!("{prompt}\nYour previous response was invalid: {error}. Return only the requested JSON with existing IDs and literal source tasks.") };
-            let raw = generate_summary(client, provider, model_name, api_key,
-                "Select source facts. Do not compose a report or invent content. Output only the requested JSON.",
-                &user_prompt, ollama_endpoint, custom_openai_endpoint, max_tokens, temperature, top_p, summary_models_dir, cancellation_token, Some(&grammar)).await?;
-            model_calls += 1;
-            let raw = clean_llm_markdown_output(&raw);
-            let result = parse_section_selection(&raw, &remaining, template, index);
-            measurement::record_source_selection(&serde_json::json!({"chunk":chunk_index,"section":index,"attempt":attempt,"response":raw,"error":result.as_ref().err()}));
-            selector_responses.push(raw);
-            match result {
-                Ok(selected) => { parsed = Some(selected); break; }
-                Err(message) => {
-                    error = message;
+    let (mut english_markdown, successful_chunk_count) = if let Some(cached) =
+        resolve_cached_english(cached_english, summary_language)
+    {
+        info!(
+            "✓ Using cached English summary ({} chars), skipping pass 1",
+            cached.len()
+        );
+        (cached.to_string(), 1_i64)
+    } else {
+        let content_to_summarize: String;
+        let successful_chunk_count: i64;
+
+        // Strategy: Use single-pass for cloud providers or short transcripts
+        // Use multi-level chunking for Ollama/BuiltInAI with long transcripts
+        // Cloud requests retain the full transcript; provider limits remain authoritative.
+        if (provider != &LLMProvider::Ollama && provider != &LLMProvider::BuiltInAI)
+            || total_tokens < token_threshold
+        {
+            let chunk_stage = measurement::stage_guard("chunk_summaries");
+            info!(
+                "Using single-pass summarization (tokens: {}, threshold: {})",
+                total_tokens, token_threshold
+            );
+            content_to_summarize = text.to_string();
+            successful_chunk_count = 1;
+            chunk_stage.finish();
+            let combine_stage = measurement::stage_guard("combine");
+            combine_stage.finish();
+        } else {
+            info!(
+                "Using multi-level summarization (tokens: {} exceeds threshold: {})",
+                total_tokens, token_threshold
+            );
+
+            // Reserve 300 tokens for prompt overhead
+            let chunks = chunk_text(text, token_threshold.saturating_sub(300).max(1000), 100);
+            let num_chunks = chunks.len();
+            info!("Split transcript into {} chunks", num_chunks);
+
+            let mut chunk_summaries = Vec::new();
+            let system_prompt_chunk = "You are an expert meeting summarizer.";
+            let chunk_stage = measurement::stage_guard("chunk_summaries");
+
+            for (i, chunk) in chunks.iter().enumerate() {
+                // Check for cancellation before processing each chunk
+                if let Some(token) = cancellation_token {
+                    if token.is_cancelled() {
+                        info!(
+                            "Summary generation cancelled during chunk {}/{}",
+                            i + 1,
+                            num_chunks
+                        );
+                        return Err("Summary generation was cancelled".to_string());
+                    }
+                }
+
+                info!("Processing chunk {}/{}", i + 1, num_chunks);
+                let user_prompt_chunk = prompt_in_output_language(
+                    build_chunk_summary_user_prompt(chunk, summary_context_prompt.as_deref()),
+                    summary_language,
+                );
+
+                match generate_summary(
+                    client,
+                    provider,
+                    model_name,
+                    api_key,
+                    system_prompt_chunk,
+                    &user_prompt_chunk,
+                    ollama_endpoint,
+                    custom_openai_endpoint,
+                    max_tokens,
+                    temperature,
+                    top_p,
+                    summary_models_dir,
+                    cancellation_token,
+                    None,
+                )
+                .await
+                {
+                    Ok(summary) => {
+                        chunk_summaries.push(summary);
+                        info!("✓ Chunk {}/{} processed successfully", i + 1, num_chunks);
+                    }
+                    Err(e) => {
+                        // Check if error is due to cancellation
+                        if e.contains("cancelled") {
+                            return Err(e);
+                        }
+                        return Err(format!("Transcript chunk {}/{} failed: {}", i + 1, num_chunks, e));
+                    }
                 }
             }
+
+            if chunk_summaries.is_empty() {
+                return Err(
+                    "Multi-level summarization failed: No chunks were processed successfully."
+                        .to_string(),
+                );
+            }
+
+            successful_chunk_count = chunk_summaries.len() as i64;
+            info!(
+                "Successfully processed {} out of {} chunks",
+                successful_chunk_count, num_chunks
+            );
+            chunk_stage.finish();
+
+            // Combine chunk summaries if multiple chunks
+            let combine_stage = measurement::stage_guard("combine");
+            content_to_summarize = if chunk_summaries.len() > 1 {
+                info!(
+                    "Combining {} chunk summaries into cohesive summary",
+                    chunk_summaries.len()
+                );
+                let combined_text = chunk_summaries.join("\n---\n");
+                let system_prompt_combine = "You are an expert at synthesizing meeting summaries.";
+                let user_prompt_combine = prompt_in_output_language(build_combine_summary_user_prompt(
+                    &combined_text,
+                    summary_context_prompt.as_deref(),
+                ), summary_language);
+                generate_summary(
+                    client,
+                    provider,
+                    model_name,
+                    api_key,
+                    system_prompt_combine,
+                    &user_prompt_combine,
+                    ollama_endpoint,
+                    custom_openai_endpoint,
+                    max_tokens,
+                    temperature,
+                    top_p,
+                    summary_models_dir,
+                    cancellation_token,
+                    None,
+                )
+                .await?
+            } else {
+                chunk_summaries.remove(0)
+            };
+            combine_stage.finish();
         }
-        let selected = parsed.ok_or_else(|| format!("Source fact selection failed: {error}"))?;
-        for section in selected.sections {
-            if let Some(prior) = facts.sections.iter_mut().find(|prior| prior.index == section.index) { prior.sentences.extend(section.sentences); prior.sentences.sort_unstable(); prior.sentences.dedup(); }
-            else { facts.sections.push(section); }
+
+        let final_template_stage = measurement::stage_guard("final_template");
+        info!(
+            "Generating final markdown report with template: {}",
+            template_id
+        );
+
+        // Generate markdown structure and section instructions using template methods
+        let clean_template_markdown = template.to_markdown_structure();
+        let section_instructions = template.to_section_instructions();
+
+        let final_system_prompt = prompt_in_output_language(
+            build_final_report_system_prompt(&section_instructions, &clean_template_markdown),
+            summary_language,
+        );
+
+        let final_user_prompt = build_final_report_user_prompt(
+            &content_to_summarize,
+            custom_prompt,
+            summary_context_prompt.as_deref(),
+        );
+
+        // Check cancellation before final summary generation
+        if let Some(token) = cancellation_token {
+            if token.is_cancelled() {
+                info!("Summary generation cancelled before final summary");
+                return Err("Summary generation was cancelled".to_string());
+            }
         }
-        facts.actions.extend(selected.actions);
-      }
-    }
-    let successful_chunk_count = chunks.len() as i64;
-    chunk_stage.finish();
-    let combine_stage = measurement::stage_guard("combine");
-    complete_assigned_actions(&mut facts, &sentences, template, summary_source);
-    complete_critical_facts(&mut facts, &sentences, template);
-    complete_background_focus(&mut facts, &sentences, template, custom_prompt, summary_source);
-    if facts.sections.iter().all(|section| section.sentences.is_empty()) && facts.actions.is_empty() { return Err("No source facts selected".into()); }
-    let facts = parse_selection(&serde_json::to_string(&facts).map_err(|error| error.to_string())?, &sentences, template)?;
-    combine_stage.finish();
-    let final_template_stage = measurement::stage_guard("final_template");
-    let mut english_markdown = render_selection(&facts, &sentences, template, summary_source)?;
-    let used = facts.sections.iter().flat_map(|section| section.sentences.iter().copied())
-        .chain(facts.actions.iter().flat_map(|action| action.context.iter().copied())).collect::<std::collections::BTreeSet<_>>();
-    let source_facts = serde_json::json!({"schemaVersion":1,"selection":facts,"sentences":sentences.iter().filter(|sentence| used.contains(&sentence.id)).collect::<Vec<_>>(),"selectorResponses":selector_responses,"modelCalls":model_calls});
-    info!("Rendered source fact report for template {} ({} chars, {} selector calls)", template_id, english_markdown.len(), model_calls);
-    final_template_stage.finish();
+
+        let raw_markdown = generate_summary(
+            client,
+            provider,
+            model_name,
+            api_key,
+            &final_system_prompt,
+            &final_user_prompt,
+            ollama_endpoint,
+            custom_openai_endpoint,
+            max_tokens,
+            temperature,
+            top_p,
+            summary_models_dir,
+            cancellation_token,
+            None,
+        )
+        .await?;
+
+        measurement::record_source_selection(&serde_json::json!({"phase":"final_report","response":raw_markdown}));
+        let english_markdown = clean_summary_draft(&raw_markdown)?;
+        info!("Summary pass completed ({} chars)", english_markdown.len());
+        final_template_stage.finish();
+
+        (english_markdown, successful_chunk_count)
+    };
 
     // Cover both fresh generation and a cached English pass before any
     // translation.  A later guard also protects against a translation model
@@ -1027,15 +1163,19 @@ pub async fn generate_meeting_summary(
     );
 
     let translation_stage = measurement::stage_guard("translation");
+    // Preserve source-sensitive values while changing display language. The
+    // summary no longer has an intermediate fact-selection object, so protect
+    // values from the generated Markdown itself and let source binding review
+    // uncertain fields afterward.
     let (translation_input, protected_actions) = protect_translation_actions(&english_markdown);
-    let english_target = summary_language.and_then(language_name_from_code).unwrap_or("English") == "English";
-    let tasks = facts.actions.iter().map(|action| action.task.clone()).collect::<Vec<_>>();
-    let source_names = tasks.iter().flat_map(|task| super::source_binding::source_action_values(task, &tasks, summary_source))
-        .filter(|(field, _)| *field == super::source_binding::SummaryTraceField::Owner)
-        .flat_map(|(_, owners)| owners.split(['、', ',', '，']).map(str::trim).map(str::to_owned).collect::<Vec<_>>())
-        .collect::<std::collections::BTreeSet<_>>().into_iter().collect::<Vec<_>>();
-    let (translation_input, mut quoted_prose) = protect_translation_prose(&translation_input, english_target, &tasks);
-    let (translation_input, mut protected_values, protected_negatives) = protect_translation_values(&translation_input, english_target, &source_names, &english_markdown);
+    let english_target = summary_language
+        .and_then(language_name_from_code)
+        .unwrap_or("English")
+        == "English";
+    let (translation_input, mut quoted_prose) =
+        protect_translation_prose(&translation_input, english_target, &[]);
+    let (translation_input, mut protected_values, protected_negatives) =
+        protect_translation_values(&translation_input, english_target, &[], &english_markdown);
     protected_values.append(&mut quoted_prose);
     let final_markdown = match resolve_final_language_action(
         summary_language,
@@ -1060,13 +1200,17 @@ pub async fn generate_meeting_summary(
             )
             .await
             {
-                Ok(translated) => restore_translation_actions(&restore_translation_values(&translated, &protected_values, &protected_negatives)?, &protected_actions, english_target)?,
+                Ok(translated) => restore_translation_actions(
+                    &restore_translation_values(&translated, &protected_values, &protected_negatives)?,
+                    &protected_actions,
+                    english_target,
+                )?,
                 Err(e) => return Err(format!("Translation to {} failed: {}", name, e)),
             }
         }
         FinalLanguageAction::NormalizeEnglish => {
             info!(
-                "English target with detected draft language {:?}; translating source report",
+                "English target with detected draft language {:?}; running soft English normalization",
                 detected_draft.language
             );
             let normalized = normalize_markdown_to_english(
@@ -1085,7 +1229,11 @@ pub async fn generate_meeting_summary(
                     cancellation_token,
                 )
                 .await?;
-            let normalized = restore_translation_values(&normalized, &protected_values, &protected_negatives)?;
+            let normalized = restore_translation_values(
+                &normalized,
+                &protected_values,
+                &protected_negatives,
+            )?;
             let normalized = restore_translation_actions(&normalized, &protected_actions, true)?;
             english_markdown = normalized.clone();
             normalized
@@ -1101,7 +1249,7 @@ pub async fn generate_meeting_summary(
     let final_markdown = super::report_format::preserve_report_blocks(&final_markdown);
 
     info!("Summary generation completed successfully");
-    Ok((final_markdown, english_markdown, successful_chunk_count, source_facts))
+    Ok((final_markdown, english_markdown, successful_chunk_count, serde_json::json!({"schemaVersion":1,"mode":"model_markdown"})))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1776,9 +1924,9 @@ mod tests {
         assert!(prompt.contains("Write the report directly in Simplified Chinese"));
         assert!(prompt.contains("Copy standalone section titles and table column headers exactly"));
         assert!(prompt.contains("Translate only prose, list items and table data cells"));
-        assert!(prompt.contains("If the template specifies an action table, preserve its exact column headers and order"));
-        assert!(prompt.contains("one row for every explicitly assigned task"));
-        assert!(prompt.contains("including communication tasks such as invitations"));
+        assert!(prompt.contains("If the template specifies an action table, preserve its exact business column headers and order"));
+        assert!(prompt.contains("Include one row only for a follow-up task"));
+        assert!(prompt.contains("Remove greetings, filler, repetitions and moderator handoffs"));
         assert!(prompt.contains("placeholder in the requested output language"));
         assert!(prompt.contains(template));
         assert!(!prompt.contains(ENGLISH_BASE_SUMMARY_INSTRUCTION));

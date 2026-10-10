@@ -66,7 +66,7 @@ fn strip_title_if_present(markdown: &str) -> String {
 }
 
 const ENGLISH_CACHE_FIELD: &str = "english_cache";
-const SUMMARY_PIPELINE_VERSION: u32 = 2026100731;
+const SUMMARY_PIPELINE_VERSION: u32 = 2026100901;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct SummaryCacheSource {

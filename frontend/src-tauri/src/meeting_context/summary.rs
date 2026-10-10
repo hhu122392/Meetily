@@ -268,6 +268,14 @@ pub fn validate_summary_markdown(
     markdown: &str,
     context: Option<&SummaryMeetingContext>,
 ) -> ValidatedSummaryMarkdown {
+    validate_meeting_fields(markdown, context, true)
+}
+
+fn validate_meeting_fields(
+    markdown: &str,
+    context: Option<&SummaryMeetingContext>,
+    mask_unverified_actions: bool,
+) -> ValidatedSummaryMarkdown {
     let Some(context) = context else {
         let warning = fact_warning(
             "missing_meeting_context",
@@ -406,10 +414,14 @@ pub fn validate_summary_markdown(
         SummaryFactValidationStatus::NeedsReview
     };
     // MeetingContext currently has no authoritative action-owner/deadline schema.
-    // A small local model can still fill those template columns despite prompt rules,
-    // so omit the unsupported values deterministically instead of presenting guesses
-    // as meeting facts. The task/decision prose remains available for manual editing.
-    let safe_markdown = omit_unverified_high_risk_fields(&person_safe_markdown, context);
+    // Generated reports keep model-authored action values when lexical evidence misses;
+    // the miss is recorded in validation metadata. Plain/manual validation still masks
+    // unsupported high-risk fields before presenting them as facts.
+    let safe_markdown = if mask_unverified_actions {
+        omit_unverified_high_risk_fields(&person_safe_markdown, context)
+    } else {
+        remove_unverified_person_annotations(&person_safe_markdown, context)
+    };
     ValidatedSummaryMarkdown {
         markdown: safe_markdown,
         validation: SummaryFactValidation {
@@ -452,7 +464,7 @@ fn validate_summary_with_transcript(
     transcript: &str,
     fields_checked_separately: bool,
 ) -> ValidatedSummaryMarkdown {
-    let mut validated = validate_summary_markdown(markdown, context);
+    let mut validated = validate_meeting_fields(markdown, context, !fields_checked_separately);
     let transcript = transcript.trim();
 
     if transcript.is_empty() {
@@ -614,6 +626,15 @@ pub fn validate_summary_markdown_with_source(
     context: Option<&SummaryMeetingContext>,
     source: &TranscriptVersionSnapshot,
 ) -> Result<ValidatedSummaryMarkdown, SummarySourceBindingError> {
+    validate_summary_source(markdown, context, source, true)
+}
+
+fn validate_summary_source(
+    markdown: &str,
+    context: Option<&SummaryMeetingContext>,
+    source: &TranscriptVersionSnapshot,
+    mask_unverified_actions: bool,
+) -> Result<ValidatedSummaryMarkdown, SummarySourceBindingError> {
     let transcript = source.render_for_summary()?;
     let mut validated = validate_summary_with_transcript(markdown, context, &transcript, true);
     let evidence_markdown = context
@@ -622,7 +643,6 @@ pub fn validate_summary_markdown_with_source(
             replace_unverified_hybrid_person_names(&normalized, context).0
         })
         .unwrap_or_else(|| markdown.to_owned());
-    validated.markdown = mask_action_fields(&validated.markdown);
     let traces = match context {
         Some(context) => crate::summary::source_binding::trace_action_fields_with_spelling(
             &evidence_markdown, source, |text| context.normalize_known_aliases(text))?,
@@ -660,8 +680,10 @@ pub fn validate_summary_markdown_with_source(
         && trace.status == SummaryTraceStatus::NeedsReview) {
         push_fact_warning(&mut validated.validation, "untraceable_action_field", "summary:factValidation.untraceableActionField");
     }
-    validated.markdown =
-        restore_supported_owner_and_time_fields(&evidence_markdown, &validated.markdown, &traces);
+    if mask_unverified_actions {
+        validated.markdown = restore_supported_owner_and_time_fields(
+            &evidence_markdown, &mask_action_fields(&validated.markdown), &traces);
+    }
     validated.validation.field_traces = traces;
     validated.validation.source_evidence = Some(source.evidence_binding()?);
     review_source_spelling(&mut validated.validation, &evidence_markdown, context);
@@ -698,7 +720,10 @@ pub fn validate_generated_summary_with_source(
     let (filled, unresolved) = fill_verified_people_fields(markdown, context, template);
     let owners = context.map(|context| context.recognition_dictionary.people.iter().map(|person| person.display_name.clone()).collect::<Vec<_>>()).unwrap_or_default();
     let filled = crate::summary::source_binding::recover_missing_action_fields(&filled, source, &owners)?;
-    let mut validated = validate_summary_markdown_with_source(&filled, context, source)?;
+    // Lexical lookup can prove a literal match, but a miss cannot disprove a
+    // paraphrase. Keep that uncertainty in validation metadata, not as deleted
+    // report cells. Verified meeting facts and literal safeguards still apply.
+    let mut validated = validate_summary_source(&filled, context, source, false)?;
     if unresolved {
         push_fact_warning(&mut validated.validation, "unmapped_people_fields",
             "summary:factValidation.unmappedPeopleFields");
@@ -3391,6 +3416,26 @@ mod tests {
         let manual = validate_summary_markdown_with_source(markdown, Some(&context), &source).unwrap();
         assert_eq!(manual.markdown, markdown);
         assert!(manual.validation.field_traces.is_empty());
+    }
+
+    #[test]
+    fn generated_report_keeps_paraphrased_fields_without_certifying_lexical_misses() {
+        let source = TranscriptVersionSnapshot::legacy_whisper("press_conference", vec![TranscriptEvidenceSegment {
+            segment_id: "milk_policy".into(), start_ms: None, end_ms: None, wall_clock: None,
+            anonymous_speaker: None, bound_person_id: None, bound_display_name: None,
+            text: "院长要求农业部还有教育部，要在一周之内与地方政府来妥善沟通，检讨相关问题是否能够进行改善。".into(),
+        }]);
+        let markdown = "| 任务 | 负责人 | 截止时间 |\n| --- | --- | --- |\n| 与地方政府沟通乳品计划执行问题 | 农业部、教育部 | 1周之内 |";
+        let result = validate_generated_summary_with_source(markdown, None, &source, &t02_people_template("paragraph")).unwrap();
+        assert_eq!(result.markdown, markdown);
+        assert!(result.validation.field_traces.iter().any(|trace| trace.status == SummaryTraceStatus::NeedsReview));
+        assert_eq!(result.validation.status, SummaryFactValidationStatus::NeedsReview);
+        // A lack of evidence stays a review finding, never a false pass or a made-up value.
+        let unsupported = markdown.replace("1周之内", "明天");
+        let result = validate_generated_summary_with_source(&unsupported, None, &source, &t02_people_template("paragraph")).unwrap();
+        assert_eq!(result.markdown, unsupported);
+        assert!(result.validation.field_traces.iter().any(|trace| trace.field == SummaryTraceField::Time
+            && trace.value == "明天" && trace.status == SummaryTraceStatus::NeedsReview && trace.evidence.is_empty()));
     }
 
     #[test]

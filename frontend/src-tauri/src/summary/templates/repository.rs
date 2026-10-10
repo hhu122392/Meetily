@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 const TEMPLATE_EXTENSION: &str = "json";
 /// 内置模板落成自定义模板的"只做一次"标记文件（放在模板根目录，无 .json 后缀不会被当成模板）
-const BUILTIN_SEED_MARKER: &str = ".builtin-seed-v1";
+const BUILTIN_SEED_MARKER: &str = ".builtin-seed-v2";
 const TRASH_SEPARATOR: &str = "--";
 const MAX_TRASH_ID_LENGTH: usize = 180;
 
@@ -980,18 +980,46 @@ impl TemplateRepository {
 
         for id in defaults::list_builtin_template_ids() {
             let target = self.custom_template_path(id)?;
-            if path_entry_exists(&target) {
-                continue;
-            }
             let Some(resolved) = defaults::get_builtin_template_for_locale(id, content_locale) else {
                 continue;
             };
+            if path_entry_exists(&target) {
+                let existing = self.read_custom_file(id)?;
+                if is_untouched_builtin_seed(&existing, resolved.content) {
+                    fs::write(&target, resolved.content.as_bytes()).map_err(map_io_error)?;
+                }
+                continue;
+            }
+            // A deleted seeded template is represented only in .trash. Do not
+            // recreate it while migrating the old seed; the user's deletion is
+            // an explicit choice.
+            if self.has_deleted_template(id)? {
+                continue;
+            }
             // 直接写原始内容：与随应用发布的那份完全一致，读回来仍会走完整校验。
             fs::write(&target, resolved.content.as_bytes()).map_err(map_io_error)?;
         }
 
         fs::write(&marker, b"seeded").map_err(map_io_error)?;
         Ok(())
+    }
+
+    fn has_deleted_template(&self, template_id: &str) -> TemplateRepositoryResult<bool> {
+        for entry in fs::read_dir(self.trash_root()).map_err(map_directory_error)? {
+            let entry = entry.map_err(map_io_error)?;
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                continue;
+            }
+            reject_reparse_point(&path)?;
+            let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
+                continue;
+            };
+            if parse_trash_id(stem).ok().is_some_and(|(id, _)| id == template_id) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     fn custom_template_path(&self, template_id: &str) -> TemplateRepositoryResult<PathBuf> {
@@ -1516,6 +1544,37 @@ fn map_write_error(error: std::io::Error) -> TemplateRepositoryError {
     }
 }
 
+fn is_untouched_builtin_seed(existing: &[u8], latest: &str) -> bool {
+    let Ok(existing) = serde_json::from_slice::<TemplateV2>(existing) else {
+        return false;
+    };
+    let Ok(latest) = serde_json::from_str::<TemplateV2>(latest) else {
+        return false;
+    };
+    let existing_revision = existing
+        .extensions
+        .get("meetily.content_revision")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let latest_revision = latest
+        .extensions
+        .get("meetily.content_revision")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let legacy_source_columns = existing.sections.iter().any(|section| {
+        let Some(format) = section.item_format.as_deref() else { return false; };
+        let chinese = ["对应转录片段", "片段时间戳"];
+        let english = ["Reference Transcript Segment", "Segment Time stamp"];
+        chinese.iter().all(|label| format.contains(label))
+            || english.iter().all(|label| format.contains(label))
+    });
+    existing.source.source_type == TemplateSourceType::Builtin
+        && existing.version == 1
+        && existing.created_at == existing.updated_at
+        && existing_revision < latest_revision
+        && legacy_source_columns
+}
+
 fn map_io_error(error: std::io::Error) -> TemplateRepositoryError {
     if is_disk_full(&error) {
         TemplateRepositoryError::new(
@@ -1584,6 +1643,37 @@ mod tests {
         let temporary = TempDir::new().unwrap();
         let repository = TemplateRepository::new(temporary.path().join("templates"), None).unwrap();
         (temporary, repository)
+    }
+
+    #[test]
+    fn only_untouched_builtin_seed_files_are_eligible_for_revision_refresh() {
+        let latest = defaults::get_builtin_template_for_locale("standard_meeting", Some("zh-CN")).unwrap();
+        let mut stale = serde_json::from_str::<TemplateV2>(latest.content).unwrap();
+        stale.version = 1;
+        stale.updated_at = stale.created_at;
+        stale.extensions.insert("meetily.content_revision".into(), Value::from(2));
+        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
+            Some("| 负责人 | 任务 | 截止时间 | 对应转录片段 | 片段时间戳 |".into());
+        let stale_bytes = serde_json::to_vec(&stale).unwrap();
+        assert!(is_untouched_builtin_seed(&stale_bytes, latest.content));
+        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
+            Some("| 负责人 | 任务 | 截止时间 |".into());
+        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
+            Some("| Owner | Task | Due | Reference Transcript Segment | Segment Time stamp |".into());
+        assert!(is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+
+        stale.source.source_type = TemplateSourceType::JsonImport;
+        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+        stale.source.source_type = TemplateSourceType::Builtin;
+        stale.version = 2;
+        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+
+        let (_temporary, repository) = repository();
+        let trash_id = make_trash_id("standard_meeting", at(1), Uuid::new_v4());
+        fs::write(repository.trash_root().join(format!("{trash_id}.json")), b"deleted").unwrap();
+        assert!(repository.has_deleted_template("standard_meeting").unwrap());
+        assert!(!repository.has_deleted_template("daily_standup").unwrap());
     }
 
     #[test]
