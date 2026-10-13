@@ -86,7 +86,7 @@ test('main transcript view uses the real recording monitor instead of a fixed pu
     'utf8',
   );
   const settingsPage = readFileSync(
-    new URL('../../src/app/settings/page.tsx', import.meta.url),
+    new URL('../../src/components/SettingsPanel.tsx', import.meta.url),
     'utf8',
   );
 

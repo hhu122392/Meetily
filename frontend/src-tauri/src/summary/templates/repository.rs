@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 const TEMPLATE_EXTENSION: &str = "json";
 /// 内置模板落成自定义模板的"只做一次"标记文件（放在模板根目录，无 .json 后缀不会被当成模板）
-const BUILTIN_SEED_MARKER: &str = ".builtin-seed-v2";
+const BUILTIN_SEED_MARKER: &str = ".builtin-seed-v3";
 const TRASH_SEPARATOR: &str = "--";
 const MAX_TRASH_ID_LENGTH: usize = 180;
 
@@ -973,10 +973,14 @@ impl TemplateRepository {
         if content_locale.is_none() {
             return Ok(());
         }
+        let _guard = self.lock_writes()?;
         let marker = self.root.join(BUILTIN_SEED_MARKER);
         if path_entry_exists(&marker) {
             return Ok(());
         }
+        let previously_seeded = [".builtin-seed-v1", ".builtin-seed-v2"]
+            .iter()
+            .any(|name| path_entry_exists(&self.root.join(name)));
 
         for id in defaults::list_builtin_template_ids() {
             let target = self.custom_template_path(id)?;
@@ -985,15 +989,19 @@ impl TemplateRepository {
             };
             if path_entry_exists(&target) {
                 let existing = self.read_custom_file(id)?;
-                if is_untouched_builtin_seed(&existing, resolved.content) {
-                    fs::write(&target, resolved.content.as_bytes()).map_err(map_io_error)?;
+                if let Some(locale) = untouched_builtin_seed_locale(id, &existing) {
+                    let latest = defaults::get_builtin_template_for_locale(id, Some(locale))
+                        .ok_or_else(|| invalid_template("the migrated builtin is unavailable"))?;
+                    let template = parse_and_validate_template_v2(latest.content)
+                        .map_err(|_| invalid_template("the migrated builtin is invalid"))?;
+                    self.write_template_atomic(&target, &template, Some((1, &existing)))?;
                 }
                 continue;
             }
             // A deleted seeded template is represented only in .trash. Do not
             // recreate it while migrating the old seed; the user's deletion is
             // an explicit choice.
-            if self.has_deleted_template(id)? {
+            if previously_seeded || self.has_deleted_template(id)? {
                 continue;
             }
             // 直接写原始内容：与随应用发布的那份完全一致，读回来仍会走完整校验。
@@ -1544,35 +1552,20 @@ fn map_write_error(error: std::io::Error) -> TemplateRepositoryError {
     }
 }
 
-fn is_untouched_builtin_seed(existing: &[u8], latest: &str) -> bool {
-    let Ok(existing) = serde_json::from_slice::<TemplateV2>(existing) else {
-        return false;
-    };
-    let Ok(latest) = serde_json::from_str::<TemplateV2>(latest) else {
-        return false;
-    };
-    let existing_revision = existing
-        .extensions
-        .get("meetily.content_revision")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let latest_revision = latest
-        .extensions
-        .get("meetily.content_revision")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let legacy_source_columns = existing.sections.iter().any(|section| {
-        let Some(format) = section.item_format.as_deref() else { return false; };
-        let chinese = ["对应转录片段", "片段时间戳"];
-        let english = ["Reference Transcript Segment", "Segment Time stamp"];
-        chinese.iter().all(|label| format.contains(label))
-            || english.iter().all(|label| format.contains(label))
-    });
-    existing.source.source_type == TemplateSourceType::Builtin
-        && existing.version == 1
-        && existing.created_at == existing.updated_at
-        && existing_revision < latest_revision
-        && legacy_source_columns
+const PREVIOUS_STANDARD_MEETING: [(&str, &str); 2] = [
+    ("en", include_str!("../../../templates/migrations/v0.4.3/standard_meeting-en.json")),
+    ("zh-CN", include_str!("../../../templates/migrations/v0.4.3/standard_meeting-zh-CN.json")),
+];
+
+fn untouched_builtin_seed_locale(template_id: &str, existing: &[u8]) -> Option<&'static str> {
+    // Compare every JSON field against the actual shipped file. Formatting is
+    // irrelevant, but even edits made outside the application must be preserved.
+    let existing: Value = serde_json::from_slice(existing).ok()?;
+    if existing.get("id")?.as_str()? != template_id { return None; }
+    PREVIOUS_STANDARD_MEETING.iter().find_map(|(locale, previous)| {
+        let previous: Value = serde_json::from_str(previous).ok()?;
+        (existing == previous).then_some(*locale)
+    })
 }
 
 fn map_io_error(error: std::io::Error) -> TemplateRepositoryError {
@@ -1647,33 +1640,63 @@ mod tests {
 
     #[test]
     fn only_untouched_builtin_seed_files_are_eligible_for_revision_refresh() {
-        let latest = defaults::get_builtin_template_for_locale("standard_meeting", Some("zh-CN")).unwrap();
-        let mut stale = serde_json::from_str::<TemplateV2>(latest.content).unwrap();
-        stale.version = 1;
-        stale.updated_at = stale.created_at;
-        stale.extensions.insert("meetily.content_revision".into(), Value::from(2));
-        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
-            Some("| 负责人 | 任务 | 截止时间 | 对应转录片段 | 片段时间戳 |".into());
-        let stale_bytes = serde_json::to_vec(&stale).unwrap();
-        assert!(is_untouched_builtin_seed(&stale_bytes, latest.content));
-        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
-            Some("| 负责人 | 任务 | 截止时间 |".into());
-        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
-        stale.sections.iter_mut().find(|section| section.id == "action_items").unwrap().item_format =
-            Some("| Owner | Task | Due | Reference Transcript Segment | Segment Time stamp |".into());
-        assert!(is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+        for (locale, previous) in PREVIOUS_STANDARD_MEETING {
+            assert_eq!(untouched_builtin_seed_locale("daily_standup", previous.as_bytes()), None);
+            let (_temporary, repository) = repository();
+            let target = repository.root().join("standard_meeting.json");
+            fs::write(&target, previous).unwrap();
+            fs::write(repository.root().join(".builtin-seed-v2"), b"seeded").unwrap();
+            // UI language changes must not translate a saved template.
+            let other_locale = if locale == "en" { "zh-CN" } else { "en" };
+            repository.list_for_content_locale(Some(other_locale)).unwrap();
+            let actual: Value = serde_json::from_slice(&fs::read(&target).unwrap()).unwrap();
+            let expected = defaults::get_builtin_template_for_locale("standard_meeting", Some(locale)).unwrap();
+            assert_eq!(actual, serde_json::from_str::<Value>(expected.content).unwrap());
+            let backups: Vec<_> = fs::read_dir(repository.backup_root()).unwrap().collect();
+            assert_eq!(backups.len(), 1);
+            assert_eq!(fs::read(backups[0].as_ref().unwrap().path()).unwrap(), previous.as_bytes());
+            repository.list_for_content_locale(Some(other_locale)).unwrap();
+            assert_eq!(fs::read_dir(repository.backup_root()).unwrap().count(), 1);
+        }
+    }
 
-        stale.source.source_type = TemplateSourceType::JsonImport;
-        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
-        stale.source.source_type = TemplateSourceType::Builtin;
-        stale.version = 2;
-        assert!(!is_untouched_builtin_seed(&serde_json::to_vec(&stale).unwrap(), latest.content));
+    #[test]
+    fn builtin_refresh_preserves_external_edits_and_imports_without_version_changes() {
+        for (_, previous) in PREVIOUS_STANDARD_MEETING {
+            for pointer in ["/name", "/sections/0/instruction", "/sections/2/item_format", "/source/type", "/extensions/custom"] {
+                let (_temporary, repository) = repository();
+                let mut edited: Value = serde_json::from_str(previous).unwrap();
+                if pointer == "/extensions/custom" {
+                    edited["extensions"]["custom"] = Value::from("keep");
+                } else {
+                    *edited.pointer_mut(pointer).unwrap() = Value::from(
+                        if pointer == "/source/type" { "json_import" } else { "User edit" }
+                    );
+                }
+                let bytes = serde_json::to_vec(&edited).unwrap();
+                assert_eq!(untouched_builtin_seed_locale("standard_meeting", &bytes), None);
+                let target = repository.root().join("standard_meeting.json");
+                fs::write(&target, &bytes).unwrap();
+                fs::write(repository.root().join(".builtin-seed-v2"), b"seeded").unwrap();
+                repository.list_for_content_locale(Some("zh-CN")).unwrap();
+                assert_eq!(fs::read(target).unwrap(), bytes);
+            }
+        }
+    }
 
-        let (_temporary, repository) = repository();
-        let trash_id = make_trash_id("standard_meeting", at(1), Uuid::new_v4());
-        fs::write(repository.trash_root().join(format!("{trash_id}.json")), b"deleted").unwrap();
-        assert!(repository.has_deleted_template("standard_meeting").unwrap());
-        assert!(!repository.has_deleted_template("daily_standup").unwrap());
+    #[test]
+    fn builtin_refresh_does_not_restore_deleted_or_purged_templates() {
+        for old_marker in [None, Some(".builtin-seed-v1"), Some(".builtin-seed-v2")] {
+            let (_temporary, repository) = repository();
+            if let Some(marker) = old_marker {
+                fs::write(repository.root().join(marker), b"seeded").unwrap();
+            } else {
+                let trash_id = make_trash_id("standard_meeting", at(1), Uuid::new_v4());
+                fs::write(repository.trash_root().join(format!("{trash_id}.json")), b"deleted").unwrap();
+            }
+            repository.list_for_content_locale(Some("zh-CN")).unwrap();
+            assert!(!repository.root().join("standard_meeting.json").exists());
+        }
     }
 
     #[test]

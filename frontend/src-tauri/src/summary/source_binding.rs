@@ -1763,9 +1763,14 @@ fn deadline_values_match(candidate: &str, source: &str) -> bool {
 }
 
 fn normalize_deadline_value(value: &str) -> String {
-    normalize_evidence(value)
+    let value = normalize_evidence(value)
         .replace("之内", "内")
         .trim_end_matches('前')
+        .to_owned();
+    // Keep compound numerals literal: character replacement would turn
+    // "十一" into "101" and falsely validate a different deadline.
+    if value.contains('十') { return value; }
+    value
         .chars()
         .flat_map(|character| match character {
             '一' => "1".chars().collect::<Vec<_>>(), '二' | '两' => "2".chars().collect(),
@@ -1773,7 +1778,7 @@ fn normalize_deadline_value(value: &str) -> String {
             '五' => "5".chars().collect(), '六' => "6".chars().collect(),
             '七' => "7".chars().collect(), '八' => "8".chars().collect(),
             '九' => "9".chars().collect(), '〇' | '零' => "0".chars().collect(),
-            '十' => "10".chars().collect(), other => vec![other],
+            other => vec![other],
         })
         .collect()
 }
@@ -2072,6 +2077,14 @@ fn canonical_json_sha256<T: Serialize>(value: &T) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn compound_chinese_deadlines_cannot_validate_concatenated_digits() {
+        for (candidate, source) in [("101天内", "十一天内"), ("210天内", "二十天内"), ("2101天内", "二十一天内")] {
+            assert!(!super::deadline_values_match(candidate, source));
+        }
+        assert!(super::deadline_values_match("十一天之内", "十一天内"));
+        assert!(super::deadline_values_match("1周之内", "一周内"));
+    }
     use super::*;
 
     #[test]

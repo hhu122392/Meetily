@@ -22,7 +22,7 @@ test('root layout provides a stable document title', async () => {
 test('main content and settings tabs contain horizontal layout pressure', async () => {
   const [mainContent, settings] = await Promise.all([
     source('components/MainContent/index.tsx'),
-    source('app/settings/page.tsx'),
+    source('components/SettingsPanel.tsx'),
   ]);
 
   assert.match(mainContent, /min-w-0 flex-1/);

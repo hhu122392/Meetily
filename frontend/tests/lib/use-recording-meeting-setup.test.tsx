@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import '../../src/i18n';
+import { i18n } from '../../src/i18n';
+import { MeetilyI18nProvider, useMeetilyI18n } from '../../src/i18n/I18nProvider';
 import { useRecordingMeetingSetup, type RecordingMeetingSetupState } from '../../src/hooks/useRecordingMeetingSetup';
 import { templateService } from '../../src/services/templateService';
 import { createTemplateDraft, editorDraftToTemplate } from '../../src/lib/template-editor';
@@ -29,14 +30,25 @@ async function withSetup(
   beforeLoaded?: (state: () => RecordingMeetingSetupState) => Promise<void>,
 ) {
   const original = { list: templateService.list, get: templateService.get, getDefault: templateService.getDefault };
-  templateService.list = async () => ({ templates: [], diagnostics: [], deletedTemplates: [], defaultTemplateId: 'default' });
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const originalLanguage = i18n.language;
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+    localStorage: { getItem: () => 'zh-CN' },
+    addEventListener() {}, removeEventListener() {},
+  } });
+  let localeReady = false;
+  templateService.list = async request => {
+    assert.equal(localeReady, true, 'do not seed templates before UI locale initialization');
+    assert.equal(request?.contentLocale, 'zh-CN', 'seed templates in the resolved UI language');
+    return { templates: [], diagnostics: [], deletedTemplates: [], defaultTemplateId: 'default' };
+  };
   templateService.get = get;
   templateService.getDefault = async () => ({ templateId: 'default', resolvedTemplateId: 'default', resolutionSource: 'user_default' });
   let state!: RecordingMeetingSetupState;
   let renderer!: TestRenderer.ReactTestRenderer;
-  function Probe() { state = useRecordingMeetingSetup(); return null; }
+  function Probe() { localeReady = useMeetilyI18n().isReady; state = useRecordingMeetingSetup(); return null; }
   try {
-    await act(async () => { renderer = TestRenderer.create(React.createElement(Probe)); });
+    await act(async () => { renderer = TestRenderer.create(React.createElement(MeetilyI18nProvider, null, React.createElement(Probe))); });
     if (beforeLoaded) await beforeLoaded(() => state);
     await act(async () => {
       const deadline = Date.now() + 3000;
@@ -48,6 +60,9 @@ async function withSetup(
   } finally {
     if (renderer) act(() => renderer.unmount());
     Object.assign(templateService, original);
+    if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
+    else Reflect.deleteProperty(globalThis, 'window');
+    await i18n.changeLanguage(originalLanguage);
   }
 }
 

@@ -58,8 +58,12 @@ test('Parakeet is automatic-only and rejects Chinese or Whisper translation mode
   assert.match(provider, /validate_parakeet_language\(language\.as_deref\(\)\)\?/);
   assert.match(worker, /validate_parakeet_language\(language\.as_deref\(\)\)/);
   assert.equal(
-    importAudio.match(/validate_parakeet_language\([\s\S]*?language\.as_deref\(\)/g)?.length,
+    importAudio.match(/resolve_import_provider\(provider\.as_deref\(\), language\.as_deref\(\)\)/g)?.length,
     2,
+  );
+  assert.match(
+    importAudio,
+    /Some\("parakeet"\) => \{\s*super::transcription::parakeet_provider::validate_parakeet_language\(language\)\?/,
   );
   assert.equal(
     retranscription.match(/validate_parakeet_language\([\s\S]*?language\.as_deref\(\)/g)?.length,

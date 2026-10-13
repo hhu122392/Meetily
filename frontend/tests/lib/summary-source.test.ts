@@ -180,7 +180,7 @@ test('native summary generation ignores WebView text and snapshots the active so
   assert.match(service, /validate_generated_summary_with_source\([\s\S]+&summary_source,[\s\S]+&template,/);
   const validation = read('src-tauri/src/meeting_context/summary.rs');
   const generatedEntry = validation.slice(validation.indexOf('pub fn validate_generated_summary_with_source('), validation.indexOf('fn people_field_index('));
-  assert.match(generatedEntry, /validate_summary_markdown_with_source\(&filled, context, source\)/);
+  assert.match(generatedEntry, /validate_summary_source\(&filled, context, source, false\)/);
   assert.doesNotMatch(service, /validate_summary_markdown_with_transcript\(/);
   assert.match(productionRepository, /moss_activation_snapshots[\s\S]+status = 'active'/);
   assert.match(productionRepository, /moss_activation_segments[\s\S]+ORDER BY segment_index/);

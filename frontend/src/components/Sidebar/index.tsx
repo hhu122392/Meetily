@@ -17,6 +17,7 @@ import { useImportDialog } from '@/contexts/ImportDialogContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { requestAppNavigation } from '@/lib/navigation-guard';
 import { DEFAULT_TRANSCRIPT_CONFIG } from '@/lib/sensevoice';
+import { APP_VERSION } from '@/constants/app';
 import dynamic from 'next/dynamic';
 
 const SettingsPanel = dynamic(() => import('@/components/SettingsPanel'), { ssr: false });
@@ -881,7 +882,7 @@ const Sidebar: React.FC = () => {
               <span>{t('labels.settings')}</span>
             </button>
             <div className="w-full flex items-center justify-center px-3 py-1 text-xs text-gray-400">
-              v0.4.0
+              v{APP_VERSION}
             </div>
           </div>
         )}

@@ -261,7 +261,8 @@ mod tests {
 
     #[test]
     fn test_get_builtin_template() {
-        let template = get_template("daily_standup");
+        let content = defaults::get_builtin_template("daily_standup").unwrap();
+        let template = validate_and_parse_template(content);
         assert!(template.is_ok());
 
         let template = template.unwrap();

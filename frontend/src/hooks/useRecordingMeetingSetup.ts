@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useMeetilyI18n } from '@/i18n/I18nProvider';
 import {
   meetingContextProfileFromExtensions,
   meetingContextProfileSha256,
@@ -59,6 +60,7 @@ async function loadSetup(templateId: string): Promise<LoadedMeetingSetup> {
 
 export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
   const { t } = useTranslation('templates');
+  const { isReady: isLocaleReady, locale } = useMeetilyI18n();
   const [templates, setTemplates] = useState<TemplateListItem[]>([]);
   const [loaded, setLoaded] = useState<LoadedMeetingSetup | null>(null);
   const [draft, setDraft] = useState<RecordingMeetingContextDraft | null>(null);
@@ -78,13 +80,14 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
   }, []);
 
   const loadInitial = useCallback((): Promise<LoadedMeetingSetup | null> => {
+    if (!isLocaleReady) return Promise.resolve(null);
     if (initialLoadRef.current) return initialLoadRef.current;
     const sequence = ++loadSequenceRef.current;
     loadStateRef.current.status = 'loading';
     initialLoadRef.current = (async () => {
       try {
         const [list, preference] = await Promise.all([
-          templateService.list(),
+          templateService.list({ contentLocale: locale }),
           templateService.getDefault(),
         ]);
         setTemplates(list.templates.filter((template) => template.valid));
@@ -105,7 +108,7 @@ export function useRecordingMeetingSetup(): RecordingMeetingSetupState {
       }
     })();
     return initialLoadRef.current;
-  }, [applyLoaded]);
+  }, [applyLoaded, isLocaleReady, locale]);
 
   useEffect(() => {
     void loadInitial();

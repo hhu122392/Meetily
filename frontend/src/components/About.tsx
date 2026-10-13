@@ -9,11 +9,12 @@ import { Button } from './ui/button';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { APP_VERSION } from '@/constants/app';
 
 
 export function About() {
     const { t } = useTranslation(['common', 'updates']);
-    const [currentVersion, setCurrentVersion] = useState<string>('0.4.0');
+    const [currentVersion, setCurrentVersion] = useState<string>(APP_VERSION);
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [isChecking, setIsChecking] = useState(false);
     const [showUpdateDialog, setShowUpdateDialog] = useState(false);
