@@ -7,7 +7,7 @@ const originalDialog = { ...await import('../src/components/ui/dialog') };
 let selected: string | null = 'D:\\模型';
 let failure = false;
 const storage = {directory:'C:\\模型', summary_directory:'C:\\模型\\summary', alongside_recordings:'D:\\录音\\models', pending_cleanup:0};
-const invoke = mock(async (command: string) => {
+const invoke = mock(async (command: string, _args?: Record<string, unknown>) => {
   if (command === 'get_model_storage') return storage;
   if (command === 'select_model_storage_folder') return selected;
   if (command === 'migrate_model_storage' && failure) throw Error('正在转写，请暂停后迁移');

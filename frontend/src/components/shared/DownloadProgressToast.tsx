@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { X, Download, Check, Loader2, ArrowBigDownDash } from 'lucide-react';
 import { getDownloadTotalMb } from '@/lib/onboarding-summary-model';
@@ -130,7 +131,14 @@ export function useDownloadProgressToast() {
   const [downloads, setDownloads] = useState<Map<string, DownloadProgress>>(new Map());
   const [dismissedModels, setDismissedModels] = useState<Set<string>>(new Set());
 
+  const downloadsRef = useRef(downloads);
+  const cleanupTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => { downloadsRef.current = downloads; }, [downloads]);
+
   const updateDownload = useCallback((modelName: string, data: Partial<DownloadProgress>) => {
+    // A new update/retry owns its lifetime; an older terminal timer must not remove it.
+    clearTimeout(cleanupTimers.current.get(modelName));
+    cleanupTimers.current.delete(modelName);
     setDownloads((prev) => {
       const updated = new Map(prev);
       const existing = updated.get(modelName) || {
@@ -149,15 +157,55 @@ export function useDownloadProgressToast() {
   }, []);
 
   const cleanupDownload = useCallback((modelName: string, delay: number = 4000) => {
-    // Remove download from map after delay (allows toast to show and auto-dismiss)
-    setTimeout(() => {
+    clearTimeout(cleanupTimers.current.get(modelName));
+    cleanupTimers.current.set(modelName, setTimeout(() => {
+      cleanupTimers.current.delete(modelName);
+      toast.dismiss(`download-${modelName}`);
       setDownloads((prev) => {
         const updated = new Map(prev);
         updated.delete(modelName);
         return updated;
       });
-    }, delay);
+    }, delay));
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let checking = false;
+    // Events can be missed across WebView lifecycle changes. Only reconcile nearly
+    // finished native downloads; byte counts alone are not proof of validation.
+    const interval = setInterval(async () => {
+      if (checking) return;
+      const candidates = [...downloadsRef.current.values()].filter(download =>
+        download.status === 'downloading' && download.progress >= 99 &&
+        /^(sensevoice|parakeet)-/.test(download.modelName));
+      if (!candidates.length) return;
+      checking = true;
+      try {
+        for (const download of candidates) {
+          if (disposed) break;
+          const provider = download.modelName.startsWith('sensevoice-') ? 'sensevoice' : 'parakeet';
+          try {
+            const models = await invoke<Array<{ name: string; status: unknown }>>(`${provider}_get_available_models`);
+            if (disposed || downloadsRef.current.get(download.modelName) !== download) continue;
+            if (models.some(model => model.name === download.modelName && model.status === 'Available')) {
+              updateDownload(download.modelName, { status: 'completed', progress: 100, speedMbps: 0 });
+              cleanupDownload(download.modelName, 4000);
+            }
+          } catch {
+            // Keep the current state on transient IPC failures; never claim completion.
+          }
+        }
+      } finally { checking = false; }
+    }, 3000);
+    return () => {
+      disposed = true;
+      clearInterval(interval);
+      cleanupTimers.current.forEach(timer => clearTimeout(timer));
+      cleanupTimers.current.clear();
+      downloadsRef.current.forEach(download => toast.dismiss(`download-${download.modelName}`));
+    };
+  }, [updateDownload, cleanupDownload]);
 
   const showDownloadToast = useCallback((download: DownloadProgress) => {
     const toastId = `download-${download.modelName}`;
@@ -243,7 +291,9 @@ export function useDownloadProgressToast() {
         };
 
         updateDownload(modelName, downloadData);
-        if (downloadData.status === 'cancelled') {
+        if (downloadData.status === 'completed') {
+          cleanupDownload(modelName, 4000);
+        } else if (downloadData.status === 'cancelled') {
           cleanupDownload(modelName, 6000);
         }
       }
@@ -316,7 +366,9 @@ export function useDownloadProgressToast() {
         };
 
         updateDownload(modelName, downloadData);
-        if (downloadData.status === 'cancelled') {
+        if (downloadData.status === 'completed') {
+          cleanupDownload(modelName, 4000);
+        } else if (downloadData.status === 'cancelled') {
           cleanupDownload(modelName, 6000);
         }
       }
