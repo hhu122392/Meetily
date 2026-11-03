@@ -1,3 +1,4 @@
+import type { MeetingSummarySettings } from './useMeetingSummarySettings';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   CancelSummaryResponse,
@@ -76,6 +77,7 @@ interface UseSummaryGenerationProps {
   modelConfig: ModelConfig;
   isModelConfigLoading: boolean;
   selectedTemplate: string;
+  prepareMeetingSettings?: () => Promise<MeetingSummarySettings>;
   onMeetingUpdated?: () => Promise<void>;
   updateMeetingTitle: (title: string) => void;
   setAiSummary: (summary: MeetingSummary | null) => void;
@@ -89,6 +91,7 @@ export function useSummaryGeneration({
   modelConfig,
   isModelConfigLoading,
   selectedTemplate,
+  prepareMeetingSettings,
   onMeetingUpdated,
   updateMeetingTitle,
   setAiSummary,
@@ -332,6 +335,7 @@ export function useSummaryGeneration({
         return;
       }
 
+      const settingsSnapshot = await prepareMeetingSettings?.();
       const timeSinceRecording = (Date.now() - new Date(meeting.created_at).getTime()) / 60000;
       trackedAttemptRef.current = {
         generationId,
@@ -369,8 +373,9 @@ export function useSummaryGeneration({
         meetingId: meeting.id,
         chunkSize: 40000,
         overlap: 1000,
-        customPrompt,
-        templateId: selectedTemplate,
+        customPrompt: settingsSnapshot?.customPrompt ?? customPrompt,
+        templateId: settingsSnapshot?.templateId ?? selectedTemplate,
+        meetingSettings: settingsSnapshot,
         summaryLanguage,
       });
       const processId = result.process_id;
@@ -387,6 +392,7 @@ export function useSummaryGeneration({
       await failGeneration(generationId, isRegeneration, error instanceof Error ? error.message : 'Summary generation failed.');
     }
   }, [
+    prepareMeetingSettings,
     failGeneration,
     finishGeneration,
     meeting.created_at,

@@ -225,7 +225,7 @@ async fn process<R: Runtime>(app: &AppHandle<R>, pool: &SqlitePool, id: &str, fo
         let language = crate::summary::metadata::read_summary_language_from_metadata(std::path::Path::new(folder)).ok().flatten();
         let state = app.state::<AppState>();
         check_pause(pool, id).await.map_err(|e| e.to_string())?;
-        let summary = crate::summary::commands::api_process_transcript(app.clone(),state,text,o.summary_provider,o.summary_model,Some(id.into()),None,None,None,None,language,None).await?;
+        let summary = crate::summary::commands::api_process_transcript(app.clone(),state,text,o.summary_provider,o.summary_model,Some(id.into()),None,None,None,None,language,None,None).await?;
         let started_at = chrono::DateTime::parse_from_rfc3339(&summary.process_id).map_err(|e| e.to_string())?.with_timezone(&chrono::Utc);
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;

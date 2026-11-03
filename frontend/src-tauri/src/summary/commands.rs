@@ -477,6 +477,7 @@ pub async fn api_process_transcript<R: Runtime>(
     template_id: Option<String>,
     summary_language: Option<String>,
     _auth_token: Option<String>,
+    meeting_settings: Option<super::meeting_settings::MeetingSummarySettings>,
 ) -> Result<ProcessTranscriptResponse, String> {
     use uuid::Uuid;
 
@@ -489,9 +490,14 @@ pub async fn api_process_transcript<R: Runtime>(
     );
 
     let pool = state.db_manager.pool().clone();
-    let final_prompt = custom_prompt.unwrap_or_else(|| "".to_string());
     crate::audio::transcription::completion::ensure_meeting_complete(&pool, &m_id).await?;
-    let final_template_id = template_id.unwrap_or_else(|| "daily_standup".to_string());
+    let mut meeting_settings = match meeting_settings { Some(settings) => settings, None => super::meeting_settings::read(&pool, &m_id).await? };
+    if let Some(prompt) = custom_prompt { meeting_settings.custom_prompt = prompt; }
+    if let Some(template) = template_id { meeting_settings.template_id = template; }
+    super::meeting_settings::save(&pool, &m_id, &meeting_settings).await?;
+    let final_prompt = meeting_settings.prompt();
+    let final_template_id = meeting_settings.template_id.clone();
+    let template_snapshot = super::templates::get_template(&final_template_id)?;
 
     // Normalise empty / whitespace-only to None so "" and null behave identically
     let summary_language = summary_language.and_then(|s| {
@@ -502,6 +508,7 @@ pub async fn api_process_transcript<R: Runtime>(
     // ponytail: summary starts are rare; use per-meeting locks only if start contention is measured.
     let _start_guard = SUMMARY_START_LOCK.lock().await;
     let started_at = next_summary_start(Utc::now());
+    super::meeting_settings::snapshot(&pool, &m_id, &started_at.to_rfc3339_opts(SecondsFormat::Nanos, true), &meeting_settings, &template_snapshot).await?;
     SummaryProcessesRepository::create_or_reset_process(&pool, &m_id, started_at)
         .await
         .map_err(|e| format!("Failed to initialize process: {}", e))?;
@@ -546,6 +553,7 @@ pub async fn api_process_transcript<R: Runtime>(
             final_prompt,
             final_template_id,
             summary_language,
+            template_snapshot,
         )
         .await;
     });

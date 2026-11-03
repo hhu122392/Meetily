@@ -4,6 +4,9 @@ import type { ReactNode } from 'react';
 let failSave = false;
 const original = '# 详细纪要\n\n| 任务 | 负责人 |\n| --- | --- |\n| 验收 | 小明 |\n\n<img src="https://example.com/track">';
 const invoke = mock(async (command: string, args?: any): Promise<any> => {
+  if (command === 'summary_markdown_history_list') return [{name: '会议纪要-old.md', size: 20}];
+  if (command === 'summary_markdown_history_read') return {name: args.version, content: '# 历史稿', hash: 'version-hash'};
+  if (command === 'summary_markdown_history_restore') return {name: '会议纪要.md', path: 'D:/会议纪要.md', content: '# 历史稿', hash: 'restored', size: 20};
   if (command === 'summary_markdown_read') return { name: '会议纪要.md', path: 'D:/会议纪要.md', content: original, hash: 'original', size: 100 };
   if (command === 'summary_markdown_save') { if (failSave) throw '文件已被其他操作修改'; return { name: '会议纪要.md', path: 'D:/会议纪要.md', content: args.content, hash: 'updated', size: 40 }; }
 });
@@ -44,4 +47,26 @@ test('保存冲突时保留编辑内容，不打开发送预览', async () => {
   expect(renderer.root.findByType('textarea').props.value).toBe('# 不要丢弃的编辑');
   expect(JSON.stringify(renderer.toJSON())).toContain('文件已被其他操作修改');
   expect(previewSend).not.toHaveBeenCalled();
+});
+
+test('查看历史不发送，确认恢复后只替换文件', async () => {
+  await mount(); await act(async () => button('历史版本').props.onClick());
+  await act(async () => renderer.root.findByProps({'aria-label':'历史版本'}).props.onChange({target:{value:'会议纪要-old.md'}}));
+  expect(renderer.root.findByProps({'aria-label':'历史版本内容'}).props.readOnly).toBe(true);
+  expect(invoke.mock.calls.some(c => c[0] === 'summary_markdown_history_restore')).toBe(false);
+  await act(async () => button('恢复此版本').props.onClick());
+  expect(invoke.mock.calls.some(c => c[0] === 'summary_markdown_history_restore')).toBe(false);
+  await act(async () => button('确认恢复').props.onClick());
+  expect(invoke.mock.calls).toContainEqual(['summary_markdown_history_restore', {meetingId:'m1',version:'会议纪要-old.md',expectedHash:'original',versionHash:'version-hash'}]);
+  expect(previewSend).not.toHaveBeenCalled();
+  expect(renderer.root.findByProps({'aria-label':'Markdown 文件内容'}).props.value).toBe('# 历史稿');
+});
+
+test('未保存编辑时不允许历史恢复覆盖草稿', async () => {
+  await mount();
+  await act(async () => renderer.root.findByProps({'aria-label':'Markdown 文件内容'}).props.onChange({target:{value:'# 未保存草稿'}}));
+  await act(async () => button('历史版本').props.onClick());
+  await act(async () => renderer.root.findByProps({'aria-label':'历史版本'}).props.onChange({target:{value:'会议纪要-old.md'}}));
+  expect(button('恢复此版本').props.disabled).toBe(true);
+  expect(renderer.root.findByProps({'aria-label':'Markdown 文件内容'}).props.value).toBe('# 未保存草稿');
 });

@@ -132,6 +132,63 @@ pub async fn summary_export_markdown<R: Runtime>(app: AppHandle<R>, state: tauri
     export(state.db_manager.pool(), &meeting_id, fallback.as_deref(), false).await
 }
 
+// Resolve history through the current company's meeting record, never a client path.
+async fn history_directory(pool: &SqlitePool, id: &str) -> Result<PathBuf, String> {
+    let file = preview(pool, id).await?.ok_or("该会议没有 Markdown 文件")?;
+    let path = PathBuf::from(file["path"].as_str().ok_or("Markdown 路径无效")?);
+    let parent = path.parent().ok_or("Markdown 目录无效")?.canonicalize().map_err(|e| e.to_string())?;
+    let directory = parent.join("纪要版本");
+    if directory.exists() && directory.canonicalize().map_err(|e| e.to_string())?.parent() != Some(parent.as_path()) { return Err("历史目录不能指向会议目录之外".into()); }
+    Ok(directory)
+}
+fn history_name_valid(name: &str) -> bool {
+    name.starts_with("会议纪要-") && name.ends_with(".md") && !name.contains(['/', '\\', ':']) && !name.contains("..")
+}
+async fn read_history(pool: &SqlitePool, id: &str, name: &str) -> Result<Value, String> {
+    if !history_name_valid(name) { return Err("历史版本标识无效".into()); }
+    let dir = history_directory(pool, id).await?.canonicalize().map_err(|e| e.to_string())?;
+    let path = dir.join(name).canonicalize().map_err(|_| "历史版本不存在")?;
+    if path.parent() != Some(dir.as_path()) { return Err("历史版本不能指向会议目录之外".into()); }
+    let size = tokio::fs::metadata(&path).await.map_err(|e| e.to_string())?.len();
+    if size > 2 * 1024 * 1024 { return Err("历史纪要超过 2 MiB".into()); }
+    let content = tokio::fs::read_to_string(path).await.map_err(|e| e.to_string())?;
+    if content.len() > 2 * 1024 * 1024 { return Err("历史纪要超过 2 MiB".into()); }
+    Ok(serde_json::json!({"name":name,"hash":crate::lark::payload::fingerprint(&[&content]),"content":content}))
+}
+#[tauri::command]
+pub async fn summary_markdown_history_list(state: tauri::State<'_, AppState>, meeting_id: String) -> Result<Vec<Value>, String> {
+    let _storage = crate::audio::storage_migration::use_storage().await?;
+    let _guard = crate::lark::app::DELIVERY_LOCK.lock().await;
+    let dir = history_directory(state.db_manager.pool(), &meeting_id).await?;
+    if !dir.exists() { return Ok(Vec::new()); }
+    let mut entries = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !history_name_valid(&name) || !entry.file_type().await.map_err(|e| e.to_string())?.is_file() { continue; }
+        result.push(serde_json::json!({"name":name,"size":entry.metadata().await.map_err(|e| e.to_string())?.len()}));
+    }
+    result.sort_by(|a,b| b["name"].as_str().cmp(&a["name"].as_str()));
+    Ok(result)
+}
+#[tauri::command]
+pub async fn summary_markdown_history_read(state: tauri::State<'_, AppState>, meeting_id: String, version: String) -> Result<Value, String> {
+    let _storage = crate::audio::storage_migration::use_storage().await?;
+    let _guard = crate::lark::app::DELIVERY_LOCK.lock().await;
+    read_history(state.db_manager.pool(), &meeting_id, &version).await
+}
+async fn restore_history(pool: &SqlitePool, id: &str, version: &str, expected_hash: &str, version_hash: &str) -> Result<Value, String> {
+    let history = read_history(pool, id, version).await?;
+    if history["hash"].as_str() != Some(version_hash) { return Err("历史文件已变化，请重新预览后恢复".into()); }
+    save_file(pool, id, expected_hash, history["content"].as_str().ok_or("历史内容无效")?).await
+}
+#[tauri::command]
+pub async fn summary_markdown_history_restore(state: tauri::State<'_, AppState>, meeting_id: String, version: String, expected_hash: String, version_hash: String) -> Result<Value, String> {
+    let _storage = crate::audio::storage_migration::use_storage().await?;
+    let _guard = crate::lark::app::DELIVERY_LOCK.lock().await;
+    restore_history(state.db_manager.pool(), &meeting_id, &version, &expected_hash, &version_hash).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,4 +230,26 @@ mod tests {
         assert!(write_files(file.path(), "内容", false).unwrap_err().contains("保存失败"));
         assert_eq!(std::fs::metadata(file.path()).unwrap().len(), 0);
     }
+    #[tokio::test]
+    async fn history_restore_checks_both_versions_and_archives_current() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE summary_markdown_exports(meeting_id TEXT PRIMARY KEY,path TEXT,error TEXT,updated_at TEXT,manually_edited INTEGER DEFAULT 0)").execute(&pool).await.unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let path = write_files(root.path(), "历史版本", true).unwrap();
+        let name = std::fs::read_dir(root.path().join("纪要版本")).unwrap().next().unwrap().unwrap().file_name().to_string_lossy().to_string();
+        write_files(root.path(), "当前编辑", false).unwrap();
+        sqlx::query("INSERT INTO summary_markdown_exports(meeting_id,path) VALUES('a',?)").bind(path).execute(&pool).await.unwrap();
+        assert!(read_history(&pool,"a","../会议纪要.md").await.is_err());
+        assert!(read_history(&pool,"missing",&name).await.is_err());
+        let history = read_history(&pool,"a",&name).await.unwrap();
+        let current = preview(&pool,"a").await.unwrap().unwrap();
+        assert!(restore_history(&pool,"a",&name,"stale",history["hash"].as_str().unwrap()).await.is_err());
+        assert!(restore_history(&pool,"a",&name,current["hash"].as_str().unwrap(),"changed-history").await.is_err());
+        let restored = restore_history(&pool,"a",&name,current["hash"].as_str().unwrap(),history["hash"].as_str().unwrap()).await.unwrap();
+        assert_eq!(restored["content"], "历史版本");
+        let backups: Vec<_> = std::fs::read_dir(root.path().join("纪要版本")).unwrap().map(|p| std::fs::read_to_string(p.unwrap().path()).unwrap()).collect();
+        assert!(backups.iter().any(|s| s == "当前编辑"));
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT manually_edited FROM summary_markdown_exports").fetch_one(&pool).await.unwrap(),1);
+    }
+
 }

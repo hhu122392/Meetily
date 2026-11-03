@@ -343,6 +343,7 @@ impl SummaryService {
         custom_prompt: String,
         template_id: String,
         summary_language: Option<String>,
+        template: Template,
     ) {
         let start_time = Instant::now();
         info!(
@@ -491,14 +492,6 @@ impl SummaryService {
             info!("📝 Detected transcript summary language: {}", code);
         }
 
-        let template = match templates::get_template(&template_id) {
-            Ok(template) => template,
-            Err(e) => {
-                let err_msg = format!("Failed to load template '{}': {}", template_id, e);
-                Self::fail_and_cleanup(&pool, &meeting_id, started_at, &err_msg).await;
-                return;
-            }
-        };
         let template_fingerprint = template_cache_fingerprint(&template);
 
         let cache_source = build_summary_cache_source(

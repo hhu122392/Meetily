@@ -6,7 +6,7 @@
 
 - 分支：`codex/lark-desktop-20261103`。
 - 应用版本：0.4.1；源码快照日期：2026-11-03。
-- 本分支对应本次 Windows x64 和 Mac Apple Silicon 定制安装包的源码，不包含安装包、模型权重、个人录音、会议数据库或运行凭证。
+- 本分支保存 Windows x64 和 Mac Apple Silicon 定制源码，不包含安装包、模型权重、个人录音、会议数据库或运行凭证。分支后续提交不代表已更新安装包；安装包应按构建提交核对。
 - 仓库 `main` 的 0.4.4 是另一条独立定制路线。本次上传没有合并或覆盖它；版本数字不能直接用于比较两条路线的功能。
 - 此分支以独立源码快照发布，不携带原私有仓库的提交历史。
 
@@ -19,6 +19,9 @@
 - 纪要可编辑，发送前预览并确认，支持概要卡片和可选 Markdown 附件。
 - 按公司隔离本地会议资料，支持录音与模型目录选择、后台转写与暂停恢复。
 - 支持 Windows x64 与 Mac Apple Silicon 构建。
+- 长时间生成纪要以后台实际状态为准，不再因前端轮询次数达到上限而显示超时失败。
+- 按会议保存背景、模板、出席人员、缺席人员和主持人，生成时固定本次输入与模板快照。
+- Markdown 历史版本可查看并确认恢复，恢复前备份当前文件，不自动发送到 Lark。
 
 ## 构建与配置
 
@@ -29,6 +32,7 @@ Mac 本机构建步骤见 [Mac 构建说明](docs/MACOS_CUSTOM_BUILD_ZH.md)。�
 - [SenseVoice 配置与下载说明](docs/SENSEVOICE_ZH.md)
 - [纪要模型下载说明](docs/SUMMARY_DOWNLOAD_ZH.md)
 - [编辑器粘贴安全修复说明](docs/EDITOR_CLIPBOARD_SECURITY_ZH.md)
+- [三项功能移植说明与验证](docs/PORT_044_FEATURES_ZH.md)
 - [第三方组件说明](THIRD_PARTY_NOTICES.md)
 
 Lark App ID、App Secret 和个人授权须由使用者自行配置。不要把真实凭证、Webhook、会议资料或日志提交到仓库。使用第三方 AI 接口生成纪要时，转写文字会发送到用户配置的服务。

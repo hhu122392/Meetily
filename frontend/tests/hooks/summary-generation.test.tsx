@@ -48,6 +48,7 @@ const response = (overrides: Partial<SummaryProcessResponse> = {}): SummaryProce
   data: null, error: null, meetingName: 'Meeting A', ...overrides,
 });
 let configuredModel = 'test';
+let prepareSettings: (() => Promise<any>) | undefined;
 let state: ReturnType<typeof useSummaryGeneration>;
 function Status({ initialSummary, meetingId = 'meeting-a' }: {
   initialSummary: SummaryProcessResponse; meetingId?: string;
@@ -57,7 +58,7 @@ function Status({ initialSummary, meetingId = 'meeting-a' }: {
   state = useSummaryGeneration({
     meeting: { id: meetingId, created_at: '2026-09-01T00:00:00Z' },
     transcripts: [], modelConfig: { provider: 'ollama', model: configuredModel, whisperModel: 'base' },
-    isModelConfigLoading: false, selectedTemplate: 'daily_standup',
+    isModelConfigLoading: false, selectedTemplate: 'daily_standup', prepareMeetingSettings: prepareSettings,
     setAiSummary, updateMeetingTitle, initialSummary,
   });
   return <output>{state.summaryStatus}:{state.summaryError}:{title}:{JSON.stringify(summary)}</output>;
@@ -70,7 +71,7 @@ const realSetInterval = globalThis.setInterval;
 const realClearInterval = globalThis.clearInterval;
 beforeEach(() => {
   renderer = undefined as unknown as ReactTestRenderer;
-  configuredModel = 'test';
+  configuredModel = 'test'; prepareSettings = undefined;
   timers.clear(); notify.mockClear(); trackCompletion.mockClear(); invoke.mockClear();
   getSummary = async () => response();
   startProcess = async () => ({ process_id: 'attempt-a' });
@@ -270,4 +271,26 @@ describe('summary state restored when returning to a meeting', () => {
     expect(state.summaryStatus).toBe('completed');
     expect(text()).toContain('Finished summary');
   });
+});
+
+test('超过旧轮询上限仍按后台状态观察，完成后停止', async () => {
+  await show(response());
+  for (let i = 0; i < 205; i++) await tick();
+  expect(state.summaryStatus).toBe('processing');
+  expect(timers.size).toBe(1);
+  getSummary = async () => response({status: 'completed', data: {markdown: '长会议完成'}});
+  await tick();
+  expect(state.summaryStatus).toBe('completed');
+  expect(timers.size).toBe(0);
+});
+
+test('重新生成使用本次会议快照，不把背景重置为空', async () => {
+  const snapshot = { templateId: 'standard_meeting', customPrompt: '本次会议背景', participants: '小明', absent: '', host: '小李' };
+  prepareSettings = async () => snapshot;
+  await show(response({status:'completed', data:{markdown:'旧纪要'}}));
+  await act(async () => state.handleRegenerateSummary());
+  const call = invoke.mock.calls.find(([command]) => command === 'api_process_transcript');
+  expect(call?.[1]?.customPrompt).toBe('本次会议背景');
+  expect(call?.[1]?.templateId).toBe('standard_meeting');
+  expect(call?.[1]?.meetingSettings).toEqual(snapshot);
 });

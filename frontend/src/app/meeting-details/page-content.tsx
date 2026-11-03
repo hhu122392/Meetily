@@ -14,6 +14,7 @@ import { ModelConfig } from '@/components/ModelSettingsModal';
 // Custom hooks
 import { useMeetingData } from '@/hooks/meeting-details/useMeetingData';
 import { useSummaryGeneration } from '@/hooks/meeting-details/useSummaryGeneration';
+import { useMeetingSummarySettings } from '@/hooks/meeting-details/useMeetingSummarySettings';
 import { useTemplates } from '@/hooks/meeting-details/useTemplates';
 import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
@@ -57,7 +58,9 @@ export default function PageContent({
   });
 
   // State
-  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const meetingSettings = useMeetingSummarySettings(meeting.id);
+  const customPrompt = meetingSettings.settings.customPrompt;
+  const setCustomPrompt = (customPrompt: string) => meetingSettings.update({ customPrompt });
   const isRecording = false;
   const [activeTab, setActiveTab] = useState<MeetingDetailsTab>('transcript');
 
@@ -122,7 +125,8 @@ export default function PageContent({
     transcripts: meetingData.transcripts,
     modelConfig: modelConfig,
     isModelConfigLoading,
-    selectedTemplate: templates.selectedTemplate,
+    selectedTemplate: meetingSettings.settings.templateId,
+    prepareMeetingSettings: meetingSettings.save,
     onMeetingUpdated,
     updateMeetingTitle: meetingData.updateMeetingTitle,
     setAiSummary: meetingData.setAiSummary,
@@ -163,6 +167,7 @@ export default function PageContent({
       !shouldAutoGenerate
       || summaryGeneration.summaryStatus !== 'idle'
       || isModelConfigLoading
+      || !meetingSettings.ready
       || meetingData.transcripts.length === 0
       || autoGenerationStartedMeetingIdRef.current === meeting.id
     ) {
@@ -172,9 +177,11 @@ export default function PageContent({
     autoGenerationStartedMeetingIdRef.current = meeting.id;
     console.log(`🤖 Auto-generating summary with ${modelConfig.provider}/${modelConfig.model}...`);
     onAutoGenerateComplete?.();
-    void summaryGeneration.handleGenerateSummary('');
+    void summaryGeneration.handleGenerateSummary(customPrompt);
   }, [
     shouldAutoGenerate,
+    meetingSettings.ready,
+    customPrompt,
     meeting.id,
     meetingData.transcripts.length,
     isModelConfigLoading,
@@ -192,6 +199,16 @@ export default function PageContent({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className="flex flex-col h-screen min-w-0 bg-gray-50"
     >
+      <details className="border-b bg-white px-4 py-2 text-sm">
+        <summary className="cursor-pointer">会议背景与人员设置 · {meetingSettings.ready ? (meetingSettings.dirty ? '未保存' : '已保存') : '加载中'}</summary>
+        <p className="my-2 text-xs text-gray-500">设置只属于当前会议；生成时自动保存并固定本次内容。参会名单不代表说话人身份。</p>
+        <div className="flex flex-wrap gap-3">
+          {([['participants', '出席人员'], ['absent', '缺席人员'], ['host', '主持人']] as const).map(([field, label]) =>
+            <label key={field}>{label}<input aria-label={label} className="ml-2 rounded border p-1" disabled={!meetingSettings.ready || meetingSettings.saving} value={meetingSettings.settings[field]} onChange={e => meetingSettings.update({ [field]: e.target.value })} /></label>)}
+          <button disabled={!meetingSettings.ready || meetingSettings.saving} onClick={() => void meetingSettings.save().catch(() => {})}>保存会议设置</button>
+        </div>
+        {meetingSettings.error && <p role="alert" className="text-red-600">{meetingSettings.error}</p>}
+      </details>
       <div className="flex flex-1 min-w-0 overflow-hidden">
         <MeetingDetailsSplitView
           activeTab={activeTab}
@@ -245,8 +262,8 @@ export default function PageContent({
               onRegenerateSummary={summaryGeneration.handleRegenerateSummary}
               getSummaryStatusMessage={summaryGeneration.getSummaryStatusMessage}
               availableTemplates={templates.availableTemplates}
-              selectedTemplate={templates.selectedTemplate}
-              onTemplateSelect={templates.handleTemplateSelection}
+              selectedTemplate={meetingSettings.settings.templateId}
+              onTemplateSelect={(templateId) => meetingSettings.update({ templateId })}
               isModelConfigLoading={isModelConfigLoading}
               onOpenModelSettings={handleRegisterModalOpen}
             />
