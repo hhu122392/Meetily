@@ -1,0 +1,14 @@
+{
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "createUpdaterArtifacts": false,
+    "macOS": {
+      "minimumSystemVersion": "14.4",
+      "signingIdentity": "-",
+      "hardenedRuntime": true
+    }
+  },
+  "plugins": {
+    "updater": { "endpoints": [] }
+  }
+}

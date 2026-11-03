@@ -1,0 +1,88 @@
+name: Mac 中文定制版安装包
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: 构建芯片类型
+        type: choice
+        default: apple
+        options: [both, apple, intel]
+permissions:
+  contents: read
+concurrency:
+  group: mac-custom-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - id: matrix
+        env:
+          ARCHITECTURE: ${{ inputs.architecture }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          rows = [
+              {'arch': 'apple', 'runner': 'macos-15', 'target': 'aarch64-apple-darwin'},
+              {'arch': 'intel', 'runner': 'macos-15-intel', 'target': 'x86_64-apple-darwin'},
+          ]
+          rows = [r for r in rows if os.environ['ARCHITECTURE'] in ('both', r['arch'])]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('value=' + json.dumps({'include': rows}) + '\n')
+          PY
+  build:
+    needs: select
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.select.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: 3
+      CARGO_INCREMENTAL: 0
+      MACOSX_DEPLOYMENT_TARGET: '14.4'
+      NEXT_TELEMETRY_DISABLED: 1
+      npm_config_verify_store_integrity: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: mac-custom-${{ matrix.target }}
+      - name: 检查构建工具
+        run: |
+          xcodebuild -version
+          cmake --version || brew install cmake
+      - name: 构建安装包
+        env:
+          npm_config_store_dir: ${{ runner.temp }}/meetily-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash scripts/build-macos-custom.sh
+      - name: 测试凭证加密与文件完整性
+        env:
+          CMAKE_PROJECT_INCLUDE: ${{ github.workspace }}/.github/force-portable-ggml.cmake
+        run: |
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' lark::macos_credentials::tests
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' parakeet_engine::parakeet_engine::tests
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' sensevoice_engine::model::tests
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' onboarding::tests
+          bundle='target/${{ matrix.target }}/release/bundle'
+          test -f "$bundle/macos/meetily.app/Contents/MacOS/meetily"
+          codesign --verify --deep --strict "$bundle/macos/meetily.app"
+          find "$bundle/dmg" -name '*.dmg' -exec hdiutil verify {} \;
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meetily-Mac-${{ matrix.arch }}-${{ github.run_number }}
+          path: target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14
