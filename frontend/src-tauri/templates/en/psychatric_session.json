@@ -1,0 +1,133 @@
+{
+  "schema_version": 2,
+  "id": "psychatric_session",
+  "name": "Psychiatric Session Note (SOAP + AI Hybrid)",
+  "description": "AI-assisted psychiatric progress note template based on SOAP, with clinical metadata and AI summary.",
+  "version": 1,
+  "locale": "en",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "session_metadata",
+      "title": "Session Metadata",
+      "instruction": "Patient initials/ID, session date, provider, session type, duration (HIPAA-sensitive)",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "ai_session_summary",
+      "title": "AI Session Summary",
+      "instruction": "One-line takeaway and one-paragraph executive summary (AI-generated). Include confidence score.",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "subjective_s",
+      "title": "Subjective (S)",
+      "instruction": "Patient's self-reported mood, symptoms, sleep, appetite, stressors",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "objective_o",
+      "title": "Objective (O)",
+      "instruction": "Observable findings: affect, speech, behavior, orientation, vitals if relevant",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "assessment_a",
+      "title": "Assessment (A)",
+      "instruction": "Diagnostic impression, risk assessment (SI/HI), progress vs treatment goals",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "plan_p",
+      "title": "Plan (P)",
+      "instruction": "Interventions, medication changes, referrals, therapy tasks and follow-up",
+      "format": "list",
+      "item_format": "| **Intervention** | **Owner** | **Frequency** | **Follow-up Date** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "medications",
+      "title": "Medications",
+      "instruction": "Current medications, doses, changes, and rationale",
+      "format": "list",
+      "item_format": "| **Medication** | **Dose** | **Route** | **Start/Change Date** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "diagnoses_dsmicd",
+      "title": "Diagnoses (DSM/ICD)",
+      "instruction": "List diagnostic codes and working diagnosis",
+      "format": "list",
+      "item_format": "| **Code** | **System** | **Diagnosis** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "safety_risk_management",
+      "title": "Safety & Risk Management",
+      "instruction": "Safety plan, emergency contacts, hospitalization considerations",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "next_appointment",
+      "title": "Next Appointment",
+      "instruction": "Date, time and modality of next session",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "audit_trail",
+      "title": "Audit Trail",
+      "instruction": "Human review flag, reviewer name and timestamp, AI version",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 1
+  }
+}

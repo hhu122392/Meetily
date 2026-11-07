@@ -34,7 +34,7 @@ afterAll(() => {
   mock.module('../src/components/ui/dialog', () => originalDialog);
 });
 const config = { settings: { target_name: '产品周会', webhook: 'https://open.larksuite.com/open-apis/bot/v2/hook/test', secret: '' }, revision: 'revision-a' };
-const button = (label: string) => renderer!.root.findAllByType('button').find(node => node.children.filter(child => typeof child === 'string').join('').includes(label))!;
+const button = (label: string) => renderer!.root.findAllByType('button').find(node => node.props['aria-label'] === label || node.children.filter(child => typeof child === 'string').join('').includes(label))!;
 const content = () => JSON.stringify(renderer!.toJSON());
 test('会议助手只有一个授权入口，一次请求会议控制和云录音权限', async () => {
   respond = async command => command === 'lark_app_status'
@@ -61,7 +61,7 @@ test('损坏的 Lark 配置显示真实错误并阻止保存和授权', async ()
   expect(invoke.mock.calls.every(call => call[0] === 'lark_app_status')).toBe(true);
 });
 async function mountSender(getSummary = async () => '## 讨论结论\n保留当前编辑内容') {
-  await act(async () => { renderer = create(<LarkSendButton meetingId="meeting-a" title="产品例会" createdAt="2026-10-14T02:00:00Z" getSummary={getSummary} />); });
+  await act(async () => { renderer = create(<LarkSendButton compact meetingId="meeting-a" title="产品例会" createdAt="2026-10-14T02:00:00Z" getSummary={getSummary} />); });
   await act(async () => button('Webhook 发送').props.onClick());
 }
 

@@ -112,6 +112,12 @@ pub fn data_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     directory(&state.root, &state.active)
 }
 
+pub fn initialize_templates<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    let state = app.state::<CompanyState>();
+    let legacy = if state.active == "legacy" { dirs::data_dir().map(|root| root.join("Meetily").join("templates")) } else { None };
+    crate::summary::templates::catalog::initialize(data_dir(app)?.join("summary-templates"), legacy)
+}
+
 pub fn bind_identity<R: Runtime>(app: &AppHandle<R>, app_id: &str, tenant: Option<&str>) -> Result<(), String> {
     let state = app.state::<CompanyState>();
     let mut registry = state.registry.lock().map_err(|_| "公司配置锁不可用")?;

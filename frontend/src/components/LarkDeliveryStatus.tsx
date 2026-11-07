@@ -16,7 +16,7 @@ export function LarkDeliveryStatus({ meetingId }: { meetingId: string }) {
     return () => { active = false; clearInterval(interval); };
   }, [meetingId]);
   if (!status?.enabled && !status?.linked) return null;
-  return <div className="border-b bg-slate-50 px-4 py-2 text-xs flex flex-wrap items-center gap-2">
+  return <div className="shrink-0 border-b bg-slate-50 px-4 py-2 text-xs flex flex-wrap items-center gap-2">
     <span>Lark：{status?.delivery_detail || status?.detail || '本次录音未关联会议。'}</span>
     {status?.attachment_status && <span className={['failed', 'unknown'].includes(status.attachment_status) ? 'text-red-700' : ''}>Markdown 附件：{status.attachment_status === 'sent' ? '发送成功' : status.attachment_detail || '尚未发送'}</span>}
     {status?.remote_id && <span>会议 ID：{status.remote_id}</span>}

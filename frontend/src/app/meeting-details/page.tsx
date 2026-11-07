@@ -271,7 +271,7 @@ function MeetingDetailsContent() {
     </div>;
   }
 
-  return <><LarkDeliveryStatus key={`lark-${meetingId}`} meetingId={meetingDetails.id} /><PageContent
+  return <div className="flex h-dvh min-h-0 min-w-0 flex-col overflow-hidden"><LarkDeliveryStatus key={`lark-${meetingId}`} meetingId={meetingDetails.id} /><PageContent
     key={meetingId}
     initialSummary={summaryResponse}
     meeting={meetingDetails}
@@ -292,7 +292,7 @@ function MeetingDetailsContent() {
     totalCount={totalCount}
     loadedCount={loadedCount}
     onLoadMore={loadMore}
-  /></>;
+  /></div>;
 }
 
 export default function MeetingDetails() {

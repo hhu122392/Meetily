@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "id": "project_sync",
+  "name": "项目同步／状态更新",
+  "description": "用于每周或双周项目状态会议，重点关注里程碑和风险。",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "meeting_date_time",
+      "title": "会议日期与时间",
+      "instruction": "记录日期、开始／结束时间和主持人姓名",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "attendees",
+      "title": "参会人",
+      "instruction": "列出参会人及其角色",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "milestones_status",
+      "title": "里程碑与状态",
+      "instruction": "列出当前里程碑、状态及预计完成日期",
+      "format": "list",
+      "item_format": "| **里程碑** | **状态** | **预计完成时间** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "progress_summary",
+      "title": "进展摘要",
+      "instruction": "用一小段文字概括自上次同步会议以来的进展",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "top_risks_mitigations",
+      "title": "主要风险与缓解措施",
+      "instruction": "列出主要风险、影响程度、缓解计划和负责人",
+      "format": "list",
+      "item_format": "| **风险** | **影响** | **缓解措施** | **负责人** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "key_decisions",
+      "title": "关键决策",
+      "instruction": "记录本次会议作出的决策、理由和时间戳",
+      "format": "list",
+      "item_format": "| **决策** | **理由** | **时间戳** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "action_items",
+      "title": "行动项",
+      "instruction": "列出任务、负责人、截止日期、优先级和状态",
+      "format": "list",
+      "item_format": "| **负责人** | **任务** | **截止日期** | **优先级** | **状态** |\n| --- | --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "related_documents",
+      "title": "相关文档",
+      "instruction": "列出讨论中涉及的相关文档、工单或设计链接",
+      "format": "list",
+      "item_format": "| **文档标题** | **URL** | **类型** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 1
+  }
+}

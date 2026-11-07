@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { TranscriptPanel } from '@/components/MeetingDetails/TranscriptPanel';
 import { SummaryPanel } from '@/components/MeetingDetails/SummaryPanel';
 import { MeetingDetailsSplitView, type MeetingDetailsTab } from '@/components/MeetingDetails/MeetingDetailsSplitView';
+import { companyStorageKey } from '@/lib/company-scope';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 
 // Custom hooks
@@ -62,12 +63,10 @@ export default function PageContent({
   const customPrompt = meetingSettings.settings.customPrompt;
   const setCustomPrompt = (customPrompt: string) => meetingSettings.update({ customPrompt });
   const isRecording = false;
-  const [activeTab, setActiveTab] = useState<MeetingDetailsTab>('transcript');
+  const [activeTab, setActiveTab] = useState<MeetingDetailsTab>('split');
 
   // Ref to store the modal open function from SummaryGeneratorButtonGroup
   const openModelSettingsRef = useRef<(() => void) | null>(null);
-  const autoSwitchedSummaryMeetingIdsRef = useRef(new Set<string>());
-  const manuallySelectedTabMeetingIdsRef = useRef(new Set<string>());
   const autoGenerationStartedMeetingIdRef = useRef<string | null>(null);
 
   // Sidebar context
@@ -151,15 +150,10 @@ export default function PageContent({
   }, []);
 
   useEffect(() => {
-    if (
-      (meetingData.aiSummary || summaryGeneration.summaryStatus === 'completed')
-      && !autoSwitchedSummaryMeetingIdsRef.current.has(meeting.id)
-      && !manuallySelectedTabMeetingIdsRef.current.has(meeting.id)
-    ) {
-      autoSwitchedSummaryMeetingIdsRef.current.add(meeting.id);
-      setActiveTab('summary');
-    }
-  }, [meeting.id, meetingData.aiSummary, summaryGeneration.summaryStatus]);
+    try { const view=localStorage.getItem(companyStorageKey('meetily.meetingDetails.view'));
+      if (view==='summary'||view==='transcript'||view==='split') setActiveTab(view);
+    } catch { /* Layout preferences are optional. */ }
+  }, []);
 
   // Auto-generate only after the model configuration has settled.
   useEffect(() => {
@@ -197,11 +191,12 @@ export default function PageContent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="flex flex-col h-screen min-w-0 bg-gray-50"
+      className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden bg-gray-50"
     >
-      <details className="border-b bg-white px-4 py-2 text-sm">
+      <details className="max-h-[40%] shrink-0 overflow-y-auto border-b bg-white px-4 py-2 text-sm">
         <summary className="cursor-pointer">会议背景与人员设置 · {meetingSettings.ready ? (meetingSettings.dirty ? '未保存' : '已保存') : '加载中'}</summary>
         <p className="my-2 text-xs text-gray-500">设置只属于当前会议；生成时自动保存并固定本次内容。参会名单不代表说话人身份。</p>
+        <label className="my-2 block">会议背景<textarea aria-label="会议背景" className="mt-1 w-full rounded border p-2" disabled={!meetingSettings.ready || meetingSettings.saving} value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} /></label>
         <div className="flex flex-wrap gap-3">
           {([['participants', '出席人员'], ['absent', '缺席人员'], ['host', '主持人']] as const).map(([field, label]) =>
             <label key={field}>{label}<input aria-label={label} className="ml-2 rounded border p-1" disabled={!meetingSettings.ready || meetingSettings.saving} value={meetingSettings.settings[field]} onChange={e => meetingSettings.update({ [field]: e.target.value })} /></label>)}
@@ -209,11 +204,11 @@ export default function PageContent({
         </div>
         {meetingSettings.error && <p role="alert" className="text-red-600">{meetingSettings.error}</p>}
       </details>
-      <div className="flex flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
         <MeetingDetailsSplitView
           activeTab={activeTab}
           onTabChange={(tab) => {
-            manuallySelectedTabMeetingIdsRef.current.add(meeting.id);
+            try { localStorage.setItem(companyStorageKey('meetily.meetingDetails.view'),tab); } catch { /* Optional preference. */ }
             setActiveTab(tab);
           }}
           transcript={

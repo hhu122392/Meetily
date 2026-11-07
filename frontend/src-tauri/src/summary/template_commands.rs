@@ -45,7 +45,7 @@ pub async fn api_list_templates<R: Runtime>(
 ) -> Result<Vec<TemplateInfo>, String> {
     info!("api_list_templates called");
 
-    let templates = templates::list_templates();
+    let templates = templates::catalog::with_store(|repo|repo.list())?.templates.into_iter().map(|entry|(entry.id,entry.name,entry.description));
 
     let template_infos: Vec<TemplateInfo> = templates
         .into_iter()

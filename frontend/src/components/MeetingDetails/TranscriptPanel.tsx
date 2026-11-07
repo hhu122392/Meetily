@@ -4,7 +4,10 @@ import { Transcript, TranscriptSegmentData } from '@/types';
 import { TranscriptView } from '@/components/TranscriptView';
 import { VirtualizedTranscriptView } from '@/components/VirtualizedTranscriptView';
 import { TranscriptButtonGroup } from './TranscriptButtonGroup';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
+import { TranscriptFileSyncNotice } from './TranscriptFileSyncNotice';
 import { t, useUiLanguage } from "@/i18n";
 
 interface TranscriptPanelProps {
@@ -51,6 +54,14 @@ export function TranscriptPanel({
   onRefetchTranscripts,
 }: TranscriptPanelProps) {
   useUiLanguage();
+  const handleUpdateSegment = useCallback(async (segmentId: string, text: string, expectedText: string) => {
+    if (!meetingId) throw new Error('Meeting ID is required');
+    await invoke('api_update_transcript_segment', { meetingId, transcriptId: segmentId, text, expectedText });
+    window.dispatchEvent(new Event('transcript-files-changed'));
+    try { await onRefetchTranscripts?.(); }
+    catch { toast.error(t('转写已保存，但页面刷新失败，请重新打开会议')); return; }
+    toast.success(t('转写已保存，已有纪要需要重新生成才会更新'));
+  }, [meetingId, onRefetchTranscripts]);
   // Convert transcripts to segments if pagination is not used but we want virtualization
   const convertedSegments = useMemo(() => {
     if (usePagination && segments) {
@@ -80,6 +91,8 @@ export function TranscriptPanel({
         />
       </div>
 
+      {meetingId && <TranscriptFileSyncNotice meetingId={meetingId} revision={convertedSegments} />}
+
       {/* Transcript content - use virtualized view for better performance */}
       <div className="flex-1 overflow-hidden pb-4">
         <VirtualizedTranscriptView
@@ -96,6 +109,7 @@ export function TranscriptPanel({
           totalCount={totalCount}
           loadedCount={loadedCount}
           onLoadMore={onLoadMore}
+          onUpdateSegment={meetingId && !isRecording ? handleUpdateSegment : undefined}
         />
       </div>
 

@@ -15,9 +15,10 @@ interface Props {
   createdAt: string;
   getSummary: () => Promise<string>;
   disabled?: boolean;
+  compact?: boolean;
 }
 
-export function LarkSendButton({ meetingId, title, createdAt, getSummary, disabled }: Props) {
+export function LarkSendButton({ meetingId, title, createdAt, getSummary, disabled, compact = false }: Props) {
   useUiLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,8 +67,10 @@ export function LarkSendButton({ meetingId, title, createdAt, getSummary, disabl
   }
 
   return <>
-    <Button variant="outline" size="sm" onClick={() => void prepare()} disabled={disabled || loading || sending}>
-      <Send size={16} />Webhook 发送 </Button>
+    <Button variant={compact ? "ghost" : "outline"} size={compact ? "icon" : "sm"}
+      className={compact ? "h-8 w-8 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900" : undefined}
+      title="Webhook 发送" aria-label="Webhook 发送" onClick={() => void prepare()} disabled={disabled || loading || sending}>
+      <Send size={16} /><span className={compact ? "sr-only" : undefined}>Webhook 发送</span> </Button>
     <Dialog open={open} onOpenChange={next => {
       if (lock.current) return;
       if (!next) ++requestVersion.current;

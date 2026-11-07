@@ -9,6 +9,7 @@ import { TranscriptSettings } from '@/components/TranscriptSettings';
 import { RecordingSettings } from '@/components/RecordingSettings';
 import { PreferenceSettings } from '@/components/PreferenceSettings';
 import { SummaryModelSettings } from '@/components/SummaryModelSettings';
+import Link from 'next/link';
 import { BetaSettings } from '@/components/BetaSettings';
 import { LarkBotSettings } from '@/components/LarkBotSettings';
 import { UiLanguageSelect } from '@/components/UiLanguageSelect';
@@ -128,6 +129,7 @@ export default function SettingsPage() {
               />
             </TabsContent>
             <TabsContent value="summaryModels">
+              <div className="mb-6 rounded-lg border bg-white p-4"><Link className="font-medium text-blue-700" href="/settings/templates">管理纪要模板 →</Link><p className="mt-1 text-sm text-gray-600">编辑模板结构、导入导出 JSON，并设置当前公司的默认模板。</p></div>
               <SummaryModelSettings />
             </TabsContent>
             <TabsContent value="beta" className="mt-6">

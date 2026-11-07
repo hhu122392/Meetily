@@ -55,7 +55,7 @@ export function RecordingQueue() {
     finally { changingRef.current = false; setChanging(null); }
   };
   const pending = jobs.filter(j => !['completed', 'cancelled'].includes(j.status)).length;
-  return <details className="fixed bottom-4 right-4 z-40 w-80 max-w-[90vw] rounded-lg border bg-white p-3 shadow-md dark:bg-gray-900">
+  return <details className="fixed bottom-24 right-4 z-40 w-80 max-w-[90vw] max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-gray-900">
     <summary className="cursor-pointer text-sm font-medium">后台会议任务 · {pending ? `${pending} 项未完成` : '已全部处理'}</summary>
     <p className="mt-2 text-xs text-gray-500">暂停会在当前分段或准备步骤结束后生效，并保留已完成分段。显示“已暂停”后可切换公司；重启后仍暂停，点击继续才恢复。</p>
     <p className="mt-1 text-xs text-gray-500">取消会停止后续处理，保留已有录音和结果；不会停止 Lark 云录制。等待显示“已取消”后可切换公司。</p>

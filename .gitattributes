@@ -1,0 +1,2 @@
+# 保持定制版已发布迁移的换行格式，避免 Windows 检出改写 SQLx 校验值。
+frontend/src-tauri/migrations/202610*.sql text eol=lf

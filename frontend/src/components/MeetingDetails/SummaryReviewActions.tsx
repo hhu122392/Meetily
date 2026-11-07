@@ -1,7 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { SquarePen, Save, MessageSquare, Send, Info } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MarkdownFileEditor } from './MarkdownFileEditor';
 import { LarkCardPreview, type LarkPreviewCard } from './MinutesCardPreview';
@@ -10,8 +13,8 @@ type Draft = { chat_id: string; chat_name?: string | null; chat_name_error?: str
 type ExportStatus = { path?: string; error?: string };
 type DeliveryStatus = { linked: boolean; last_sent_at?: number | null; chat_name?: string | null };
 const sentTime = (seconds: number) => new Date(seconds * 1000).toLocaleString('zh-CN', { hour12: false });
-export function SummaryReviewActions({ meetingId, saveEdits, disabled }: {
-  meetingId: string; saveEdits: () => Promise<void>; disabled?: boolean;
+export function SummaryReviewActions({ meetingId, saveEdits, disabled, toolbarTarget }: {
+  meetingId: string; saveEdits: () => Promise<void>; disabled?: boolean; toolbarTarget?: HTMLElement | null;
 }) {
   const [file, setFile] = useState<ExportStatus>({});
   const [linked, setLinked] = useState(false);
@@ -104,23 +107,29 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled }: {
     } catch (e) { setError(String(e)); setDraft(null); }
     finally { lock.current = false; setBusy(false); }
   }
-  return <div className="space-y-2 border-b bg-slate-50 px-4 py-3 text-sm">
-    <h2 className="font-semibold text-slate-900">详细纪要（Markdown）</h2>
-    <p className="text-xs text-slate-600">下方用于编辑完整纪要并保存为 Markdown 文件。Lark 群消息使用独立的概要卡片，发送前需确认。</p>
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" disabled={disabled || busy} onClick={() => void prepare(false)}>保存 Markdown</Button>
-      <Button size="sm" variant="outline" disabled={disabled || busy} onClick={() => void prepare(false, true)}>编辑 Markdown 文件</Button>
+  const actions = <>
+      <Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="编辑纪要" title="编辑纪要" disabled={disabled || busy} onClick={() => void prepare(false, true)}><SquarePen className="h-4 w-4" /><span className="sr-only">编辑纪要</span></Button>
+      <Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="保存 Markdown" title="保存 Markdown" disabled={disabled || busy} onClick={() => void prepare(false)}><Save className="h-4 w-4" /><span className="sr-only">保存 Markdown</span></Button>
       {linked && <>
-        <Button size="sm" variant="outline" disabled={disabled || busy} onClick={() => void prepare(true)}>编辑 Lark 消息</Button>
-        <Button size="sm" disabled={disabled || busy} onClick={() => void prepare(true)}>发送到 Lark</Button>
-        <span className="text-xs text-gray-600">{lastSentAt ? `上次发送时间：${sentTime(lastSentAt)}` : '尚未发送'}</span>
+        <Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="编辑 Lark 消息" title="编辑 Lark 消息" disabled={disabled || busy} onClick={() => void prepare(true)}><MessageSquare className="h-4 w-4" /><span className="sr-only">编辑 Lark 消息</span></Button>
+        <Button className="h-8 w-8 rounded-full p-0" size="sm" aria-label="发送到 Lark" title="发送到 Lark（预览后确认）" disabled={disabled || busy} onClick={() => void prepare(true)}><Send className="h-4 w-4" /><span className="sr-only">发送到 Lark</span></Button>
       </>}
-    </div>
-    {file.path && <p className="break-all text-xs text-gray-600">Markdown 文件：{file.path}</p>}
-    {file.error && <p role="alert" className="text-red-700">{file.error}</p>}
-    {!open && error && <p role="alert" className="text-red-700">{error}</p>}
+      <Popover>
+        <PopoverTrigger asChild><Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="纪要文件与发送状态" title={linked ? (lastSentAt ? `上次发送时间：${sentTime(lastSentAt)}` : '尚未发送到 Lark') : '纪要文件信息'}><Info className="h-4 w-4" /></Button></PopoverTrigger>
+        <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] space-y-2 rounded-xl text-sm">
+          <p className="font-medium">纪要文件与发送状态</p>
+          {linked && <p>{lastSentAt ? `上次发送时间：${sentTime(lastSentAt)}` : '尚未发送到 Lark'}</p>}
+          <p className="break-all text-xs text-gray-600">{file.path ? `Markdown 文件：${file.path}` : '保存后可查看 Markdown 文件位置。'}</p>
+          <p className="text-xs text-gray-500">Lark 群消息使用独立的概要卡片，发送前需预览并确认。</p>
+        </PopoverContent>
+      </Popover>
+  </>;
+  return <>
+    {toolbarTarget ? createPortal(actions, toolbarTarget) : <div className="flex flex-wrap items-center gap-0.5">{actions}</div>}
+    {file.error && <p role="alert" className="px-4 py-2 text-sm text-red-700">{file.error}</p>}
+    {!open && error && <p role="alert" className="px-4 py-2 text-sm text-red-700">{error}</p>}
     <Dialog open={open} onOpenChange={next => { if (!next) closeMessage(); }}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl max-h-[92vh] overflow-y-auto" onEscapeKeyDown={e => { if (messageDirty || busy) e.preventDefault(); }} onPointerDownOutside={e => { if (messageDirty || busy) e.preventDefault(); }}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl max-h-[92vh] overflow-y-auto rounded-2xl" onEscapeKeyDown={e => { if (messageDirty || busy) e.preventDefault(); }} onPointerDownOutside={e => { if (messageDirty || busy) e.preventDefault(); }}>
         <DialogHeader><DialogTitle>Lark 消息 · 编辑与确认发送</DialogTitle>
           <DialogDescription>请核对目标群和概要卡片。详细内容在 Markdown 文件中，可单独编辑；只有勾选发送文件时，确认后才会上传附件。</DialogDescription>
         </DialogHeader>
@@ -138,8 +147,8 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled }: {
             <label className="block space-y-1"><span>消息概要</span><textarea ref={messageSummaryRef} aria-label="消息概要" className="block w-full resize-none rounded border bg-white p-3 text-sm leading-7" rows={6} maxLength={1500} disabled={busy || sent} value={messageSummary} onChange={e => setMessageSummary(e.target.value)} /></label>
             <p className="text-xs text-gray-500">支持文字、标题和列表，不使用表格。保存后，下方会显示实际待发送的卡片。</p>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={busy || sent || !messageDirty || !messageTitle.trim() || !messageSummary.trim()} onClick={() => void saveMessage()}>保存消息并更新预览</Button>
-              {messageDirty && <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setMessageTitle(draft.message_title ?? ''); setMessageSummary(draft.message_summary ?? ''); setError(''); }}>放弃消息修改</Button>}
+              <Button className="h-8 rounded-full" size="sm" variant="outline" disabled={busy || sent || !messageDirty || !messageTitle.trim() || !messageSummary.trim()} onClick={() => void saveMessage()}>保存消息并更新预览</Button>
+              {messageDirty && <Button className="h-8 rounded-full" size="sm" variant="ghost" disabled={busy} onClick={() => { setMessageTitle(draft.message_title ?? ''); setMessageSummary(draft.message_summary ?? ''); setError(''); }}>放弃消息修改</Button>}
             </div>
             {!messageDirty && draft.message_edited && <p className="text-xs text-green-700">消息修改已保存，确认后才会发送。</p>}
           </section>
@@ -151,7 +160,7 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled }: {
             {!includeMarkdown && <p className="text-xs text-gray-600">本次只发送概要卡片，不上传文件；详细纪要仍保存在本机。</p>}
             <p>{draft.markdown.name} · {draft.markdown.size.toLocaleString('zh-CN')} 字节</p>
             <p className="break-all text-xs text-gray-600">本地位置：{draft.markdown.path}</p>
-            <Button size="sm" variant="outline" disabled={busy || sent || messageDirty} onClick={() => { setOpen(false); setFileOpen(true); }}>编辑 Markdown 文件</Button>
+            <Button className="h-8 rounded-full" size="sm" variant="outline" disabled={busy || sent || messageDirty} onClick={() => { setOpen(false); setFileOpen(true); }}>编辑 Markdown 文件</Button>
           </section> : <p role="alert" className="text-red-700">Markdown 文件尚未准备好，请返回重新保存。</p>}
           {draft.requires_duplicate_ack && <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3">
             <p>上次发送结果不确定，卡片或附件可能已送达。请先核对群消息；再次发送可能产生重复消息。</p>
@@ -167,5 +176,5 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled }: {
       </DialogContent>
     </Dialog>
     {fileOpen && <MarkdownFileEditor meetingId={meetingId} onClose={() => setFileOpen(false)} onSaved={path => setFile({ path })} onSendPreview={linked ? () => { setFileOpen(false); void prepare(true); } : undefined} />}
-  </div>;
+  </>;
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FileText, Sparkles } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { FileText, Sparkles, Columns2 } from 'lucide-react';
+import { companyStorageKey } from '@/lib/company-scope';
 import { t, useUiLanguage } from "@/i18n";
 const STORAGE_KEY = 'meetily.meetingDetails.transcriptPaneRatio';
 const DEFAULT_RATIO = 0.3;
@@ -10,14 +10,15 @@ const MIN_RATIO = 0.3;
 const MAX_RATIO = 0.5;
 
 const TABS = [
-  { value: 'transcript' as const, label: 'Transcript', icon: FileText },
-  { value: 'summary' as const, label: 'Summary', icon: Sparkles },
+  { value: 'summary' as const, label: 'AI 摘要', icon: Sparkles },
+  { value: 'transcript' as const, label: '转写', icon: FileText },
+  { value: 'split' as const, label: '并排', icon: Columns2 },
 ];
 
 function readStoredRatio(): number {
   if (typeof window === 'undefined') return DEFAULT_RATIO;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(companyStorageKey(STORAGE_KEY));
     const n = raw == null ? NaN : Number(raw);
     return Number.isFinite(n) && n >= MIN_RATIO && n <= MAX_RATIO ? n : DEFAULT_RATIO;
   } catch {
@@ -27,13 +28,13 @@ function readStoredRatio(): number {
 
 function writeStoredRatio(value: number): void {
   try {
-    localStorage.setItem(STORAGE_KEY, String(value));
+    localStorage.setItem(companyStorageKey(STORAGE_KEY), String(value));
   } catch {
     // Layout persistence is optional.
   }
 }
 
-export type MeetingDetailsTab = 'transcript' | 'summary';
+export type MeetingDetailsTab = 'transcript' | 'summary' | 'split';
 
 interface MeetingDetailsSplitViewProps {
   transcript: ReactNode;
@@ -49,6 +50,7 @@ export function MeetingDetailsSplitView({
   onTabChange,
 }: MeetingDetailsSplitViewProps) {
   useUiLanguage();
+  const panelId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState(DEFAULT_RATIO);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -102,76 +104,29 @@ export function MeetingDetailsSplitView({
     writeStoredRatio(next);
   }, [ratio]);
 
-  const transcriptPanelProps = isDesktop
-    ? { role: 'region' as const, 'aria-label': 'Transcript', tabIndex: -1 }
-    : {};
-  const summaryPanelProps = isDesktop
-    ? { role: 'region' as const, 'aria-label': 'Summary', tabIndex: -1 }
-    : {};
-
-  return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => onTabChange(value as MeetingDetailsTab)}
-      className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden"
-    >
-      <div className="shrink-0 bg-white px-2 md:hidden">
-        <TabsList className="relative h-auto w-full justify-center rounded-none border-b border-gray-200 bg-transparent p-0">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="relative z-10 flex items-center gap-2 rounded-none border-0 bg-transparent px-6 py-4 text-gray-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none hover:text-gray-900"
-              >
-                <Icon className="h-4 w-4" />
-                {t(tab.label)}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+  const showTranscript = activeTab === 'transcript' || (activeTab === 'split' && isDesktop);
+  const showSummary = activeTab === 'summary' || activeTab === 'split';
+  const split = showTranscript && showSummary;
+  return <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+    <div className="flex shrink-0 justify-center border-b bg-white px-3 py-2">
+      <div role="group" aria-label="会议视图" className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100/90 p-1 shadow-sm backdrop-blur">
+        {TABS.map(({value,label,icon:Icon}) => <button key={value} type="button" aria-pressed={activeTab===value}
+          aria-controls={value==='split' ? panelId+'-transcript '+panelId+'-summary' : panelId+'-'+value}
+          className={'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-blue-600 '+(activeTab===value?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700')}
+          onClick={()=>onTabChange(value)}><Icon size={16}/>{t(label)}</button>)}
       </div>
-      <div
-        ref={containerRef}
-        className="flex flex-1 min-h-0 min-w-0 flex-col md:flex-row"
-        style={{ '--transcript-pane-width': `${ratio * 100}%` } as CSSProperties}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <TabsContent
-          value="transcript"
-          forceMount
-          className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden md:w-[var(--transcript-pane-width)] md:flex-none md:data-[state=inactive]:flex"
-          {...transcriptPanelProps}
-        >
-          {transcript}
-        </TabsContent>
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-valuenow={Math.round(ratio * 100)}
-          aria-valuemin={Math.round(MIN_RATIO * 100)}
-          aria-valuemax={Math.round(MAX_RATIO * 100)}
-          aria-valuetext={`Transcript panel ${Math.round(ratio * 100)} percent`}
-          aria-label={t("Resize transcript and summary")}
-          tabIndex={0}
-          className="group relative z-10 hidden w-2 flex-shrink-0 cursor-col-resize items-stretch justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset md:flex"
-          onPointerDown={onPointerDown}
-          onKeyDown={onSeparatorKeyDown}
-        >
-          <div className="h-full w-px bg-gray-200 transition-[width,background-color] duration-150 ease-out group-hover:w-1 group-hover:bg-blue-400 group-active:w-1 group-active:bg-blue-500" />
-        </div>
-        <TabsContent
-          value="summary"
-          forceMount
-          className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden md:data-[state=inactive]:flex"
-          {...summaryPanelProps}
-        >
-          {summary}
-        </TabsContent>
-      </div>
-    </Tabs>
-  );
+    </div>
+    {activeTab==='split'&&!isDesktop&&<p className="bg-gray-50 px-3 py-1 text-center text-xs text-gray-500">窗口较窄，当前显示纪要；可切换转写视图。</p>}
+    <div ref={containerRef} className="flex flex-1 min-h-0 min-w-0" onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+      <div id={panelId+'-transcript'} role="region" aria-label={t('Transcript')} aria-hidden={!showTranscript}
+        className="min-h-0 min-w-0 flex-col overflow-hidden" style={{display:showTranscript?'flex':'none',width:split ? ratio*100+'%' : '100%'}}>{transcript}</div>
+      {split&&<div role="separator" aria-orientation="vertical" aria-valuenow={Math.round(ratio*100)} aria-valuemin={MIN_RATIO*100} aria-valuemax={MAX_RATIO*100}
+        aria-label={t('Resize transcript and summary')} tabIndex={0} onPointerDown={onPointerDown} onKeyDown={onSeparatorKeyDown}
+        className="group relative z-10 flex w-2 shrink-0 cursor-col-resize justify-center focus-visible:outline-blue-600">
+        <div className="h-full w-px bg-gray-200 group-hover:w-1 group-hover:bg-blue-400"/>
+      </div>}
+      <div id={panelId+'-summary'} role="region" aria-label={t('Summary')} aria-hidden={!showSummary}
+        className="min-h-0 min-w-0 flex-1 flex-col overflow-hidden" style={{display:showSummary?'flex':'none'}}>{summary}</div>
+    </div>
+  </div>;
 }

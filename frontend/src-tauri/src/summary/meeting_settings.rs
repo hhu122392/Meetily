@@ -34,9 +34,13 @@ async fn require_meeting(pool: &SqlitePool, id: &str) -> Result<(), String> {
 pub async fn read(pool: &SqlitePool, id: &str) -> Result<MeetingSummarySettings, String> {
     require_meeting(pool, id).await?;
     let json: Option<String> = sqlx::query_scalar("SELECT settings_json FROM meeting_summary_settings WHERE meeting_id=?").bind(id).fetch_optional(pool).await.map_err(|e| e.to_string())?;
-    match json { Some(json) => serde_json::from_str(&json).map_err(|_| "会议设置数据损坏，未覆盖原设置".into()), None => Ok(MeetingSummarySettings::default()) }
+    match json { Some(json) => serde_json::from_str(&json).map_err(|_| "会议设置数据损坏，未覆盖原设置".into()), None => { let mut settings = MeetingSummarySettings::default();
+        settings.template_id = templates::catalog::default_for_meeting()?;
+        Ok(settings)
+    } }
 }
 pub async fn save(pool: &SqlitePool, id: &str, settings: &MeetingSummarySettings) -> Result<(), String> {
+    let _reference = templates::catalog::REFERENCES.read().await;
     require_meeting(pool, id).await?;
     settings.validate()?;
     templates::get_template(&settings.template_id)?;

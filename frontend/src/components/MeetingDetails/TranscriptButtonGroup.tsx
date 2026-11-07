@@ -41,11 +41,11 @@ export function TranscriptButtonGroup({
 
   return (
     <div className="flex items-center justify-center w-full gap-2">
-      <ButtonGroup>
+      <div role="group" aria-label="转写工具" className="flex items-center gap-0.5 rounded-full border border-gray-200 bg-white p-1 shadow-sm">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="px-2 @[22rem]:px-3"
+          className="h-8 rounded-full px-2 text-gray-600 @[22rem]:px-3"
           onClick={() => {
             Analytics.trackButtonClick('copy_transcript', 'meeting_details');
             onCopyTranscript();
@@ -59,8 +59,8 @@ export function TranscriptButtonGroup({
 
         <Button
           size="sm"
-          variant="outline"
-          className="px-2 @[22rem]:px-4"
+          variant="ghost"
+          className="h-8 rounded-full px-2 text-gray-600 @[22rem]:px-3"
           onClick={() => {
             Analytics.trackButtonClick('open_recording_folder', 'meeting_details');
             onOpenMeetingFolder();
@@ -74,8 +74,8 @@ export function TranscriptButtonGroup({
         {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
           <Button
             size="sm"
-            variant="outline"
-            className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 px-2 @[22rem]:px-4"
+            variant="ghost"
+            className="h-8 rounded-full bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 px-2 @[22rem]:px-4"
             onClick={() => {
               Analytics.trackButtonClick('enhance_transcript', 'meeting_details');
               setShowRetranscribeDialog(true);
@@ -86,7 +86,7 @@ export function TranscriptButtonGroup({
             <span className="hidden @[22rem]:inline">{t("Enhance")}</span>
           </Button>
         )}
-      </ButtonGroup>
+      </div>
 
       {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
         <RetranscribeDialog

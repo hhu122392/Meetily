@@ -32,5 +32,13 @@
   "相同内容已发送到该机器人，本次未重复发送。": "This content was already sent to this bot. No duplicate was sent.",
   "纪要已成功发送到 Lark。": "Summary sent to Lark.",
   "无法准备发送内容，请确认纪要已加载，并使用包含 Lark 功能的桌面版本。": "Could not prepare the message. Make sure the summary is loaded and you are using a desktop build with Lark support.",
-  "发送失败，请检查群内消息后再决定是否重试。": "Sending failed. Check the group for the message before retrying."
+  "发送失败，请检查群内消息后再决定是否重试。": "Sending failed. Check the group for the message before retrying.",
+  "编辑转写内容": "Edit transcript text",
+  "取消编辑转写": "Cancel transcript edit",
+  "保存转写": "Save transcript",
+  "编辑这段转写": "Edit this segment",
+  "转写已变化，请取消编辑后重新打开": "The transcript changed. Cancel and reopen the editor.",
+  "保存失败，修改内容已保留，请重试": "Could not save. Your draft is preserved; please retry.",
+  "转写已保存，但页面刷新失败，请重新打开会议": "Saved, but the view could not refresh. Reopen the meeting.",
+  "转写已保存，已有纪要需要重新生成才会更新": "Transcript saved. Regenerate the summary to reflect your changes."
 }

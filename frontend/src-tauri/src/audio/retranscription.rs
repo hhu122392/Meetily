@@ -453,6 +453,8 @@ async fn run_retranscription<R: Runtime>(
 
     // Wrap delete+insert+update in a transaction to prevent data loss
     let pool = app_state.db_manager.pool();
+    let _correction_write = crate::transcript_file_store::WRITE_LOCK.lock().await;
+    crate::transcript_file_store::ensure_ready(pool, &meeting_id).await.map_err(|e| anyhow!(e))?;
     let mut conn = pool.acquire().await.map_err(|e| anyhow!("DB error: {}", e))?;
     let mut tx = sqlx::Connection::begin(&mut *conn)
         .await

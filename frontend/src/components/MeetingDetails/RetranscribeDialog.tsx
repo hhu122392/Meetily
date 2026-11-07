@@ -24,6 +24,7 @@ import { LANGUAGES } from '@/constants/languages';
 import { normalizeTranscriptionLanguage } from '@/lib/transcription-language';
 import { useTranscriptionModels, ModelOption } from '@/hooks/useTranscriptionModels';
 import Analytics from '@/lib/analytics';
+import { TranscriptCorrectionDialog } from './TranscriptCorrectionDialog';
 import { t, useUiLanguage } from "@/i18n";
 
 interface RetranscribeDialogProps {
@@ -51,6 +52,8 @@ export function RetranscribeDialog({
   useUiLanguage();
   const { selectedLanguage, transcriptModelConfig } = useConfig();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showCorrection, setShowCorrection] = useState(false);
+  useEffect(() => { if (!open) setShowCorrection(false); }, [open]);
   const [error, setError] = useState<string | null>(null);
   const [selectedLang, setSelectedLang] = useState(selectedLanguage || 'auto');
 
@@ -180,6 +183,8 @@ export function RetranscribeDialog({
     }
   };
 
+  if (open && showCorrection && meetingFolderPath) return <TranscriptCorrectionDialog key={meetingId} meetingId={meetingId} folder={meetingFolderPath} onClose={() => { setShowCorrection(false); onOpenChange(false); }} onComplete={onComplete} />;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -209,6 +214,7 @@ export function RetranscribeDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {!isProcessing && <div className="rounded-xl border bg-gray-50 p-3"><Button variant="outline" className="rounded-full" disabled={!meetingFolderPath} onClick={() => setShowCorrection(true)}>转写文字纠错</Button><p className="mt-2 text-xs text-gray-500">检查现有文字中的术语、同音字和错别字，无需重新识别音频。可选 AI 校对，确认后写回并保留备份。</p></div>}
         <div className="space-y-4 py-4">
           {!isProcessing && !loadingModels && availableModels.length === 0 && (
             <p className="text-sm text-amber-700">没有可用的本地转写模型，请先在设置中下载模型。</p>

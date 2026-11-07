@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
+import { TEMPLATES_CHANGED } from '@/lib/summary-template';
 
 export function useTemplates() {
   const [availableTemplates, setAvailableTemplates] = useState<Array<{
@@ -13,7 +14,10 @@ export function useTemplates() {
 
   // Fetch available templates on mount
   useEffect(() => {
+    let active = true;
+    let request = 0;
     const fetchTemplates = async () => {
+      const current = ++request;
       try {
         const templates = await invokeTauri('api_list_templates') as Array<{
           id: string;
@@ -21,12 +25,15 @@ export function useTemplates() {
           description: string;
         }>;
         console.log('Available templates:', templates);
-        setAvailableTemplates(templates);
+        if (active && request === current) setAvailableTemplates(templates);
       } catch (error) {
         console.error('Failed to fetch templates:', error);
       }
     };
-    fetchTemplates();
+    void fetchTemplates();
+    window.addEventListener(TEMPLATES_CHANGED, fetchTemplates);
+    window.addEventListener('focus', fetchTemplates);
+    return () => { active = false; window.removeEventListener(TEMPLATES_CHANGED, fetchTemplates); window.removeEventListener('focus', fetchTemplates); };
   }, []);
 
   // Handle template selection

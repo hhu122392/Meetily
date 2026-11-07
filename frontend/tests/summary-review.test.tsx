@@ -12,6 +12,7 @@ const sequence: string[] = [];
 const invoke = mock(async (command: string, args?: any) => {
   sequence.push(command);
   if (command === 'summary_markdown_status') return {};
+  if (command === 'summary_markdown_read') return { name: '会议纪要.md', path: 'D:/录音/会议纪要.md', content: '# 已有纪要', hash: 'test-hash', size: 20 };
   if (command === 'lark_app_meeting_status') return { linked: true, last_sent_at: lastSentAt };
   if (command === 'summary_export_markdown') { if (failExport) throw '磁盘已满'; return 'D:/录音/会议纪要.md'; }
   if (command === 'lark_app_edit_message') {
@@ -27,7 +28,7 @@ mock.module('../src/components/ui/dialog', () => ({ Dialog: ({ open, children }:
   DialogContent: Container, DialogDescription: Container, DialogHeader: Container, DialogTitle: Container }));
 const { SummaryReviewActions } = await import('../src/components/MeetingDetails/SummaryReviewActions');
 let renderer: ReactTestRenderer;
-const button = (text: string) => renderer.root.findAllByType('button').find(b => b.children.includes(text))!;
+const button = (text: string) => renderer.root.findAllByType('button').find(b => b.props['aria-label'] === text || b.children.includes(text))!;
 afterEach(async () => { if (renderer) await act(async () => renderer.unmount()); invoke.mockClear(); sequence.length = 0; failSave = failExport = failSend = failEdit = false; lastSentAt = null; uncertain = false; });
 async function mount() {
   await act(async () => { renderer = create(<SummaryReviewActions meetingId="test" saveEdits={async () => { sequence.push('save-edits'); if (failSave) throw '保存失败'; }} />); });
@@ -42,6 +43,14 @@ test('saves edits and Markdown before preview; requires a separate confirmation'
   await act(async () => button('确认发送').props.onClick());
   expect(invoke.mock.calls as unknown[]).toContainEqual(['lark_app_check_send', { meetingId: 'test', expectedRevision: 'review-1', acknowledgeDuplicateRisk: false, includeMarkdown: true }]);
   expect(button('已发送').props.disabled).toBe(true);
+});
+
+test('编辑纪要入口保存当前草稿后打开文件编辑器，不准备或发送群消息', async () => {
+  await act(async () => { renderer = create(<SummaryReviewActions meetingId="test" saveEdits={async () => { sequence.push('save-edits'); }} />); });
+  sequence.length = 0;
+  await act(async () => renderer.root.findAllByType('button').find(b => b.props['aria-label'] === '编辑纪要')!.props.onClick());
+  expect(sequence).toEqual(['save-edits', 'summary_export_markdown', 'summary_markdown_read']);
+  expect(JSON.stringify(renderer.toJSON())).toContain('# 已有纪要');
 });
 test('save failure cannot open a sendable preview', async () => {
   failSave = true; await mount();

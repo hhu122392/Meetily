@@ -109,8 +109,9 @@ fn relocated(value: &str, plan: &[(PathBuf, PathBuf)]) -> Option<String> {
 }
 
 async fn remap_paths(pool: &SqlitePool, plan: &[(PathBuf, PathBuf)], target: &Path) -> Result<(), String> {
+    crate::transcript_file_store::ensure_table(pool).await.map_err(|e| e.to_string())?;
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    for (table, column) in [("meetings","folder_path"),("recording_jobs","folder_path"),("lark_recording_links","folder_path"),("lark_auto_recordings","folder_path"),("recording_transcription_checks","folder_path"),("summary_markdown_exports","path")] {
+    for (table, column) in [("meetings","folder_path"),("recording_jobs","folder_path"),("lark_recording_links","folder_path"),("lark_auto_recordings","folder_path"),("recording_transcription_checks","folder_path"),("summary_markdown_exports","path"),("transcript_file_sync","folder")] {
         let values = sqlx::query(&format!("SELECT DISTINCT {column} AS value FROM {table} WHERE {column} IS NOT NULL"))
             .fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
         for row in values {
@@ -164,7 +165,10 @@ mod tests {
         sqlx::raw_sql("CREATE TABLE summary_markdown_exports(path TEXT); CREATE TABLE recording_storage_settings(id INTEGER PRIMARY KEY,directory TEXT);").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO summary_markdown_exports VALUES(?)").bind(old.join("会议纪要.md").to_string_lossy().as_ref()).execute(&pool).await.unwrap();
         let plan = vec![(std::fs::canonicalize(&old).unwrap(),new.clone())];
+        crate::transcript_file_store::ensure_table(&pool).await.unwrap();
+        sqlx::query("INSERT INTO transcript_file_sync VALUES('meeting',?,'{}')").bind(old.to_string_lossy().as_ref()).execute(&pool).await.unwrap();
         remap_paths(&pool,&plan,&new).await.unwrap();
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT folder FROM transcript_file_sync").fetch_one(&pool).await.unwrap(),new.to_string_lossy());
         for table in ["meetings","recording_jobs","lark_recording_links","lark_auto_recordings","recording_transcription_checks"] {
             assert_eq!(sqlx::query_scalar::<_,String>(&format!("SELECT folder_path FROM {table}")).fetch_one(&pool).await.unwrap(),new.to_string_lossy());
         }

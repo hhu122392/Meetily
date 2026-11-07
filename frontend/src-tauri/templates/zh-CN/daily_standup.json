@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "id": "daily_standup",
+  "name": "每日站会",
+  "description": "适用于工程和产品团队的限时每日进展同步。",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "date",
+      "title": "日期",
+      "instruction": "YYYY-MM-DD",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "attendees",
+      "title": "参会人",
+      "instruction": "列出实际参会人员",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "yesterday",
+      "title": "昨日完成",
+      "instruction": "用简短要点列出昨日完成的工作",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": "| **负责人** | **已完成工作** |\n| --- | --- |",
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "today",
+      "title": "今日计划",
+      "instruction": "用简短要点列出今天计划完成的工作",
+      "format": "list",
+      "item_format": null,
+      "example_item_format": "| **负责人** | **计划工作** |\n| --- | --- |",
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "blockers",
+      "title": "阻塞项",
+      "instruction": "列出所有阻塞项；如已知，请注明负责人",
+      "format": "list",
+      "item_format": "| **负责人** | **阻塞项** | **影响** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "notes",
+      "title": "备注",
+      "instruction": "补充简短备注或通知（可选）",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 1
+  }
+}

@@ -53,6 +53,15 @@ pub mod lark;
 pub mod openrouter;
 pub mod parakeet_engine;
 pub mod sensevoice_engine;
+pub mod transcript_revision;
+pub mod transcript_proofread;
+pub mod transcript_term_correction;
+pub mod transcript_text_edit;
+pub mod transcript_file_store;
+pub mod transcript_file_sync;
+pub mod proofread_protocol;
+pub mod transcript_correction_context;
+pub mod transcript_manual_edit;
 pub mod state;
 pub mod summary;
 pub mod tray;
@@ -488,6 +497,10 @@ pub fn run() {
                 _app.manage(company::StartupFailure(format!("无法加载公司资料：{error} 请检查资料目录或恢复备份后重启 Meetily。")));
                 return Ok(());
             }
+            if let Err(error) = company::initialize_templates(_app.handle()) {
+                _app.manage(company::StartupFailure(format!("无法加载公司模板：{error}")));
+                return Ok(());
+            }
             #[cfg(target_os = "windows")]
             match _app.path().resolve(
                 "onnxruntime.dll",
@@ -835,6 +848,14 @@ pub fn run() {
             summary::commands::api_detect_transcript_summary_language,
             summary::commands::api_cancel_summary,
             // Template commands
+            summary::template_library_commands::template_library_list,
+            summary::template_library_commands::template_library_export,
+            summary::template_library_commands::template_library_read,
+            summary::template_library_commands::template_library_save,
+            summary::template_library_commands::template_library_import,
+            summary::template_library_commands::template_library_duplicate,
+            summary::template_library_commands::template_library_set_default,
+            summary::template_library_commands::template_library_delete,
             summary::template_commands::api_list_templates,
             summary::template_commands::api_get_template_details,
             summary::template_commands::api_validate_template,
@@ -905,6 +926,18 @@ pub fn run() {
             // System settings commands
             #[cfg(target_os = "macos")]
             utils::open_system_settings,
+            transcript_revision::api_list_transcript_backups,
+            transcript_revision::api_get_transcript_revision_diff,
+            transcript_revision::api_restore_transcript_revision,
+            transcript_revision::api_apply_meeting_text_corrections,
+            transcript_proofread::api_review_transcript_with_llm,
+            transcript_proofread::api_apply_transcript_proofread_edits,
+            transcript_manual_edit::api_update_transcript_segment,
+            transcript_proofread::api_get_proofread_target,
+            transcript_proofread::api_set_proofread_target,
+            transcript_proofread::api_list_proofread_models,
+            transcript_file_sync::api_transcript_file_sync_pending,
+            transcript_file_sync::api_retry_transcript_file_sync,
             // Retranscription commands
             audio::retranscription::start_retranscription_command,
             audio::retranscription::cancel_retranscription_command,

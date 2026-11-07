@@ -1,0 +1,133 @@
+{
+  "schema_version": 2,
+  "id": "psychatric_session",
+  "name": "精神科会谈记录（SOAP + AI 混合）",
+  "description": "基于 SOAP 的 AI 辅助精神科进展记录模板，包含临床元数据和 AI 摘要。",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [],
+  "source": {
+    "type": "builtin",
+    "original_file_name": null,
+    "original_file_sha256": null,
+    "imported_at": null,
+    "copied_from_template_id": null
+  },
+  "created_at": "2026-08-23T00:00:00+08:00",
+  "updated_at": "2026-08-23T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "session_metadata",
+      "title": "会谈元数据",
+      "instruction": "记录患者姓名首字母／ID、会谈日期、服务提供者、会谈类型和时长（HIPAA 敏感信息）",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "ai_session_summary",
+      "title": "AI 会谈摘要",
+      "instruction": "生成一句话结论和一段式执行摘要（由 AI 生成），并包含置信度。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "subjective_s",
+      "title": "主观资料（S）",
+      "instruction": "记录患者自述的情绪、症状、睡眠、食欲和压力源",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "objective_o",
+      "title": "客观资料（O）",
+      "instruction": "记录可观察结果：情感表现、言语、行为、定向力，以及相关生命体征",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "assessment_a",
+      "title": "评估（A）",
+      "instruction": "记录诊断印象、风险评估（SI/HI）及相对于治疗目标的进展",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "plan_p",
+      "title": "计划（P）",
+      "instruction": "记录干预措施、药物调整、转诊、治疗任务和随访安排",
+      "format": "list",
+      "item_format": "| **干预措施** | **负责人** | **频率** | **随访日期** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "medications",
+      "title": "药物",
+      "instruction": "记录当前药物、剂量、调整情况及理由",
+      "format": "list",
+      "item_format": "| **药物** | **剂量** | **给药途径** | **开始／调整日期** |\n| --- | --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "diagnoses_dsmicd",
+      "title": "诊断（DSM/ICD）",
+      "instruction": "列出诊断编码和工作诊断",
+      "format": "list",
+      "item_format": "| **编码** | **体系** | **诊断** |\n| --- | --- | --- |",
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "safety_risk_management",
+      "title": "安全与风险管理",
+      "instruction": "记录安全计划、紧急联系人及住院考量",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "next_appointment",
+      "title": "下次预约",
+      "instruction": "记录下次会谈的日期、时间和形式",
+      "format": "string",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "audit_trail",
+      "title": "审计记录",
+      "instruction": "记录人工复核标记、复核人姓名、时间戳和 AI 版本",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {
+    "meetily.content_revision": 1
+  }
+}

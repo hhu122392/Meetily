@@ -93,6 +93,7 @@ export function SummaryPanel({
   const [summaryLang, setSummaryLang] = useState<string | null>(null);
   const [summaryLangStorage, setSummaryLangStorage] = useState<SummaryLanguageStorage>('metadata');
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [reviewToolbarTarget, setReviewToolbarTarget] = useState<HTMLSpanElement | null>(null);
   const languageLoadVersionRef = useRef(0);
   const activeMeetingIdRef = useRef(meeting.id);
   const languageSaveVersionRef = useRef(0);
@@ -222,8 +223,9 @@ export function SummaryPanel({
     <Popover open={langPickerOpen} onOpenChange={setLangPickerOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
+          className="h-8 rounded-full px-2 text-gray-600 hover:text-gray-900"
           title={`${t('Summary Language')}: ${t(effectiveLangLabel)}`}
           aria-label={t("Set summary language")}
         >
@@ -247,39 +249,16 @@ export function SummaryPanel({
   );
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden h-full w-full @container">
-      {/* Top-level actions — always visible, same pattern as TranscriptPanel */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-center w-full min-w-0 gap-2 flex-wrap">
-          <div className="flex-shrink-0 min-w-0">
-            <SummaryGeneratorButtonGroup
-              modelConfig={modelConfig}
-              setModelConfig={setModelConfig}
-              onSaveModelConfig={onSaveModelConfig}
-              onGenerateSummary={onGenerateSummary}
-              onStopGeneration={onStopGeneration}
-              customPrompt={customPrompt}
-              summaryStatus={summaryStatus}
-              availableTemplates={availableTemplates}
-              selectedTemplate={selectedTemplate}
-              onTemplateSelect={onTemplateSelect}
-              hasTranscripts={transcripts.length > 0}
-              hasSummary={hasSummary}
-              isModelConfigLoading={isModelConfigLoading}
-              onOpenModelSettings={onOpenModelSettings}
-              languageSlot={transcripts.length > 0 || hasSummary ? languageSlot : undefined}
-            />
-          </div>
-
-          {hasSummary && !isSummaryLoading && (
-            <div className="flex-shrink-0 flex gap-2 flex-wrap">
-              <SummaryUpdaterButtonGroup
-                isSaving={isSaving}
-                isDirty={isSummaryDirty}
-                onSave={onSaveAll}
-                onCopy={onCopySummary}
-              />
-              <LarkSendButton
+    <div className="relative flex-1 min-w-0 flex flex-col bg-white overflow-hidden h-full w-full @container">
+      {(transcripts.length > 0 || hasSummary) && <div className="flex shrink-0 justify-end px-4 py-3">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-0.5 rounded-2xl border border-gray-200 bg-white/95 p-1 shadow-sm" role="group" aria-label="纪要工具">
+          <span ref={setReviewToolbarTarget} className="contents" />
+          <SummaryGeneratorButtonGroup layout="toolbar" modelConfig={modelConfig} setModelConfig={setModelConfig}
+              onSaveModelConfig={onSaveModelConfig} onGenerateSummary={onGenerateSummary}
+              onStopGeneration={onStopGeneration} customPrompt={customPrompt} summaryStatus={summaryStatus}
+              availableTemplates={availableTemplates} selectedTemplate={selectedTemplate} onTemplateSelect={onTemplateSelect}
+              hasTranscripts={transcripts.length > 0} hasSummary={hasSummary} isModelConfigLoading={isModelConfigLoading} onOpenModelSettings={onOpenModelSettings} />
+          {hasSummary && !isSummaryLoading && (<LarkSendButton compact
                 key={meeting.id}
                 meetingId={meeting.id}
                 title={meetingTitle}
@@ -293,14 +272,25 @@ export function SummaryPanel({
                   }
                   return legacySummaryText(aiSummary);
                 }}
-              />
-            </div>
-          )}
+              />)}
         </div>
-      </div>
+      </div>}
+      {(transcripts.length > 0 || hasSummary) && <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center px-3">
+        <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1.5 shadow-lg backdrop-blur" role="group" aria-label="纪要操作">
+          {hasSummary && !isSummaryLoading && <>
+            <SummaryUpdaterButtonGroup isSaving={isSaving} isDirty={isSummaryDirty} onSave={onSaveAll} onCopy={onCopySummary} />
+            <span className="mx-0.5 h-5 w-px shrink-0 bg-gray-200" aria-hidden="true" />
+          </>}
+          <SummaryGeneratorButtonGroup layout="primary" modelConfig={modelConfig} setModelConfig={setModelConfig}
+              onSaveModelConfig={onSaveModelConfig} onGenerateSummary={onGenerateSummary}
+              onStopGeneration={onStopGeneration} customPrompt={customPrompt} summaryStatus={summaryStatus}
+              availableTemplates={availableTemplates} selectedTemplate={selectedTemplate} onTemplateSelect={onTemplateSelect}
+              hasTranscripts={transcripts.length > 0} hasSummary={hasSummary} isModelConfigLoading={isModelConfigLoading} languageSlot={languageSlot} />
+        </div>
+      </div>}
 
       {hasSummary && !isSummaryLoading && <SummaryReviewActions key={`review-${meeting.id}`}
-        meetingId={meeting.id} disabled={isSaving} saveEdits={async () => {
+        meetingId={meeting.id} disabled={isSaving} toolbarTarget={reviewToolbarTarget} saveEdits={async () => {
           if (!summaryRef.current) throw new Error('纪要编辑器尚未加载，请稍后重试。');
           if (summaryRef.current.isDirty) await summaryRef.current.saveSummary();
         }} />}
@@ -320,7 +310,7 @@ export function SummaryPanel({
         />
       ) : (
         <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
-          <div className="p-6 w-full">
+          <div className="mx-auto w-full max-w-3xl px-4 pt-4 pb-28 sm:px-6">
             <BlockNoteSummaryView
               key={meeting.id}
               ref={summaryRef}
