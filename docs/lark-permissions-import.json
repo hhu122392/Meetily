@@ -1,0 +1,22 @@
+{
+  "scopes": {
+    "tenant": [
+      "im:message.group_at_msg:readonly",
+      "im:message:send_as_bot",
+      "im:chat:read",
+      "im:resource",
+      "vc:meeting.meetingevent:read",
+      "vc:reserve",
+      "vc:reserve:readonly"
+    ],
+    "user": [
+      "vc:meeting.meetingevent:read",
+      "offline_access",
+      "vc:meeting",
+      "vc:record",
+      "vc:record:readonly",
+      "vc:meeting:readonly",
+      "minutes:minutes.media:export"
+    ]
+  }
+}
