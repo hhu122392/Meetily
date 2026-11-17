@@ -50,6 +50,22 @@ test('复制内置模板后编辑和设默认；并发冲突保留编辑内容',
   expect(saveCall[1].expectedVersion).toBe(1);
 });
 
+test('关闭修改过的模板时可从底栏继续编辑或保存并关闭',async()=>{
+  await act(async()=>{view=create(<TemplateLibrary/>);});
+  await act(async()=>button('复制').props.onClick());
+  const name=view.root.findAllByType('input').find(n=>n.props.value==='标准会议（副本）')!;
+  await act(async()=>name.props.onChange({target:{value:'新周会'}}));
+  await act(async()=>button('关闭').props.onClick());
+  const footer=view.root.findByType('footer');
+  expect(footer.findAllByType('button').map(text)).toEqual(['继续编辑','放弃修改','保存并关闭']);
+  await act(async()=>button('继续编辑').props.onClick());
+  expect(name.props.value).toBe('新周会');
+  await act(async()=>button('关闭').props.onClick());
+  await act(async()=>button('保存并关闭').props.onClick());
+  expect(docs.get('custom_copy')?.name).toBe('新周会');
+  expect(view.root.findAllByType('footer')).toHaveLength(0);
+});
+
 test('超大 JSON 在读取前拒绝，导入失败不会覆盖已有模板',async()=>{
   await act(async()=>{view=create(<TemplateLibrary/>);});
   const fileInput=view.root.findAllByType('input').find(n=>n.props.type==='file')!;

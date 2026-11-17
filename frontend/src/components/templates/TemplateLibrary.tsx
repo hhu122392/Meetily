@@ -62,6 +62,15 @@ export function TemplateLibrary() {
     if (editor && JSON.stringify(editor.doc) !== editor.original) setDiscard(true);
     else { setEditor(null); setError(''); }
   }
+  async function saveEditor() {
+    if (!editor || editor.readonly) return;
+    setDiscard(false);
+    const validation = validateTemplateDraft(editor.doc);
+    if (validation) throw Error(validation);
+    await templateLibrary.save(editor.doc, editor.expectedVersion);
+    setEditor(null);
+    await changed('模板已保存');
+  }
   async function exportTemplate(entry: TemplateEntry) {
     const path = await templateLibrary.export(entry.id);
     if (mounted.current) setNotice(path ? `模板已导出：${path}` : '已取消导出');
@@ -127,12 +136,19 @@ export function TemplateLibrary() {
             </fieldset>)}
             {!editor.readonly && <Button type="button" variant="outline" disabled={editor.doc.sections.length>=50} onClick={()=>patch({sections:[...editor.doc.sections,newSection()]})}><Plus size={16}/>添加章节</Button>}
           </fieldset>
-          {discard && <div role="alert" className="rounded-md bg-amber-50 p-3 text-sm">有尚未保存的修改。<Button variant="ghost" onClick={()=>{setEditor(null);setDiscard(false);setError('');}}>放弃修改</Button><Button variant="ghost" onClick={()=>setDiscard(false)}>继续编辑</Button></div>}
           </div>
-          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 pt-4"><Button variant="outline" disabled={busy} onClick={closeEditor}>关闭</Button>{!editor.readonly && <Button disabled={busy} onClick={()=>void run(async()=>{
-            const validation=validateTemplateDraft(editor.doc);if(validation)throw Error(validation);
-            await templateLibrary.save(editor.doc,editor.expectedVersion);setEditor(null);await changed('模板已保存');
-          })}>{busy?'保存中…':'保存模板'}</Button>}</div>
+          <footer className="shrink-0 border-t border-gray-100 pt-3">
+            {discard && <p role="alert" className="mb-2 text-sm font-medium text-amber-800">模板有未保存的修改，是否保存后关闭？</p>}
+            <div className="flex flex-wrap justify-end gap-2">
+              {discard ? <>
+                <Button variant="ghost" autoFocus onClick={()=>setDiscard(false)}>继续编辑</Button>
+                <Button variant="outline" onClick={()=>{setEditor(null);setDiscard(false);setError('');}}>放弃修改</Button>
+              </> : <Button variant="outline" disabled={busy} onClick={closeEditor}>关闭</Button>}
+              {!editor.readonly && <Button disabled={busy} onClick={() => void run(saveEditor)}>
+                {busy ? '保存中…' : discard ? '保存并关闭' : '保存模板'}
+              </Button>}
+            </div>
+          </footer>
         </>}
       </DialogContent>
     </Dialog>
