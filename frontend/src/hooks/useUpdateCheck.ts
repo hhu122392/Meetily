@@ -10,7 +10,7 @@ interface UseUpdateCheckOptions {
 
 export function useUpdateCheck(options: UseUpdateCheckOptions = {}) {
   const {
-    checkOnMount = true,
+    checkOnMount = false,
     showNotification = true,
     onUpdateAvailable,
   } = options;
