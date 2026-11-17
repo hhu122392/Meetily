@@ -275,20 +275,6 @@ export function SummaryPanel({
               />)}
         </div>
       </div>}
-      {(transcripts.length > 0 || hasSummary) && <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center px-3">
-        <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1.5 shadow-lg backdrop-blur" role="group" aria-label="纪要操作">
-          {hasSummary && !isSummaryLoading && <>
-            <SummaryUpdaterButtonGroup isSaving={isSaving} isDirty={isSummaryDirty} onSave={onSaveAll} onCopy={onCopySummary} />
-            <span className="mx-0.5 h-5 w-px shrink-0 bg-gray-200" aria-hidden="true" />
-          </>}
-          <SummaryGeneratorButtonGroup layout="primary" modelConfig={modelConfig} setModelConfig={setModelConfig}
-              onSaveModelConfig={onSaveModelConfig} onGenerateSummary={onGenerateSummary}
-              onStopGeneration={onStopGeneration} customPrompt={customPrompt} summaryStatus={summaryStatus}
-              availableTemplates={availableTemplates} selectedTemplate={selectedTemplate} onTemplateSelect={onTemplateSelect}
-              hasTranscripts={transcripts.length > 0} hasSummary={hasSummary} isModelConfigLoading={isModelConfigLoading} languageSlot={languageSlot} />
-        </div>
-      </div>}
-
       {hasSummary && !isSummaryLoading && <SummaryReviewActions key={`review-${meeting.id}`}
         meetingId={meeting.id} disabled={isSaving} toolbarTarget={reviewToolbarTarget} saveEdits={async () => {
           if (!summaryRef.current) throw new Error('纪要编辑器尚未加载，请稍后重试。');
@@ -302,15 +288,17 @@ export function SummaryPanel({
           </div>
         </div>
       ) : !hasSummary ? (
-        <EmptyStateSummary
-          onGenerate={() => onGenerateSummary(customPrompt)}
-          hasModel={modelConfig.provider !== null && modelConfig.model !== null}
-          isGenerating={isSummaryLoading}
-          error={summaryError}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <EmptyStateSummary
+            onGenerate={() => onGenerateSummary(customPrompt)}
+            hasModel={modelConfig.provider !== null && modelConfig.model !== null}
+            isGenerating={isSummaryLoading}
+            error={summaryError}
+          />
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
-          <div className="mx-auto w-full max-w-3xl px-4 pt-4 pb-28 sm:px-6">
+          <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6">
             <BlockNoteSummaryView
               key={meeting.id}
               ref={summaryRef}
@@ -331,16 +319,26 @@ export function SummaryPanel({
               }}
             />
           </div>
-          {summaryStatus !== 'idle' && (
-            <div className={`mt-4 p-4 rounded-lg ${summaryStatus === 'error' ? 'bg-red-100 text-red-700' :
-              summaryStatus === 'completed' ? 'bg-green-100 text-green-700' :
-                'bg-blue-100 text-blue-700'
-              }`}>
-              <p className="text-sm font-medium">{getSummaryStatusMessage(summaryStatus)}</p>
-            </div>
-          )}
         </div>
       )}
+      {(transcripts.length > 0 || hasSummary) && <div className="flex shrink-0 flex-col items-center gap-1 px-3 pt-1 pb-2">
+        {hasSummary && (summaryStatus === 'completed' || summaryStatus === 'error') && (
+          <span role="status" className={`rounded-full px-2 py-0.5 text-xs font-medium ${summaryStatus === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {t(getSummaryStatusMessage(summaryStatus))}
+          </span>
+        )}
+        <div className="flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1.5 shadow-lg backdrop-blur" role="group" aria-label="纪要操作">
+          {hasSummary && !isSummaryLoading && <>
+            <SummaryUpdaterButtonGroup isSaving={isSaving} isDirty={isSummaryDirty} onSave={onSaveAll} onCopy={onCopySummary} />
+            <span className="mx-0.5 h-5 w-px shrink-0 bg-gray-200" aria-hidden="true" />
+          </>}
+          <SummaryGeneratorButtonGroup layout="primary" modelConfig={modelConfig} setModelConfig={setModelConfig}
+              onSaveModelConfig={onSaveModelConfig} onGenerateSummary={onGenerateSummary}
+              onStopGeneration={onStopGeneration} customPrompt={customPrompt} summaryStatus={summaryStatus}
+              availableTemplates={availableTemplates} selectedTemplate={selectedTemplate} onTemplateSelect={onTemplateSelect}
+              hasTranscripts={transcripts.length > 0} hasSummary={hasSummary} isModelConfigLoading={isModelConfigLoading} languageSlot={languageSlot} />
+        </div>
+      </div>}
     </div>
   );
 }
