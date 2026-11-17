@@ -30,3 +30,28 @@ test('录音期间不向转写列表提供编辑回调', async () => {
   await act(async () => { view = create(<TranscriptPanel {...props} isRecording />); });
   expect(received.onUpdateSegment).toBeUndefined();
 });
+
+test('底部背景可明确保存，离开输入框自动保存，并显示未保存状态',async()=>{
+  const save=mock(async()=>{}),change=mock();
+  await act(async()=>{view=create(<TranscriptPanel {...props} usePagination segments={[{id:'s',text:'会议原文',timestamp:0}]} customPrompt="测试背景" onPromptChange={change} onSavePrompt={save} promptReady promptDirty/>);});
+  const input=view.root.findByProps({'aria-label':'会议背景'});
+  expect(input.props.value).toBe('测试背景');expect(input.props.disabled).toBe(false);
+  expect(JSON.stringify(view.toJSON())).toContain('未保存');
+  await act(async()=>input.props.onChange({target:{value:'补充背景'}}));expect(change).toHaveBeenCalledWith('补充背景');
+  await act(async()=>input.props.onBlur());expect(save).toHaveBeenCalledTimes(1);
+  const button=view.root.findAllByType('button').find(b=>b.children.includes('保存会议背景'))!;
+  await act(async()=>button.props.onClick());expect(save).toHaveBeenCalledTimes(2);
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+test('加载或保存中禁用背景输入，已保存时失焦不重复保存，错误直接显示在底部',async()=>{
+  const save=mock(async()=>{});const base={...props,usePagination:true,segments:[{id:'s',text:'原文',timestamp:0}],onSavePrompt:save};
+  await act(async()=>{view=create(<TranscriptPanel {...base} promptReady={false}/>);});
+  expect(view.root.findByProps({'aria-label':'会议背景'}).props.disabled).toBe(true);
+  await act(async()=>view.root.findByProps({'aria-label':'会议背景'}).props.onBlur());expect(save).not.toHaveBeenCalled();
+  await act(async()=>view.update(<TranscriptPanel {...base} promptReady promptSaving promptDirty/>));
+  expect(view.root.findByProps({'aria-label':'会议背景'}).props.disabled).toBe(true);expect(JSON.stringify(view.toJSON())).toContain('保存中');
+  await act(async()=>view.update(<TranscriptPanel {...base} promptReady/>));await act(async()=>view.root.findByProps({'aria-label':'会议背景'}).props.onBlur());expect(save).not.toHaveBeenCalled();
+  await act(async()=>view.update(<TranscriptPanel {...base} promptReady promptDirty promptError="出席和缺席名单包含同一人"/>));
+  expect(view.root.findByProps({role:'alert'}).children.join('')).toContain('出席和缺席名单');expect(JSON.stringify(view.toJSON())).toContain('保存失败');
+});

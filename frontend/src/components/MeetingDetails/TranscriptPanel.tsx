@@ -14,6 +14,11 @@ interface TranscriptPanelProps {
   transcripts: Transcript[];
   customPrompt: string;
   onPromptChange: (value: string) => void;
+  onSavePrompt?: () => Promise<unknown>;
+  promptReady?: boolean;
+  promptSaving?: boolean;
+  promptDirty?: boolean;
+  promptError?: string;
   onCopyTranscript: () => void;
   onOpenMeetingFolder: () => Promise<void>;
   isRecording: boolean;
@@ -38,6 +43,11 @@ export function TranscriptPanel({
   transcripts,
   customPrompt,
   onPromptChange,
+  onSavePrompt,
+  promptReady = true,
+  promptSaving = false,
+  promptDirty = false,
+  promptError = '',
   onCopyTranscript,
   onOpenMeetingFolder,
   isRecording,
@@ -54,6 +64,11 @@ export function TranscriptPanel({
   onRefetchTranscripts,
 }: TranscriptPanelProps) {
   useUiLanguage();
+  const savePrompt = () => {
+    if (onSavePrompt && promptReady && promptDirty && !promptSaving) {
+      void onSavePrompt().catch(() => {}); // The shared settings hook displays the error beside this input.
+    }
+  };
   const handleUpdateSegment = useCallback(async (segmentId: string, text: string, expectedText: string) => {
     if (!meetingId) throw new Error('Meeting ID is required');
     await invoke('api_update_transcript_segment', { meetingId, transcriptId: segmentId, text, expectedText });
@@ -116,12 +131,23 @@ export function TranscriptPanel({
       {/* Custom prompt input at bottom of transcript section */}
       {!isRecording && convertedSegments.length > 0 && (
         <div className="p-1 border-t border-gray-200">
+          {onSavePrompt && <div className="flex items-center justify-between gap-2 px-2 py-1 text-xs">
+            <label htmlFor={`meeting-background-${meetingId}`}>会议背景 · <span role="status">{promptSaving ? '保存中…' : promptError ? (promptReady ? '保存失败，修改尚未保存' : '读取失败') : !promptReady ? '加载中…' : promptDirty ? '未保存' : '已保存'}</span></label>
+            <button type="button" className="rounded border px-2 py-1 disabled:opacity-50" disabled={!promptReady || promptSaving || !promptDirty} onClick={savePrompt}>保存会议背景</button>
+          </div>}
           <textarea
+            id={`meeting-background-${meetingId}`}
+            aria-label="会议背景"
+            aria-describedby={onSavePrompt ? `meeting-background-help-${meetingId}` : undefined}
             placeholder={t("Add context for AI summary. For example people involved, meeting overview, objective etc...")}
             className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm min-h-[80px] resize-y"
             value={customPrompt}
+            disabled={!promptReady || promptSaving}
             onChange={(e) => onPromptChange(e.target.value)}
+            onBlur={savePrompt}
           />
+          {onSavePrompt && <p id={`meeting-background-help-${meetingId}`} className="px-2 text-xs text-gray-500">离开输入框时自动保存到本次会议；不会自动生成纪要或发送到 Lark。</p>}
+          {promptError && <p role="alert" className="px-2 py-1 text-xs text-red-700">{promptError}</p>}
         </div>
       )}
     </div>

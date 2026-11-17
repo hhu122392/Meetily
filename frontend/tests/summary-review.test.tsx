@@ -12,6 +12,9 @@ const sequence: string[] = [];
 const invoke = mock(async (command: string, args?: any) => {
   sequence.push(command);
   if (command === 'summary_markdown_status') return {};
+  if (command === 'lark_manual_context') return { title: '测试会议', meetingTime: '2026-11-16 10:00', participants: '甲', absent: '乙', host: '', summary: '会议概要', project: '' };
+  if (command === 'lark_manual_groups') return [{ id: 'oc_manual', name: '测试群' }];
+  if (command === 'lark_archive_projects') return [];
   if (command === 'summary_markdown_read') return { name: '会议纪要.md', path: 'D:/录音/会议纪要.md', content: '# 已有纪要', hash: 'test-hash', size: 20 };
   if (command === 'lark_app_meeting_status') return { linked: true, last_sent_at: lastSentAt };
   if (command === 'summary_export_markdown') { if (failExport) throw '磁盘已满'; return 'D:/录音/会议纪要.md'; }
@@ -35,6 +38,19 @@ async function mount() {
   sequence.length = 0;
   await act(async () => button('发送到 Lark').props.onClick());
 }
+
+test('原顶部工具栏保留编辑与保存，新增选群入口先保存再预览且不直接发送', async () => {
+  await act(async () => { renderer = create(<SummaryReviewActions meetingId="test" saveEdits={async () => { sequence.push('save-edits'); }} />); });
+  expect(button('编辑纪要')).toBeDefined();
+  expect(button('保存 Markdown')).toBeDefined();
+  expect(button('云文档')).toBeDefined();
+  expect(JSON.stringify(renderer.toJSON())).not.toContain('详细纪要（Markdown）');
+  sequence.length = 0;
+  await act(async () => button('选群发送纪要').props.onClick());
+  expect(sequence).toEqual(['save-edits', 'summary_export_markdown', 'lark_manual_context', 'lark_manual_groups', 'lark_message_templates']);
+  expect(JSON.stringify(renderer.toJSON())).toContain('测试群');
+  expect(sequence.some(command => command === 'lark_manual_send' || command === 'lark_app_check_send')).toBe(false);
+});
 test('saves edits and Markdown before preview; requires a separate confirmation', async () => {
   await mount();
   expect(sequence).toEqual(['save-edits', 'summary_export_markdown', 'lark_app_preview_summary']);
@@ -50,7 +66,9 @@ test('编辑纪要入口保存当前草稿后打开文件编辑器，不准备�
   sequence.length = 0;
   await act(async () => renderer.root.findAllByType('button').find(b => b.props['aria-label'] === '编辑纪要')!.props.onClick());
   expect(sequence).toEqual(['save-edits', 'summary_export_markdown', 'summary_markdown_read']);
-  expect(JSON.stringify(renderer.toJSON())).toContain('# 已有纪要');
+  expect(renderer.root.findByType('h1').children).toEqual(['已有纪要']);
+  await act(async () => button('编辑源码').props.onClick());
+  expect(renderer.root.findByProps({'aria-label':'Markdown 文件内容'}).props.value).toBe('# 已有纪要');
 });
 test('save failure cannot open a sendable preview', async () => {
   failSave = true; await mount();

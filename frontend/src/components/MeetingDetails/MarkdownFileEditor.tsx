@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -10,18 +12,20 @@ export function MarkdownFileEditor({ meetingId, onClose, onSaved, onSendPreview 
 }) {
   const [file, setFile] = useState<MarkdownFile | null>(null);
   const [content, setContent] = useState('');
+  const [filename,setFilename]=useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [view, setView] = useState<'preview' | 'source'>('preview');
   const [history, setHistory] = useState<Array<{ name: string; size: number }> | null>(null);
   const [version, setVersion] = useState<{ name: string; content: string; hash: string } | null>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const currentMeeting = useRef(meetingId); currentMeeting.current = meetingId;
   const lock = useRef(false);
-  const dirty = file !== null && content !== file.content;
+  const dirty = file !== null && (content !== file.content||filename!==file.name);
   useEffect(() => {
     let active = true; setFile(null); setContent(''); setHistory(null); setVersion(null); setConfirmRestore(false);
-    void invoke<MarkdownFile>('summary_markdown_read', { meetingId }).then(v => { if (active) { setFile(v); setContent(v.content); } }).catch(e => { if (active) setError(String(e)); });
+    void invoke<MarkdownFile>('summary_markdown_read', { meetingId }).then(v => { if (active) { setFile(v); setContent(v.content);setFilename(v.name); } }).catch(e => { if (active) setError(String(e)); });
     return () => { active = false; };
   }, [meetingId]);
   function close() {
@@ -33,7 +37,10 @@ export function MarkdownFileEditor({ meetingId, onClose, onSaved, onSendPreview 
     if (!file || lock.current || !content.trim()) return;
     lock.current = true; setBusy(true); setError('');
     try {
-      const updated = await invoke<MarkdownFile>('summary_markdown_save', { meetingId, expectedHash: file.hash, content });
+      let updated = await invoke<MarkdownFile>('summary_markdown_save', { meetingId, expectedHash: file.hash, content });
+      setFile(updated);setContent(updated.content);
+      if(filename!==updated.name)updated=await invoke<MarkdownFile>('summary_markdown_rename',{meetingId,expectedHash:updated.hash,expectedName:updated.name,name:filename});
+      setFilename(updated.name);
       setFile(updated); setContent(updated.content); setSaved(true); onSaved(updated.path);
       if (sendPreview) onSendPreview?.();
     } catch (e) { setError(String(e)); }
@@ -59,16 +66,24 @@ export function MarkdownFileEditor({ meetingId, onClose, onSaved, onSendPreview 
     try {
       const updated = await invoke<MarkdownFile>('summary_markdown_history_restore', { meetingId, version: version.name, expectedHash: file.hash, versionHash: version.hash });
       if (currentMeeting.current !== meetingId) return;
-      setFile(updated); setContent(updated.content); setSaved(true); setVersion(null); setHistory(null); setConfirmRestore(false); onSaved(updated.path);
+      setFile(updated); setContent(updated.content);setFilename(updated.name); setSaved(true); setVersion(null); setHistory(null); setConfirmRestore(false); onSaved(updated.path);
     } catch (e) { if (currentMeeting.current === meetingId) setError(String(e)); }
     finally { lock.current = false; setBusy(false); }
   }
   return <Dialog open onOpenChange={value => { if (!value) close(); }}>
     <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" onEscapeKeyDown={e => { if (dirty || busy) e.preventDefault(); }} onPointerDownOutside={e => { if (dirty || busy) e.preventDefault(); }}>
-      <DialogHeader><DialogTitle>编辑 Markdown 文件</DialogTitle><DialogDescription>这里修改的是将要发送的详细纪要文件。单独编辑后，保存页面纪要不会覆盖它；重新生成纪要时会保留旧文件版本。Lark 卡片会从该文件提取概要。</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>详细纪要 · Markdown</DialogTitle><DialogDescription>预览与源码使用同一份详细纪要，表格会在预览中显示。单独编辑文件后不会同步修改纪要面板；重新生成会保留旧文件版本。云文档使用这份完整纪要，群卡片显示概要。</DialogDescription></DialogHeader>
       {file && <>
+        <label>Markdown 文件名<input aria-label="Markdown 文件名" className="w-full rounded border p-2" value={filename} maxLength={120} disabled={busy} onChange={e=>{setFilename(e.target.value);setSaved(false);}}/></label>
         <p className="break-all text-xs text-gray-600">{file.path}</p>
-        <textarea aria-label="Markdown 文件内容" className="w-full min-h-[45vh] rounded border p-3 font-mono text-sm resize-y" value={content} disabled={busy} onChange={e => { setContent(e.target.value); setSaved(false); }} />
+        <div className="flex gap-2" aria-label="纪要查看方式">
+          <Button variant={view === 'preview' ? 'default' : 'outline'} aria-pressed={view === 'preview'} onClick={() => setView('preview')}>预览排版</Button>
+          <Button variant={view === 'source' ? 'default' : 'outline'} aria-pressed={view === 'source'} onClick={() => setView('source')}>编辑源码</Button>
+        </div>
+        {view === 'source' ? <textarea aria-label="Markdown 文件内容" className="w-full min-h-[45vh] rounded border p-3 font-mono text-sm resize-y" value={content} disabled={busy} onChange={e => { setContent(e.target.value); setSaved(false); }} /> :
+          <div aria-label="Markdown 排版预览" className="prose prose-sm dark:prose-invert max-w-none min-h-[45vh] overflow-x-auto rounded border p-4 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_th]:text-left [&_td]:border [&_td]:p-2 [&_pre]:overflow-x-auto">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{img: ({alt}) => <span>［图片：{alt || '未命名'}］</span>, a: ({children}) => <span className="text-blue-600 underline">{children}</span>}}>{content}</ReactMarkdown>
+          </div>}
         <div className="flex flex-wrap gap-2">
           <Button disabled={busy || !content.trim()} onClick={() => void save(false)}>{busy ? '正在保存…' : '保存文件'}</Button>
           {onSendPreview && <Button variant="outline" disabled={busy || !content.trim()} onClick={() => void save(true)}>保存并编辑消息</Button>}

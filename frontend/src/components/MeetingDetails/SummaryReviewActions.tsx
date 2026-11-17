@@ -8,6 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MarkdownFileEditor } from './MarkdownFileEditor';
 import { LarkCardPreview, type LarkPreviewCard } from './MinutesCardPreview';
+import { ManualLarkSend } from './ManualLarkSend';
+import { CloudDocumentEditor } from './CloudDocumentEditor';
+import { ProcessingStats } from './ProcessingStats';
+import { ActionItems } from './ActionItems';
 
 type Draft = { chat_id: string; chat_name?: string | null; chat_name_error?: string; remote_id: string; text: string; card?: LarkPreviewCard; message_title?: string; message_summary?: string; message_edited?: boolean; revision: string; last_sent_at?: number | null; requires_duplicate_ack?: boolean; markdown?: { name: string; path: string; content: string; size: number } };
 type ExportStatus = { path?: string; error?: string };
@@ -108,6 +112,9 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled, toolbarTa
     finally { lock.current = false; setBusy(false); }
   }
   const actions = <>
+      <ActionItems key={`actions-${meetingId}`} meetingId={meetingId} saveEdits={saveEdits} disabled={disabled || busy} />
+      <ManualLarkSend key={meetingId} meetingId={meetingId} saveEdits={saveEdits} disabled={disabled || busy} compact />
+      <CloudDocumentEditor key={`cloud-${meetingId}`} meetingId={meetingId} saveEdits={saveEdits} disabled={disabled || busy}/>
       <Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="编辑纪要" title="编辑纪要" disabled={disabled || busy} onClick={() => void prepare(false, true)}><SquarePen className="h-4 w-4" /><span className="sr-only">编辑纪要</span></Button>
       <Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="保存 Markdown" title="保存 Markdown" disabled={disabled || busy} onClick={() => void prepare(false)}><Save className="h-4 w-4" /><span className="sr-only">保存 Markdown</span></Button>
       {linked && <>
@@ -118,6 +125,7 @@ export function SummaryReviewActions({ meetingId, saveEdits, disabled, toolbarTa
         <PopoverTrigger asChild><Button className="h-8 w-8 rounded-full p-0" size="sm" variant="ghost" aria-label="纪要文件与发送状态" title={linked ? (lastSentAt ? `上次发送时间：${sentTime(lastSentAt)}` : '尚未发送到 Lark') : '纪要文件信息'}><Info className="h-4 w-4" /></Button></PopoverTrigger>
         <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] space-y-2 rounded-xl text-sm">
           <p className="font-medium">纪要文件与发送状态</p>
+          <ProcessingStats meetingId={meetingId} />
           {linked && <p>{lastSentAt ? `上次发送时间：${sentTime(lastSentAt)}` : '尚未发送到 Lark'}</p>}
           <p className="break-all text-xs text-gray-600">{file.path ? `Markdown 文件：${file.path}` : '保存后可查看 Markdown 文件位置。'}</p>
           <p className="text-xs text-gray-500">Lark 群消息使用独立的概要卡片，发送前需预览并确认。</p>

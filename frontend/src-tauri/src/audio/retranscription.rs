@@ -106,7 +106,11 @@ pub async fn start_retranscription<R: Runtime>(
 
     let use_sensevoice = provider.as_deref() == Some("sensevoice");
     let use_parakeet = use_sensevoice || provider.as_deref() == Some("parakeet");
+    let timing_model = model.clone();
+    let timing_provider = provider.clone();
+    let transcription_started = std::time::Instant::now();
     let result = run_retranscription(app.clone(), meeting_id.clone(), meeting_folder_path, language, model, provider).await;
+    let transcription_seconds = transcription_started.elapsed().as_secs_f64();
 
     // Unload the engine after the batch job (success, failure, or cancellation)
     super::common::unload_engine_after_batch(use_parakeet).await;
@@ -116,6 +120,12 @@ pub async fn start_retranscription<R: Runtime>(
 
     match &result {
         Ok(res) => {
+            let state = app.state::<crate::state::AppState>();
+            if sqlx::query("INSERT INTO meeting_processing_timings(meeting_id,transcription_seconds,audio_seconds,model,provider) VALUES(?,?,?,?,?) ON CONFLICT(meeting_id) DO UPDATE SET transcription_seconds=excluded.transcription_seconds,audio_seconds=excluded.audio_seconds,model=excluded.model,provider=excluded.provider")
+                .bind(&meeting_id).bind(transcription_seconds).bind(res.duration_seconds).bind(timing_model).bind(timing_provider)
+                .execute(state.db_manager.pool()).await.is_err() {
+                log::warn!("无法保存转写耗时，转写结果已保留");
+            }
             let _ = app.emit(
                 "retranscription-complete",
                 serde_json::json!({

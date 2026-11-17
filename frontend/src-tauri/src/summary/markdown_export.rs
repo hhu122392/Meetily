@@ -31,7 +31,8 @@ async fn archive_current(file: &Value) -> Result<(), String> {
     let path = PathBuf::from(file["path"].as_str().ok_or("Markdown 路径无效。")?);
     let dir = path.parent().ok_or("Markdown 目录无效。")?.to_path_buf();
     let content = file["content"].as_str().ok_or("Markdown 内容无效。")?.to_owned();
-    tokio::task::spawn_blocking(move || write_files(&dir, &content, true)).await.map_err(|e| e.to_string())??;
+    let name=path.file_name().and_then(|n|n.to_str()).ok_or("文件名无效")?.to_owned();
+    tokio::task::spawn_blocking(move || write_named_files(&dir, &name, &content, true)).await.map_err(|e| e.to_string())??;
     Ok(())
 }
 
@@ -48,8 +49,9 @@ async fn save_file(pool: &SqlitePool, id: &str, expected_hash: &str, content: &s
     sqlx::query("UPDATE summary_markdown_exports SET manually_edited=1,error=NULL,updated_at=? WHERE meeting_id=?")
         .bind(chrono::Utc::now().to_rfc3339()).bind(id).execute(pool).await.map_err(|e| e.to_string())?;
     let dir = PathBuf::from(current["path"].as_str().unwrap()).parent().ok_or("Markdown 目录无效。")?.to_path_buf();
+    let name=current["name"].as_str().ok_or("文件名无效")?.to_owned();
     let content = content.to_owned();
-    tokio::task::spawn_blocking(move || write_files(&dir, &content, false)).await.map_err(|e| e.to_string())??;
+    tokio::task::spawn_blocking(move || write_named_files(&dir, &name, &content, false)).await.map_err(|e| e.to_string())??;
     preview(pool, id).await?.ok_or("文件已保存，但无法重新读取，请检查目录。".into())
 }
 
@@ -68,6 +70,8 @@ pub async fn summary_markdown_save(state: tauri::State<'_, AppState>, meeting_id
 }
 
 async fn write_export(pool: &SqlitePool, id: &str, fallback: Option<&Path>, generated: bool) -> Result<String, String> {
+    let existing:Option<String>=sqlx::query_scalar("SELECT path FROM summary_markdown_exports WHERE meeting_id=?").bind(id).fetch_optional(pool).await.map_err(|e|e.to_string())?.flatten();
+    let name=existing.as_deref().and_then(|p|Path::new(p).file_name()).and_then(|n|n.to_str()).unwrap_or("会议纪要.md").to_owned();
     let row = sqlx::query("SELECT m.title,m.created_at,m.folder_path,s.result FROM meetings m JOIN summary_processes s ON s.meeting_id=m.id WHERE m.id=?")
         .bind(id).fetch_optional(pool).await.map_err(|e| e.to_string())?.ok_or("会议纪要不存在")?;
     let result: Value = serde_json::from_str(&row.get::<String,_>("result")).map_err(|_| "纪要格式异常")?;
@@ -80,11 +84,44 @@ async fn write_export(pool: &SqlitePool, id: &str, fallback: Option<&Path>, gene
     if !dir.is_absolute() { return Err("会议目录必须是绝对路径".into()); }
     let content = format!("# {}\n\n会议时间：{}\n\n本地会议 ID：{}\n\n{}\n",
         row.get::<String,_>("title").replace(['\r','\n'], " "), row.get::<String,_>("created_at"), id, body);
-    tokio::task::spawn_blocking(move || write_files(&dir, &content, generated))
+    tokio::task::spawn_blocking(move || write_named_files(&dir, &name, &content, generated))
         .await.map_err(|e| e.to_string())?
 }
 
 fn write_files(dir: &Path, content: &str, generated: bool) -> Result<String, String> {
+    write_named_files(dir,"会议纪要.md",content,generated)
+}
+pub(crate) fn validate_filename(name:&str)->Result<String,String>{
+    let name=name.trim();
+    if name.is_empty()||name.chars().count()>120||name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])||name.chars().any(char::is_control)||name.ends_with(['.',' ']) {return Err("文件名需为 1–120 字，不能包含路径或特殊字符。".into());}
+    let name=if name.to_ascii_lowercase().ends_with(".md"){name.to_owned()}else{format!("{name}.md")};
+    let base=name.split('.').next().unwrap_or("").trim_end().to_ascii_uppercase();
+    if base.is_empty()||["CON","PRN","AUX","NUL","COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9","LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"].contains(&base.as_str()) {return Err("请换一个有效的 Markdown 文件名。".into());}
+    Ok(name)
+}
+async fn rename_file(pool:&SqlitePool,id:&str,expected_hash:&str,expected_name:&str,name:&str)->Result<Value,String>{
+    let name=validate_filename(name)?;
+    let current=preview(pool,id).await?.ok_or("Markdown 文件不存在")?;
+    if current["hash"]!=expected_hash||current["name"]!=expected_name{return Err("文件内容或名称已变化，请重新打开后修改。".into());}
+    if current["name"]==name{return Ok(current);}
+    let old=PathBuf::from(current["path"].as_str().ok_or("文件路径无效")?);
+    let dest=old.parent().ok_or("文件目录无效")?.join(&name);
+    // Create without replacing another file; keep the original until the DB points to the new file.
+    let mut output=std::fs::OpenOptions::new().write(true).create_new(true).open(&dest).map_err(|_|"同名文件已存在或目录不可写，请换一个名称。")?;
+    let write_result=output.write_all(current["content"].as_str().unwrap_or("").as_bytes()).and_then(|_|output.sync_all());drop(output);
+    if let Err(e)=write_result {let _=std::fs::remove_file(&dest);return Err(format!("改名未完成，原文件保留：{e}"));}
+    if let Err(e)=sqlx::query("UPDATE summary_markdown_exports SET path=?,updated_at=? WHERE meeting_id=?").bind(dest.to_string_lossy().as_ref()).bind(chrono::Utc::now().to_rfc3339()).bind(id).execute(pool).await {let _=std::fs::remove_file(&dest);return Err(e.to_string());}
+    let _=std::fs::remove_file(&old);
+    preview(pool,id).await?.ok_or("改名后文件无法读取".into())
+}
+#[tauri::command]
+pub async fn summary_markdown_rename(state:tauri::State<'_,AppState>,meeting_id:String,expected_hash:String,expected_name:String,name:String)->Result<Value,String>{
+    let _storage=crate::audio::storage_migration::use_storage().await?;
+    let _guard=crate::lark::app::DELIVERY_LOCK.lock().await;
+    rename_file(state.db_manager.pool(),&meeting_id,&expected_hash,&expected_name,&name).await
+}
+fn write_named_files(dir: &Path, name:&str, content: &str, generated: bool) -> Result<String, String> {
+    let name=validate_filename(name)?;
     let write = || -> std::io::Result<String> {
         std::fs::create_dir_all(dir)?;
         if generated {
@@ -95,7 +132,7 @@ fn write_files(dir: &Path, content: &str, generated: bool) -> Result<String, Str
             file.write_all(content.as_bytes())?;
             file.sync_all()?;
         }
-        let latest = dir.join("会议纪要.md");
+        let latest = dir.join(&name);
         let mut temporary = tempfile::NamedTempFile::new_in(dir)?;
         temporary.write_all(content.as_bytes())?;
         temporary.as_file().sync_all()?;
@@ -192,6 +229,22 @@ pub async fn summary_markdown_history_restore(state: tauri::State<'_, AppState>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn renamed_file_survives_save_restore_and_regeneration_without_clobbering(){
+        let pool=SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql("CREATE TABLE meetings(id TEXT,title TEXT,created_at TEXT,folder_path TEXT);CREATE TABLE summary_processes(meeting_id TEXT,result TEXT);CREATE TABLE summary_markdown_exports(meeting_id TEXT PRIMARY KEY,path TEXT,error TEXT,updated_at TEXT,manually_edited INTEGER DEFAULT 0);").execute(&pool).await.unwrap();
+        let dir=tempfile::tempdir().unwrap();
+        sqlx::query("INSERT INTO meetings VALUES('m','会议','2026-11-16',?)").bind(dir.path().to_string_lossy().as_ref()).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO summary_processes VALUES('m',?)").bind(serde_json::json!({"markdown":"原稿"}).to_string()).execute(&pool).await.unwrap();
+        export(&pool,"m",None,true).await.unwrap();let f=preview(&pool,"m").await.unwrap().unwrap();
+        std::fs::write(dir.path().join("其他.md"),"不能覆盖").unwrap();
+        assert!(rename_file(&pool,"m",f["hash"].as_str().unwrap(),"会议纪要.md","其他.md").await.is_err());
+        assert!(rename_file(&pool,"m","stale","会议纪要.md","周会").await.is_err());
+        let f=rename_file(&pool,"m",f["hash"].as_str().unwrap(),"会议纪要.md","项目周会").await.unwrap();assert_eq!(f["name"],"项目周会.md");assert!(!dir.path().join("会议纪要.md").exists());
+        save_file(&pool,"m",f["hash"].as_str().unwrap(),"手动改稿").await.unwrap();
+        export(&pool,"m",None,true).await.unwrap();let f=preview(&pool,"m").await.unwrap().unwrap();assert_eq!(f["name"],"项目周会.md");assert!(f["content"].as_str().unwrap().contains("原稿"));assert_eq!(std::fs::read_to_string(dir.path().join("其他.md")).unwrap(),"不能覆盖");
+        for name in ["../逃逸.md","CON.md","LPT1.txt.md","A:B","a\\b",".","\n"]{assert!(validate_filename(name).is_err(),"{name}");}
+    }
     #[tokio::test]
     async fn manual_edit_is_preserved_until_regeneration_and_stale_save_is_rejected() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();

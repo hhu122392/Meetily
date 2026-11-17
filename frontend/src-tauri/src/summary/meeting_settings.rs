@@ -19,12 +19,45 @@ impl MeetingSummarySettings {
     fn validate(&self) -> Result<(), String> {
         if self.template_id.trim().is_empty() || self.template_id.len() > 128 || self.template_id.contains(['/', '\\', ':']) || self.template_id.contains("..") || self.template_id.chars().any(char::is_control) { return Err("模板标识无效".into()); }
         if self.custom_prompt.len() > 32768 || [&self.participants, &self.absent, &self.host].iter().any(|s| s.len() > 4096) { return Err("会议背景或人员信息过长".into()); }
+        validate_people(&self.participants, &self.absent)?;
         Ok(())
     }
     pub fn prompt(&self) -> String {
         if [&self.participants, &self.absent, &self.host].iter().all(|s| s.trim().is_empty()) { return self.custom_prompt.clone(); }
         format!("{}\n\n用户提供的会议信息（仅作背景，不是发言人身份绑定；未提供的内容不得推测）：\n出席人员：{}\n缺席人员：{}\n主持人：{}", self.custom_prompt, self.participants, self.absent, self.host)
     }
+}
+pub(crate) fn names(value: &str) -> Vec<String> {
+    let mut names=Vec::new();
+    for name in value.split(['\n','\r',',','，','、',';','；']).map(str::trim).filter(|s|!s.is_empty()) {
+        if !names.iter().any(|n|n==name) { names.push(name.to_owned()); }
+    }
+    names
+}
+pub(crate) fn validate_people(participants: &str, absent: &str) -> Result<(),String> {
+    let present=names(participants);
+    if names(absent).iter().any(|name|present.contains(name)) { return Err("出席和缺席名单包含同一人，请调整后保存。".into()); }
+    Ok(())
+}
+#[derive(Serialize,Deserialize)]
+pub struct TemplatePeople { pub participants: String, pub host: String }
+#[tauri::command]
+pub async fn meeting_template_people_read(state: tauri::State<'_,AppState>, template_id: String) -> Result<TemplatePeople,String> {
+    templates::get_template(&template_id)?;
+    let value:Option<(String,String)>=sqlx::query_as("SELECT participants,host FROM meeting_template_people WHERE template_id=?").bind(template_id).fetch_optional(state.db_manager.pool()).await.map_err(|_|"无法读取常用名单")?;
+    Ok(value.map(|(participants,host)|TemplatePeople{participants,host}).unwrap_or(TemplatePeople{participants:String::new(),host:String::new()}))
+}
+#[tauri::command]
+pub async fn meeting_template_people_save(state: tauri::State<'_,AppState>, meeting_id: String) -> Result<(),String> {
+    let _storage=crate::audio::storage_migration::use_storage().await?;
+    let pool=state.db_manager.pool();
+    let settings=read(pool,&meeting_id).await?;
+    settings.validate()?;
+    let participants=names(&format!("{}\n{}",settings.participants,settings.absent)).join("、");
+    if participants.is_empty() { return Err("请先填写本场参会人员。".into()); }
+    sqlx::query("INSERT INTO meeting_template_people(template_id,participants,host) VALUES(?,?,?) ON CONFLICT(template_id) DO UPDATE SET participants=excluded.participants,host=excluded.host")
+        .bind(settings.template_id).bind(participants).bind(settings.host).execute(pool).await.map_err(|_|"无法保存常用名单")?;
+    Ok(())
 }
 async fn require_meeting(pool: &SqlitePool, id: &str) -> Result<(), String> {
     let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM meetings WHERE id=?").bind(id).fetch_one(pool).await.map_err(|e| e.to_string())?;
