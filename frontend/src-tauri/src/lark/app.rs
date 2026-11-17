@@ -22,8 +22,8 @@ static MATCH_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RecordingSource {
-    #[default]
     Cloud,
+    #[default]
     Local,
 }
 
@@ -33,6 +33,11 @@ pub(crate) struct AppConfig {
     pub app_id: String,
     pub secret: String,
     pub enabled: bool,
+    pub manual_mode: bool,
+    pub calendar_authorized: bool,
+    pub documents_authorized: bool,
+    pub tasks_authorized: bool,
+    pub calendar_auth_revision: String,
     pub auto_send: bool,
     pub auto_record: bool,
     pub recording_source: RecordingSource,
@@ -254,7 +259,7 @@ pub async fn lark_app_status(state: tauri::State<'_, AppState>) -> Result<Value,
     let automation: Option<String> = sqlx::query_scalar("SELECT detail FROM lark_auto_recordings WHERE app_id=? AND owner_id=? ORDER BY updated_at DESC LIMIT 1")
         .bind(&c.app_id).bind(&c.owner_id).fetch_optional(pool).await.map_err(db_error)?;
     Ok(
-        json!({"app_id":c.app_id,"has_secret":!c.secret.is_empty(),"enabled":c.enabled,"auto_send":c.auto_send,
+        json!({"app_id":c.app_id,"has_secret":!c.secret.is_empty(),"enabled":c.enabled,"auto_send":c.auto_send,"manual_mode":c.manual_mode,"calendar_authorized":c.calendar_authorized,
             "auto_record":c.auto_record,"recording_source":c.recording_source,"automation":automation,"allow_group_launch":c.allow_group_launch,
             "authorized":super::oauth::authorization_status(&c).1,"authorization_status":super::oauth::authorization_status(&c).0,"owner_id":c.owner_id,"connection":STATUS.lock().await.clone(),
             "launches":launches.iter().map(|r|json!({"request_id":r.get::<String,_>("request_id"),"chat_id":r.get::<String,_>("chat_id"),"topic":r.get::<String,_>("topic"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"meeting_url":r.get::<Option<String>,_>("meeting_url")})).collect::<Vec<_>>(),
@@ -276,6 +281,7 @@ pub async fn lark_app_save(
     auto_record: Option<bool>,
     allow_group_launch: Option<bool>,
     recording_source: Option<RecordingSource>,
+    manual_mode: Option<bool>,
 ) -> Result<(), String> {
     let _policy = super::auto_recording::POLICY_LOCK.lock().await;
     let _lock = CONFIG_LOCK.lock().await;
@@ -300,6 +306,7 @@ pub async fn lark_app_save(
         return Err("请输入有效 App Secret。".into());
     }
     c.enabled = enabled;
+    if let Some(value) = manual_mode { c.manual_mode = value; }
     c.auto_send = auto_send;
     if let Some(source) = recording_source { c.recording_source = source; }
     if let Some(value) = allow_group_launch {
@@ -310,6 +317,12 @@ pub async fn lark_app_save(
             c.auto_record_since = now();
         }
         c.auto_record = value;
+    }
+    if c.manual_mode {
+        c.auto_send = false;
+        c.auto_record = false;
+        c.allow_group_launch = false;
+        c.recording_source = RecordingSource::Local;
     }
     crate::company::bind_identity(&app, id, None)?;
     save(pool, &c).await?;
@@ -336,6 +349,10 @@ pub async fn restart(pool: SqlitePool) {
         status("已停用").await;
         return;
     }
+    if c.manual_mode {
+        status("本地录音模式：手动选群发送，不接收机器人开会指令").await;
+        return;
+    }
     let cancel = CancellationToken::new();
     *worker = Some(cancel.clone());
     tokio::spawn(async move {
@@ -347,7 +364,7 @@ pub async fn restart(pool: SqlitePool) {
 pub async fn recording_started(pool: &SqlitePool, folder: &str) -> Result<(), String> {
     let _tracking = MATCH_LOCK.lock().await;
     let c = load(pool).await?;
-    if !c.enabled {
+    if !c.enabled || c.manual_mode {
         return Ok(());
     }
     sqlx::query("INSERT OR IGNORE INTO lark_recording_links(folder_path,app_id,owner_id,started_at,auto_send,detail) VALUES(?,?,?,?,?,?)")
@@ -800,7 +817,7 @@ async fn set_attachment(pool: &SqlitePool, id: &str, status: &str, detail: &str)
     Ok(())
 }
 
-async fn upload_markdown(token: &str, markdown: &Value) -> Result<String, String> {
+pub(super) async fn upload_markdown(token: &str, markdown: &Value) -> Result<String, String> {
     let name = markdown["name"].as_str().ok_or("Markdown 文件名缺失。")?;
     let content = markdown["content"].as_str().ok_or("Markdown 文件内容缺失。")?;
     let part = reqwest::multipart::Part::bytes(content.as_bytes().to_vec())
@@ -946,6 +963,16 @@ pub async fn report_summary_result(pool: &SqlitePool, id: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn recording_defaults_to_local_and_preserves_explicit_cloud_selection() {
+        assert!(AppConfig::default().recording_source == RecordingSource::Local);
+        let missing: AppConfig = serde_json::from_str("{}").unwrap();
+        assert!(missing.recording_source == RecordingSource::Local);
+        assert!(!missing.auto_record && !missing.auto_send);
+        let saved: AppConfig = serde_json::from_str(r#"{"recording_source":"cloud"}"#).unwrap();
+        assert!(saved.recording_source == RecordingSource::Cloud);
+    }
+
     #[tokio::test]
     async fn invalid_credentials_do_not_block_local_startup_or_get_overwritten() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();

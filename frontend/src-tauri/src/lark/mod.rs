@@ -11,6 +11,13 @@ pub mod app;
 pub(crate) mod routing;
 mod transport;
 pub mod oauth;
+pub mod manual;
+pub mod calendar;
+pub mod documents;
+pub mod cloud_editor;
+pub mod locations;
+pub mod message_templates;
+pub mod actions;
 
 use crate::state::AppState;
 use once_cell::sync::Lazy;

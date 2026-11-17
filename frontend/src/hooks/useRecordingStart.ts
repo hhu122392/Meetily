@@ -4,7 +4,7 @@ import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateContext';
-import { recordingService } from '@/services/recordingService';
+import { recordingService, type CalendarRecordingSelection } from '@/services/recordingService';
 import Analytics from '@/lib/analytics';
 import { showRecordingNotification } from '@/lib/recordingNotification';
 import { toast } from 'sonner';
@@ -16,7 +16,7 @@ const isTranscriptionRuntimeStartError = (error: unknown) =>
   String(error) === TRANSCRIPTION_RUNTIME_START_ERROR_CODE;
 
 interface UseRecordingStartReturn {
-  handleRecordingStart: () => Promise<void>;
+  handleRecordingStart: (calendar?: CalendarRecordingSelection) => Promise<void>;
   isAutoStarting: boolean;
 }
 
@@ -61,7 +61,7 @@ export function useRecordingStart(
 
 
   // Handle manual recording start (from button click)
-  const handleRecordingStart = useCallback(async () => {
+  const handleRecordingStart = useCallback(async (calendar?: CalendarRecordingSelection) => {
     if (isStartingRef.current) {
       console.log('handleRecordingStart ignored - start already in progress');
       return;
@@ -70,18 +70,20 @@ export function useRecordingStart(
     try {
       console.log('handleRecordingStart called - checking selected transcription model status');
 
-      const randomTitle = generateMeetingTitle();
+      const randomTitle = calendar?.title || generateMeetingTitle();
       setMeetingTitle(randomTitle);
       // Capture is independent of model availability; background jobs report model failures.
       setStatus(RecordingStatus.STARTING, 'Initializing recording...');
 
       // Start the actual backend recording
       console.log('Starting backend recording with meeting:', randomTitle);
-      await recordingService.startRecordingWithDevices(
+      if (calendar) {
+        await recordingService.startCalendarRecording(calendar, selectedDevices?.micDevice || null, selectedDevices?.systemDevice || null);
+      } else { await recordingService.startRecordingWithDevices(
         selectedDevices?.micDevice || null,
         selectedDevices?.systemDevice || null,
         randomTitle
-      );
+      ); }
       console.log('Backend recording started successfully');
 
       // Update state after successful backend start

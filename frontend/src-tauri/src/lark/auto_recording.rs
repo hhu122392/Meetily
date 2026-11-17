@@ -206,6 +206,7 @@ async fn tick<R: Runtime>(
     }
     let c = config?;
     if !c.enabled
+        || c.manual_mode
         || !c.auto_record
         || c.auto_record_since == 0
         || !FRONTEND_READY.load(Ordering::SeqCst)

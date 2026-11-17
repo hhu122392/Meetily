@@ -461,6 +461,20 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     system_device_name: Option<String>,
     meeting_name: Option<String>,
 ) -> Result<(), String> {
+    start_devices_inner(app, mic_device_name, system_device_name, meeting_name, None).await
+}
+
+pub async fn start_calendar_recording<R: Runtime>(
+    app: AppHandle<R>, mic_device_name: Option<String>, system_device_name: Option<String>,
+    selection: crate::lark::calendar::Selection,
+) -> Result<(), String> {
+    start_devices_inner(app, mic_device_name, system_device_name, None, Some(selection)).await
+}
+
+async fn start_devices_inner<R: Runtime>(
+    app: AppHandle<R>, mic_device_name: Option<String>, system_device_name: Option<String>,
+    meeting_name: Option<String>, calendar_selection: Option<crate::lark::calendar::Selection>,
+) -> Result<(), String> {
     let _storage = super::storage_migration::use_storage().await?;
     let _operation = RECORDING_COMMAND_LOCK.lock().await;
     info!(
@@ -475,6 +489,18 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     if current_recording_state {
         return Err("Recording already in progress".to_string());
     }
+
+    // Keep the selected account stable through native capture registration.
+    let _calendar_config = if calendar_selection.is_some() {
+        Some(crate::lark::app::CONFIG_LOCK.lock().await)
+    } else { None };
+    let calendar_capture = if let Some(selection) = calendar_selection {
+        let state = app.state::<crate::state::AppState>();
+        Some(tokio::time::timeout(std::time::Duration::from_secs(60),
+            crate::lark::calendar::prepare_locked(state.db_manager.pool(), &selection)).await
+            .map_err(|_| "日程核对超时，尚未启动录音，请重新同步后再试。")??)
+    } else { None };
+    let meeting_name = calendar_capture.as_ref().map(|c| c.meeting.title.clone()).or(meeting_name);
 
     // Capture does not load an ASR model; saved recordings are processed by the queue.
 
@@ -538,9 +564,19 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
 
     let folder = manager.get_meeting_folder().ok_or("无法建立录音目录")?.to_string_lossy().to_string();
     let title = manager.get_meeting_name().unwrap_or_else(|| "会议录音".into());
-    if let Err(e) = super::recording_jobs::register(&app, &folder, &title).await {
+    let registered = async {
+        let id = super::recording_jobs::register(&app, &folder, &title).await?;
+        if let Some(capture) = &calendar_capture {
+            let state = app.state::<crate::state::AppState>();
+            crate::lark::calendar::attach(state.db_manager.pool(), &id, capture).await?;
+        }
+        Ok::<(), String>(())
+    }.await;
+    if let Err(e) = registered {
         let _ = manager.stop_streams_and_force_flush().await;
         let _ = manager.save_recording_only(&app).await;
+        let state = app.state::<crate::state::AppState>();
+        let _ = super::recording_jobs::capture_saved(state.db_manager.pool(), &folder, Some(&e)).await;
         return Err(e);
     }
     // Take the device event receiver BEFORE storing manager globally.
@@ -572,10 +608,12 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     });
     *TRANSCRIPTION_TASK.lock().unwrap() = Some(task_handle);
 
-    if let (Some(state), Ok(Some(folder))) = (app.try_state::<crate::state::AppState>(), get_meeting_folder_path().await) {
+    if calendar_capture.is_none() {
+      if let (Some(state), Ok(Some(folder))) = (app.try_state::<crate::state::AppState>(), get_meeting_folder_path().await) {
         if let Err(error) = crate::lark::app::recording_started(state.db_manager.pool(), &folder).await {
             warn!("Lark recording association unavailable: {}", error);
         }
+      }
     }
     // Emit success event
     app.emit("recording-started", serde_json::json!({

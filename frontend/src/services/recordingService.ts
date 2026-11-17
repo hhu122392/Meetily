@@ -26,6 +26,8 @@ export interface RecordingStoppedPayload {
   meeting_name?: string;
 }
 
+export type CalendarRecordingSelection = { key: string; revision: string; title: string };
+
 // Bound the start invoke: > ~40s Bluetooth mic cold-start and ~90s worst-case
 // Windows device enumeration, but still finite so a hung native start settles
 // the UI into ERROR instead of an eternal STARTING spinner.
@@ -34,11 +36,11 @@ const START_TIMEOUT_MS = 120000;
 // ponytail: on timeout we only reject — no auto stop_recording. Calling stop
 // against a stuck start could itself block; the ERROR state lets the user
 // retry and the backend engine-lifecycle lock serializes that retry.
-function withStartTimeout<T>(promise: Promise<T>): Promise<T> {
+function withStartTimeout<T>(promise: Promise<T>, timeoutMs = START_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error('Recording start timed out after 120s')),
-      START_TIMEOUT_MS
+      () => reject(new Error(`Recording start timed out after ${timeoutMs / 1000}s`)),
+      timeoutMs
     );
     promise.then(
       (value) => { clearTimeout(timer); resolve(value); },
@@ -52,6 +54,11 @@ function withStartTimeout<T>(promise: Promise<T>): Promise<T> {
  * Singleton service for managing recording lifecycle operations
  */
 export class RecordingService {
+  async startCalendarRecording(selection: CalendarRecordingSelection, micDeviceName: string | null, systemDeviceName: string | null): Promise<void> {
+    return withStartTimeout(invoke('lark_calendar_start_recording', {
+      selection: { key: selection.key, revision: selection.revision }, micDeviceName, systemDeviceName,
+    }), 180000);
+  }
   /**
    * Check if recording is currently active
    * @returns Promise<boolean>

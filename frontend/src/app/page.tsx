@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { RecordingControls } from '@/components/RecordingControls';
+import { LarkUpcomingMeetings } from '@/components/LarkUpcomingMeetings';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateContext';
@@ -210,6 +211,13 @@ export default function Home() {
       />
       <div className="flex flex-1 overflow-hidden">
         <TranscriptPanel
+          calendarPanel={!recordingState.isRecording && <LarkUpcomingMeetings
+            disabled={isRecordingDisabled || isStopping || isSaving || status === RecordingStatus.STARTING}
+            recordingDisabled={!hasMicrophone}
+            onStart={handleRecordingStart}
+            onSettings={() => router.push('/settings')}
+            onOpenMeeting={id => router.push(`/meeting-details?id=${encodeURIComponent(id)}`)}
+          />}
           isProcessingStop={isProcessingStop}
           isStopping={isStopping}
           showModal={showModal}

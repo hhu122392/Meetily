@@ -22,11 +22,13 @@ const { LarkAppSettings } = await import('../src/components/LarkAppSettings');
 let renderer: ReactTestRenderer | undefined;
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 afterEach(async () => {
   if (renderer) await act(async () => renderer!.unmount());
   renderer = undefined;
   if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow); else delete (globalThis as any).window;
   if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else delete (globalThis as any).document;
+  if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator); else delete (globalThis as any).navigator;
   setUiLanguage('zh-CN'); invoke.mockClear();
 });
 afterAll(() => {
@@ -38,7 +40,7 @@ const button = (label: string) => renderer!.root.findAllByType('button').find(no
 const content = () => JSON.stringify(renderer!.toJSON());
 test('会议助手只有一个授权入口，一次请求会议控制和云录音权限', async () => {
   respond = async command => command === 'lark_app_status'
-    ? { app_id:'cli_test',has_secret:true,enabled:true,authorized:true, routes:[], deliveries:[], recording:null }
+    ? { app_id:'cli_test',has_secret:true,enabled:true,authorized:true, recording_source:'cloud', routes:[], deliveries:[], recording:null }
     : command === 'lark_app_authorize' ? 'https://accounts.larksuite.com/test' : null;
   await act(async () => { renderer=create(<LarkAppSettings />); });
   await act(async () => button('授权会议助手').props.onClick());
@@ -57,7 +59,7 @@ test('损坏的 Lark 配置显示真实错误并阻止保存和授权', async ()
   expect(content()).toContain('配置读取失败');
   expect(content()).not.toContain('请确认运行的是新版 Meetily');
   expect(button('保存并连接').props.disabled).toBe(true);
-  expect(button('授权会议助手').props.disabled).toBe(true);
+  expect(button('授权会议助手')).toBeUndefined();
   expect(invoke.mock.calls.every(call => call[0] === 'lark_app_status')).toBe(true);
 });
 async function mountSender(getSummary = async () => '## 讨论结论\n保留当前编辑内容') {
@@ -123,6 +125,100 @@ describe('Lark preview and sending', () => {
 
 describe('Lark enterprise app configuration', () => {
   const appStatus = { app_id: 'cli_test', has_secret: true, enabled: true, auto_send: true, authorized: false, owner_id: '', connection: '未授权', routes: [], deliveries: [], recording: null };
+  const pasteCredential = async (text: string) => {
+    await act(async () => renderer!.root.findByProps({ id: 'lark-credential-paste' }).props.onPaste({
+      preventDefault() {}, clipboardData: { getData: () => text },
+    }));
+  };
+  test('后台辅助导入按两次复制填入，保存前不发送凭证或自动开启功能', async () => {
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    await act(async () => button('打开 Lark 后台').props.onClick());
+    expect(invoke.mock.calls.find(call => call[0] === 'open_external_url')).toEqual(['open_external_url', { url: 'https://open.larksuite.com/app/cli_test/baseinfo' }]);
+    await pasteCredential('cli_imported');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
+    expect(button('授权会议助手').props.disabled).toBe(true);
+    await pasteCredential('TestOnlySecret0123456789abcdefABCD');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.type).toBe('password');
+    expect(renderer!.root.findByProps({ id: 'lark-credential-paste' }).props.value).toBe('');
+    expect(invoke.mock.calls.some(call => call[0] === 'lark_app_save')).toBe(false);
+    await act(async () => button('保存并连接').props.onClick());
+    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')?.[1]).toEqual(expect.objectContaining({
+      appId: 'cli_imported', secret: 'TestOnlySecret0123456789abcdefABCD', autoRecord: false, allowGroupLaunch: false,
+    }));
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
+    expect(invoke.mock.calls.some(call => call[0].includes('send'))).toBe(false);
+  });
+  test('合并凭证原子导入；无效和遮挡内容不覆盖原配置', async () => {
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    await pasteCredential('App ID: cli_other\nApp Secret: ********');
+    expect(renderer!.root.findByProps({ id: 'lark-app-id' }).props.value).toBe('cli_test');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('********');
+    await pasteCredential('App ID: cli_other\nApp Secret: TestOnlySecret0123456789abcdefABCD');
+    expect(renderer!.root.findByProps({ id: 'lark-app-id' }).props.value).toBe('cli_other');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('TestOnlySecret0123456789abcdefABCD');
+    await pasteCredential('cli_third');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
+  });
+  test('只在点击时读取剪贴板，拒绝后可手动粘贴，错误不显示密钥', async () => {
+    const readText = mock(async () => { throw new Error('TestOnlySecret0123456789abcdefABCD'); });
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { readText } } });
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    expect(readText).not.toHaveBeenCalled();
+    await act(async () => button('读取剪贴板').props.onClick());
+    expect(readText).toHaveBeenCalledTimes(1);
+    expect(content()).toContain('Ctrl+V');
+    expect(content()).not.toContain('TestOnlySecret0123456789abcdefABCD');
+    await pasteCredential('cli_pasted');
+    expect(renderer!.root.findByProps({ id: 'lark-app-id' }).props.value).toBe('cli_pasted');
+  });
+  test('读取剪贴板期间切换应用不会将旧密钥填入新应用', async () => {
+    let finish!: (text: string) => void;
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { readText: () => new Promise<string>(resolve => { finish = resolve; }) } } });
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    await act(async () => button('读取剪贴板').props.onClick());
+    await act(async () => renderer!.root.findByProps({ id: 'lark-app-id' }).props.onChange({ target: { value: 'cli_changed' } }));
+    await act(async () => finish('TestOnlySecret0123456789abcdefABCD'));
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
+  });
+  test('读取剪贴板可补充现有应用密钥，不读取或覆盖其他设置', async () => {
+    const readText = mock(async () => 'TestOnlySecret0123456789abcdefABCD');
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { readText } } });
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    expect(button('读取剪贴板').props.disabled).toBe(false);
+    await act(async () => button('读取剪贴板').props.onClick());
+    expect(renderer!.root.findByProps({ id: 'lark-app-id' }).props.value).toBe('cli_test');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('TestOnlySecret0123456789abcdefABCD');
+    await act(async () => button('刷新状态').props.onClick());
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('TestOnlySecret0123456789abcdefABCD');
+    expect(invoke.mock.calls.every(call => call[0] === 'lark_app_status')).toBe(true);
+  });
+  test('空配置先导入 App ID，已有 App ID 可只补密钥', async () => {
+    respond = async command => command === 'lark_app_status' ? { ...appStatus, app_id: '', has_secret: false, manual_mode: false } : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    expect(renderer!.root.findByProps({ 'aria-label': '会议助手使用方式' }).props.value).toBe('manual');
+    expect(button('授权会议助手')).toBeUndefined();
+    await pasteCredential('TestOnlySecret0123456789abcdefABCD');
+    expect(content()).toContain('请先复制并粘贴 App ID');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
+    await pasteCredential('cli_new');
+    await pasteCredential('TestOnlySecret0123456789abcdefABCD');
+    expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('TestOnlySecret0123456789abcdefABCD');
+  });
+  test('本地手动模式不申请云录音权限，也不启用机器人事件和自动录音', async () => {
+    respond = async command => command === 'lark_app_status' ? appStatus : undefined;
+    await act(async () => { renderer = create(<LarkAppSettings />); });
+    await act(async () => renderer!.root.findByProps({ 'aria-label': '会议助手使用方式' }).props.onChange({target:{value:'manual'}}));
+    expect(button('授权会议助手')).toBeUndefined();
+    expect(renderer!.root.findAllByProps({id:'lark-recording-source'})).toHaveLength(0);
+    await act(async()=>button('保存并连接').props.onClick());
+    expect(invoke.mock.calls.find(call=>call[0]==='lark_app_save')?.[1]).toEqual(expect.objectContaining({manualMode:true,recordingSource:'local',autoRecord:false,allowGroupLaunch:false}));
+    expect(invoke.mock.calls.some(call=>call[0]==='lark_app_authorize')).toBe(false);
+  });
   test('saving sends credentials only to the backend and clears the secret input without sending messages', async () => {
     respond = async command => command === 'lark_app_status' ? appStatus : undefined;
     await act(async () => { renderer = create(<LarkAppSettings />); });
@@ -131,7 +227,7 @@ describe('Lark enterprise app configuration', () => {
     await act(async () => button('更换密钥').props.onClick());
     await act(async () => renderer!.root.findByProps({ id: 'lark-app-secret' }).props.onChange({ target: { value: 'test-only-secret' } }));
     await act(async () => button('保存并连接').props.onClick());
-    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')).toEqual(['lark_app_save', { appId: 'cli_test', secret: 'test-only-secret', enabled: true, autoSend: true, autoRecord: false, allowGroupLaunch: false, recordingSource: 'cloud' }]);
+    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')).toEqual(['lark_app_save', { appId: 'cli_test', secret: 'test-only-secret', enabled: true, autoSend: true, autoRecord: false, allowGroupLaunch: false, recordingSource: 'local', manualMode: false }]);
     expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('********');
     expect(invoke.mock.calls.some(call => call[0].includes('send'))).toBe(false);
   });
@@ -160,7 +256,7 @@ describe('Lark enterprise app configuration', () => {
   test('automatic recording requires a saved opt-in and status refresh preserves the pending choice', async () => {
     respond = async command => command === 'lark_app_status' ? appStatus : undefined;
     await act(async () => { renderer = create(<LarkAppSettings />); });
-    const auto = () => renderer!.root.findAllByType('input').filter(n => n.props.type === 'checkbox')[2];
+    const auto = () => renderer!.root.findByProps({ id: 'lark-auto-record' });
     expect(auto().props.checked).toBe(false);
     await act(async () => auto().props.onChange({ target: { checked: true } }));
     await act(async () => button('刷新状态').props.onClick());
@@ -181,24 +277,24 @@ describe('Lark enterprise app configuration', () => {
     await act(async () => button('保存并连接').props.onClick());
     expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')?.[1]?.allowGroupLaunch).toBe(true);
   });
-  test('cloud is the default without enabling automation and source edits survive refresh until saved', async () => {
+  test('默认本地录音且不开启自动录音，手选云录音在刷新后保留并仅在保存时提交', async () => {
     respond = async command => command === 'lark_app_status' ? appStatus : undefined;
     await act(async () => { renderer = create(<LarkAppSettings />); });
     const source = () => renderer!.root.findByProps({ id: 'lark-recording-source' });
-    expect(source().props.value).toBe('cloud');
-    await act(async () => source().props.onChange({ target: { value: 'local' } }));
-    await act(async () => button('刷新状态').props.onClick());
     expect(source().props.value).toBe('local');
+    await act(async () => source().props.onChange({ target: { value: 'cloud' } }));
+    await act(async () => button('刷新状态').props.onClick());
+    expect(source().props.value).toBe('cloud');
     expect(invoke.mock.calls.some(call => call[0] === 'lark_app_save')).toBe(false);
     await act(async () => button('保存并连接').props.onClick());
-    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')?.[1]).toEqual(expect.objectContaining({ recordingSource: 'local', autoRecord: false }));
+    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')?.[1]).toEqual(expect.objectContaining({ recordingSource: 'cloud', autoRecord: false }));
   });
   test('saved local source is restored and cloud authorization is requested explicitly', async () => {
     respond = async command => command === 'lark_app_status' ? { ...appStatus, recording_source: 'local' } : 'https://accounts.larksuite.com/authorize';
     await act(async () => { renderer = create(<LarkAppSettings />); });
     expect(renderer!.root.findByProps({ id: 'lark-recording-source' }).props.value).toBe('local');
     await act(async () => button('授权会议助手').props.onClick());
-    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_authorize')?.[1]).toEqual({ includeMeetingControl: true, includeCloudRecording: true });
+    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_authorize')?.[1]).toEqual({ includeMeetingControl: true, includeCloudRecording: false });
   });
   test('launch failures show the source group and opening a saved link never creates or sends a meeting', async () => {
     respond = async command => command === 'lark_app_status' ? { ...appStatus, launches: [{ request_id: 'r1', topic: '研发周会', chat_id: 'oc_source', status: 'link_failed', detail: '会议已创建，链接发送失败', meeting_no: '123456789', meeting_url: 'https://vc.larksuite.com/j/123456789' }] } : undefined;

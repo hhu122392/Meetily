@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn defaults_and_urls_are_strict() {
         let c: AppConfig = serde_json::from_str("{}").unwrap();
-        assert!(c.recording_source == app::RecordingSource::Cloud);
+        assert!(c.recording_source == app::RecordingSource::Local);
         assert!(!c.auto_record);
         assert!(serde_json::from_str::<AppConfig>(r#"{"recording_source":"invalid"}"#).is_err());
         assert_eq!(minute_token("https://example.jp.larksuite.com/minutes/obj123?from=meeting").unwrap(), "obj123");

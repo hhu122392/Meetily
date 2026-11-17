@@ -8,6 +8,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { TranscriptPanel } from '@/components/MeetingDetails/TranscriptPanel';
 import { SummaryPanel } from '@/components/MeetingDetails/SummaryPanel';
+import { TemplatePeople } from '@/components/MeetingDetails/TemplatePeople';
+import { CalendarMeetingInfo } from '@/components/MeetingDetails/CalendarMeetingInfo';
 import { MeetingDetailsSplitView, type MeetingDetailsTab } from '@/components/MeetingDetails/MeetingDetailsSplitView';
 import { companyStorageKey } from '@/lib/company-scope';
 import { ModelConfig } from '@/components/ModelSettingsModal';
@@ -196,7 +198,9 @@ export default function PageContent({
       <details className="max-h-[40%] shrink-0 overflow-y-auto border-b bg-white px-4 py-2 text-sm">
         <summary className="cursor-pointer">会议背景与人员设置 · {meetingSettings.ready ? (meetingSettings.dirty ? '未保存' : '已保存') : '加载中'}</summary>
         <p className="my-2 text-xs text-gray-500">设置只属于当前会议；生成时自动保存并固定本次内容。参会名单不代表说话人身份。</p>
-        <label className="my-2 block">会议背景<textarea aria-label="会议背景" className="mt-1 w-full rounded border p-2" disabled={!meetingSettings.ready || meetingSettings.saving} value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} /></label>
+        <TemplatePeople meetingId={meeting.id} settings={meetingSettings.settings} disabled={!meetingSettings.ready || meetingSettings.saving} save={meetingSettings.save} update={meetingSettings.update} />
+        <CalendarMeetingInfo meetingId={meeting.id} disabled={!meetingSettings.ready || meetingSettings.saving} update={meetingSettings.update} />
+        <label className="my-2 block">会议背景<textarea aria-label="会议背景" className="mt-1 w-full rounded border p-2" disabled={!meetingSettings.ready || meetingSettings.saving} value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} onBlur={() => { if (meetingSettings.ready && meetingSettings.dirty && !meetingSettings.saving) void meetingSettings.save().catch(() => {}); }} /></label>
         <div className="flex flex-wrap gap-3">
           {([['participants', '出席人员'], ['absent', '缺席人员'], ['host', '主持人']] as const).map(([field, label]) =>
             <label key={field}>{label}<input aria-label={label} className="ml-2 rounded border p-1" disabled={!meetingSettings.ready || meetingSettings.saving} value={meetingSettings.settings[field]} onChange={e => meetingSettings.update({ [field]: e.target.value })} /></label>)}
@@ -216,6 +220,11 @@ export default function PageContent({
               transcripts={meetingData.transcripts}
               customPrompt={customPrompt}
               onPromptChange={setCustomPrompt}
+              onSavePrompt={meetingSettings.save}
+              promptReady={meetingSettings.ready}
+              promptSaving={meetingSettings.saving}
+              promptDirty={meetingSettings.dirty}
+              promptError={meetingSettings.error}
               onCopyTranscript={copyOperations.handleCopyTranscript}
               onOpenMeetingFolder={meetingOperations.handleOpenMeetingFolder}
               isRecording={isRecording}
