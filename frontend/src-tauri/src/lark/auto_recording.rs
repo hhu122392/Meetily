@@ -457,7 +457,7 @@ mod tests {
             "header":{"app_id":"cli_test","event_type":"im.message.receive_v1","event_id":event_id},
             "event":{"sender":{"sender_type":"user","sender_id":{"open_id":owner}},
             "message":{"chat_type":"group","chat_id":group,"message_type":"text","mentions":[{"key":"@_user_1"}],
-            "create_time":(now()*1000).to_string(),"content":json!({"text":"@_user_1 绑定会议 123 456 789"}).to_string()}}});
+            "create_time":(now()*1000).to_string(),"content":json!({"text":"@_user_1 会议ID:123 456 789"}).to_string()}}});
         app::save(&pool,&c).await.unwrap();
         app::receive(&pool,&c,&event("off","owner","oc_a")).await.unwrap();
         c.auto_record = true;

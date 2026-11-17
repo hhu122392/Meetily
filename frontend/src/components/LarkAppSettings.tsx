@@ -138,7 +138,7 @@ export function LarkAppSettings() {
       </select>
       <p className="text-xs text-gray-500">保存后对下一场会议生效；已有任务继续使用原来源。</p>
       {recordingSource === 'cloud' ? <p className="text-xs text-gray-500">授权本人入会且为主持人时，自动请求 Lark 开始录制。整场会议结束后，等待云文件就绪，下载到当前公司的录音目录，再后台转写和生成纪要；不会录入电脑的其他声音。下载不使用 Lark 语音转文字额度。请保持 Meetily 运行；重启后会继续等待或下载。暂停任务不会停止 Lark 云录制。</p>
-        : <p className="text-xs text-gray-500">已有会议：先保存自动录音设置，再用授权账号在群里发送 <code>@会议助手 绑定会议 123456789</code>，将示例号码换成本场会议号。保持 Meetily 运行，在这台电脑入会后录制麦克风和系统声音，确认离会后停止。手动停止后本场不再重启。</p>}
+        : <p className="text-xs text-gray-500">已有会议：先保存自动录音设置，再用授权账号在群里发送 <code>@会议助手 会议ID:123 456 789</code>，将示例号码换成本场会议号。保持 Meetily 运行，在这台电脑入会后录制麦克风和系统声音，确认离会后停止。手动停止后本场不再重启。</p>}
     </div>
     <label className="flex items-center gap-2 text-sm"><input id="lark-allow-group-launch" type="checkbox" checked={allowGroupLaunch} disabled={busy} onChange={e => setAllowGroupLaunch(e.target.checked)} />允许所有已加入机器人的群成员 @会议助手 开会</label>
     <p className="text-xs text-gray-500">其他成员发起时仍使用本机授权账号创建会议，并关联发起群。授权本人需入会，云录音还需本人为主持人；其他成员不能使用绑定会议指令。关闭后只接受授权本人发起。</p>

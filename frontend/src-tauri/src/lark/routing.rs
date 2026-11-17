@@ -15,7 +15,10 @@ pub fn parse_binding(text: &str) -> Option<MeetingReference> {
         return (id.len() >= 10 && id.len() <= 32 && id.bytes().all(|b| b.is_ascii_digit()))
             .then(|| MeetingReference::Id(id.into()));
     }
-    let value = text.strip_prefix("绑定会议 ")?.trim();
+    let value = text.strip_prefix("绑定会议 ")
+        .or_else(|| text.strip_prefix("会议ID:"))
+        .or_else(|| text.strip_prefix("会议ID："))?
+        .trim();
     let number: String = value.chars().filter(|c| *c != ' ' && *c != '-').collect();
     (number.len() == 9 && number.bytes().all(|b| b.is_ascii_digit()))
         .then(|| MeetingReference::Number(number))
@@ -94,6 +97,9 @@ mod tests {
     }
     #[test]
     fn only_explicit_commands() {
+        for command in ["@_user_1 会议ID:123 456 789", "@_user_1 会议ID： 123456789"] {
+            assert_eq!(parse_binding(command), Some(MeetingReference::Number("123456789".into())));
+        }
         assert_eq!(
             parse_binding("@_user_1 绑定会议 123 456 789"),
             Some(MeetingReference::Number("123456789".into()))
@@ -108,6 +114,8 @@ mod tests {
             "绑定会议 https://evil.test/123456789",
             "绑定会议ID 123456789",
             "绑定会议 1234567890",
+            "会议ID:1234567890123456789",
+            "会议ID:123 456 789 还有其他会议",
         ] {
             assert_eq!(parse_binding(s), None);
         }
