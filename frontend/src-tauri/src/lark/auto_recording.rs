@@ -86,27 +86,57 @@ fn notice<R: Runtime>(handle: &AppHandle<R>, message: &str, error: bool) {
     );
 }
 
-async fn has_pending_launch(pool: &SqlitePool, c: &AppConfig) -> Result<bool, String> {
+async fn has_pending_meeting(pool: &SqlitePool, c: &AppConfig) -> Result<bool, String> {
     let count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM lark_meeting_launches j WHERE j.app_id=? AND j.owner_id=? AND j.created_at>=? AND j.expires_at>? AND j.reserve_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM lark_app_routes r JOIN lark_auto_recordings a ON a.app_id=r.app_id AND a.owner_id=r.owner_id AND a.remote_id=r.remote_id WHERE r.app_id=j.app_id AND r.owner_id=j.owner_id AND r.reference_kind='reserve' AND r.reference=j.reserve_id) AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=j.app_id AND s.owner_id=j.owner_id AND s.meeting_no=j.meeting_no AND s.ended=1 AND s.event_at>=j.created_at*1000)")
         .bind(&c.app_id).bind(&c.owner_id).bind(c.auto_record_since).bind(now()).fetch_one(pool).await.map_err(db_error)?;
-    Ok(count > 0)
+    if count > 0 || c.recording_source != app::RecordingSource::Local {
+        return Ok(count > 0);
+    }
+    sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM lark_app_routes r
+         WHERE r.app_id=? AND r.owner_id=? AND r.reference_kind='number'
+           AND r.local_record_bound_at>=? AND r.expires_at>?
+           AND NOT EXISTS (SELECT 1 FROM lark_auto_recordings a WHERE a.app_id=r.app_id
+               AND a.owner_id=r.owner_id AND a.remote_id=r.remote_id)
+           AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=r.app_id
+               AND s.owner_id=r.owner_id AND s.ended=1 AND (s.remote_id=r.remote_id OR
+               (r.remote_id IS NULL AND s.meeting_no=r.reference AND s.event_at>=r.local_record_bound_at*1000))))"
+    ).bind(&c.app_id).bind(&c.owner_id).bind(c.auto_record_since).bind(now())
+        .fetch_one(pool).await.map_err(db_error)
 }
 
-async fn claim(pool: &SqlitePool, c: &AppConfig, id: &str) -> Result<bool, String> {
-    if meeting_state::ended(pool, c, id).await? { return Ok(false); }
-    // Only an app-created reservation from after opt-in may trigger automatic capture.
-    let chats:Vec<String>=sqlx::query_scalar("SELECT DISTINCT r.chat_id FROM lark_app_routes r JOIN lark_meeting_launches j ON j.reserve_id=r.reference AND j.app_id=r.app_id AND j.owner_id=r.owner_id AND j.chat_id=r.chat_id WHERE r.app_id=? AND r.owner_id=? AND r.reference_kind='reserve' AND r.remote_id=? AND r.expires_at>? AND j.created_at>=? AND j.expires_at>?")
-        .bind(&c.app_id).bind(&c.owner_id).bind(id).bind(now()).bind(c.auto_record_since).bind(now()).fetch_all(pool).await.map_err(db_error)?;
-    if chats.len() != 1 {
-        return Ok(false);
-    }
-    let all_chats:i64=sqlx::query_scalar("SELECT COUNT(DISTINCT chat_id) FROM lark_app_routes WHERE app_id=? AND owner_id=? AND remote_id=? AND expires_at>?")
-        .bind(&c.app_id).bind(&c.owner_id).bind(id).bind(now()).fetch_one(pool).await.map_err(db_error)?;
-    if all_chats != 1 {
-        return Ok(false);
-    }
-    Ok(sqlx::query("INSERT OR IGNORE INTO lark_auto_recordings(app_id,owner_id,remote_id,status,detail,updated_at) VALUES(?,?,?,'starting','已识别本人加入机器人创建的会议，正在启动录音。',?)")
-        .bind(&c.app_id).bind(&c.owner_id).bind(id).bind(now()).execute(pool).await.map_err(db_error)?.rows_affected()==1)
+async fn claim(pool: &SqlitePool, c: &AppConfig, id: &str, number: &str) -> Result<bool, String> {
+    // Resolve bindings and reserve capture atomically against the account's observed meeting instance.
+    let mut tx = pool.begin().await.map_err(db_error)?;
+    let clock = now();
+    let inserted = sqlx::query(
+        "WITH routes AS (
+            SELECT * FROM lark_app_routes WHERE app_id=?1 AND owner_id=?2 AND expires_at>?3
+              AND (remote_id=?4 OR (reference_kind='number' AND reference=?5 AND remote_id IS NULL))
+         )
+         INSERT OR IGNORE INTO lark_auto_recordings(app_id,owner_id,remote_id,status,detail,updated_at)
+         SELECT ?1,?2,?4,'starting','已确认本人加入目标会议，正在启动录音。',?3
+         WHERE (SELECT COUNT(DISTINCT chat_id) FROM routes)=1
+           AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals WHERE app_id=?1 AND owner_id=?2 AND remote_id=?4 AND ended=1)
+           AND EXISTS (SELECT 1 FROM routes r WHERE
+              (?6 AND r.reference_kind='number' AND r.reference=?5 AND r.local_record_bound_at>=?7
+               AND (r.remote_id=?4 OR NOT EXISTS (
+                   SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=?1 AND s.owner_id=?2 AND s.ended=1
+                     AND s.meeting_no=?5 AND s.event_at>=r.local_record_bound_at*1000)))
+              OR (r.reference_kind='reserve' AND r.remote_id=?4 AND EXISTS (
+                 SELECT 1 FROM lark_meeting_launches j WHERE j.app_id=?1 AND j.owner_id=?2
+                   AND j.reserve_id=r.reference AND j.chat_id=r.chat_id AND j.created_at>=?7 AND j.expires_at>?3)))"
+    ).bind(&c.app_id).bind(&c.owner_id).bind(clock).bind(id).bind(number)
+        .bind(c.recording_source == app::RecordingSource::Local).bind(c.auto_record_since)
+        .execute(&mut *tx).await.map_err(db_error)?.rows_affected() == 1;
+    // A recurring number must never arm another instance on the same binding.
+    sqlx::query("UPDATE lark_app_routes SET remote_id=?1 WHERE app_id=?2 AND owner_id=?3 AND
+        reference_kind='number' AND reference=?4 AND remote_id IS NULL AND expires_at>?5
+        AND EXISTS (SELECT 1 FROM lark_auto_recordings WHERE app_id=?2 AND owner_id=?3 AND remote_id=?1)")
+        .bind(id).bind(&c.app_id).bind(&c.owner_id).bind(number).bind(clock)
+        .execute(&mut *tx).await.map_err(db_error)?;
+    tx.commit().await.map_err(db_error)?;
+    Ok(inserted)
 }
 
 pub async fn run<R: Runtime>(handle: AppHandle<R>, pool: SqlitePool) {
@@ -215,7 +245,7 @@ async fn tick<R: Runtime>(
     {
         return Ok(());
     }
-    if !has_pending_launch(pool, &c).await? {
+    if !has_pending_meeting(pool, &c).await? {
         return Ok(());
     }
     let (c, active, observation) = meeting_state::current(pool).await?;
@@ -236,7 +266,7 @@ async fn tick<R: Runtime>(
     {
         return Ok(());
     }
-    if !claim(pool, &c, &id).await? {
+    if !claim(pool, &c, &id, &no).await? {
         return Ok(());
     }
     if c.recording_source == app::RecordingSource::Cloud {
@@ -335,6 +365,7 @@ mod tests {
             include_str!("../../migrations/20261015010000_add_lark_launches.sql"),
             include_str!("../../migrations/20261015020000_add_lark_auto_recording.sql"),
             include_str!("../../migrations/20261016000000_add_lark_meeting_signals.sql"),
+            include_str!("../../migrations/20261117000000_bound_meeting_recording.sql"),
         ] {
             sqlx::raw_sql(migration).execute(&pool).await.unwrap();
         }
@@ -344,17 +375,17 @@ mod tests {
             auto_record_since: now() - 10,
             ..Default::default()
         };
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         sqlx::query("INSERT INTO lark_meeting_launches(request_id,app_id,owner_id,message_id,chat_id,topic,reserve_id,created_at,expires_at) VALUES('j','app','owner','msg','oc_a','test','reserve',?,?)")
             .bind(now()-20).bind(now()+1000).execute(&pool).await.unwrap();
         sqlx::query(
-            "INSERT INTO lark_app_routes VALUES('app','owner','reserve','reserve','oc_a','1',?)",
+            "INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at) VALUES('app','owner','reserve','reserve','oc_a','1',?)",
         )
         .bind(now() + 1000)
         .execute(&pool)
         .await
         .unwrap();
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         sqlx::query("UPDATE lark_meeting_launches SET created_at=?")
             .bind(now())
             .execute(&pool)
@@ -364,15 +395,15 @@ mod tests {
             owner_id: "other".into(),
             ..c.clone()
         };
-        assert!(!claim(&pool, &other_owner, "1").await.unwrap());
+        assert!(!claim(&pool, &other_owner, "1", "123456789").await.unwrap());
         sqlx::query(
-            "INSERT INTO lark_app_routes VALUES('app','owner','1','id','oc_conflict','1',?)",
+            "INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at) VALUES('app','owner','1','id','oc_conflict','1',?)",
         )
         .bind(now() + 1000)
         .execute(&pool)
         .await
         .unwrap();
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         sqlx::query("DELETE FROM lark_app_routes WHERE chat_id='oc_conflict'")
             .execute(&pool)
             .await
@@ -381,14 +412,14 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         sqlx::query("UPDATE lark_app_routes SET expires_at=?")
             .bind(now() + 1000)
             .execute(&pool)
             .await
             .unwrap();
-        assert!(claim(&pool, &c, "1").await.unwrap());
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(claim(&pool, &c, "1", "123456789").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         update(&pool, &c, "1", "processing", "stopped", Some("folder-a"))
             .await
             .unwrap();
@@ -408,8 +439,46 @@ mod tests {
                 .unwrap(),
             1
         );
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
     }
+    #[tokio::test]
+    async fn group_binding_arms_only_the_owners_next_matching_local_instance() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        for migration in [
+            include_str!("../../migrations/20261015000000_add_lark_app.sql"),
+            include_str!("../../migrations/20261015010000_add_lark_launches.sql"),
+            include_str!("../../migrations/20261015020000_add_lark_auto_recording.sql"),
+            include_str!("../../migrations/20261016000000_add_lark_meeting_signals.sql"),
+            include_str!("../../migrations/20261117000000_bound_meeting_recording.sql"),
+        ] { sqlx::raw_sql(migration).execute(&pool).await.unwrap(); }
+        let mut c = AppConfig { app_id:"cli_test".into(), owner_id:"owner".into(), enabled:true,
+            allow_group_launch:true, auto_record_since:now()-30, ..Default::default() };
+        let event = |event_id: &str, owner: &str, group: &str| json!({
+            "header":{"app_id":"cli_test","event_type":"im.message.receive_v1","event_id":event_id},
+            "event":{"sender":{"sender_type":"user","sender_id":{"open_id":owner}},
+            "message":{"chat_type":"group","chat_id":group,"message_type":"text","mentions":[{"key":"@_user_1"}],
+            "create_time":(now()*1000).to_string(),"content":json!({"text":"@_user_1 绑定会议 123 456 789"}).to_string()}}});
+        app::save(&pool,&c).await.unwrap();
+        app::receive(&pool,&c,&event("off","owner","oc_a")).await.unwrap();
+        c.auto_record = true;
+        app::save(&pool,&c).await.unwrap();
+        app::receive(&pool,&c,&event("unauthorized","other","oc_a")).await.unwrap();
+        assert!(!has_pending_meeting(&pool,&c).await.unwrap(), "a delivery-only binding cannot arm later");
+        app::receive(&pool,&c,&event("armed","owner","oc_a")).await.unwrap();
+        assert!(has_pending_meeting(&pool,&c).await.unwrap());
+        assert!(!claim(&pool,&c,"101","987654321").await.unwrap());
+        let cloud = AppConfig { recording_source:app::RecordingSource::Cloud, ..c.clone() };
+        assert!(!has_pending_meeting(&pool,&cloud).await.unwrap());
+        assert!(!claim(&pool,&cloud,"101","123456789").await.unwrap());
+        app::receive(&pool,&c,&event("ambiguous","owner","oc_b")).await.unwrap();
+        assert!(!claim(&pool,&c,"101","123456789").await.unwrap());
+        sqlx::query("UPDATE lark_app_routes SET expires_at=0 WHERE chat_id='oc_b'").execute(&pool).await.unwrap();
+        assert!(claim(&pool,&c,"101","123456789").await.unwrap());
+        assert!(!claim(&pool,&c,"101","123456789").await.unwrap());
+        assert!(!claim(&pool,&c,"102","123456789").await.unwrap(), "recurring number, different instance");
+        assert!(!has_pending_meeting(&pool,&c).await.unwrap());
+    }
+
     #[tokio::test]
     async fn manually_recorded_meetings_are_never_reclaimed_or_finished_by_automation() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -422,13 +491,14 @@ mod tests {
             include_str!("../../migrations/20261015010000_add_lark_launches.sql"),
             include_str!("../../migrations/20261015020000_add_lark_auto_recording.sql"),
             include_str!("../../migrations/20261016000000_add_lark_meeting_signals.sql"),
+            include_str!("../../migrations/20261117000000_bound_meeting_recording.sql"),
         ] {
             sqlx::raw_sql(migration).execute(&pool).await.unwrap();
         }
         sqlx::query("INSERT INTO lark_meeting_launches(request_id,app_id,owner_id,message_id,chat_id,topic,reserve_id,created_at,expires_at) VALUES('j','app','owner','msg','oc_a','test','reserve',?,?)")
             .bind(now()).bind(now()+1000).execute(&pool).await.unwrap();
         sqlx::query(
-            "INSERT INTO lark_app_routes VALUES('app','owner','reserve','reserve','oc_a','1',?)",
+            "INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at) VALUES('app','owner','reserve','reserve','oc_a','1',?)",
         )
         .bind(now() + 1000)
         .execute(&pool)
@@ -442,9 +512,9 @@ mod tests {
             auto_record_since: now() - 10,
             ..Default::default()
         };
-        assert!(!claim(&pool, &c, "1").await.unwrap());
+        assert!(!claim(&pool, &c, "1", "123456789").await.unwrap());
         finish(&pool, "manual-folder", false).await.unwrap();
-        assert!(!has_pending_launch(&pool, &c).await.unwrap());
+        assert!(!has_pending_meeting(&pool, &c).await.unwrap());
         assert_eq!(
             sqlx::query_scalar::<_, String>("SELECT status FROM lark_auto_recordings")
                 .fetch_one(&pool)
@@ -462,21 +532,22 @@ mod tests {
             include_str!("../../migrations/20261015010000_add_lark_launches.sql"),
             include_str!("../../migrations/20261015020000_add_lark_auto_recording.sql"),
             include_str!("../../migrations/20261016000000_add_lark_meeting_signals.sql"),
+            include_str!("../../migrations/20261117000000_bound_meeting_recording.sql"),
         ] { sqlx::raw_sql(migration).execute(&pool).await.unwrap(); }
         let c = AppConfig { app_id:"app".into(), owner_id:"owner".into(), auto_record_since:now()-100, ..Default::default() };
         sqlx::query("INSERT INTO lark_meeting_launches(request_id,app_id,owner_id,message_id,chat_id,topic,reserve_id,meeting_no,created_at,expires_at) VALUES('j','app','owner','msg','oc_a','test','reserve','123456789',?,?)")
             .bind(now()-5).bind(now()+1000).execute(&pool).await.unwrap();
-        assert!(has_pending_launch(&pool,&c).await.unwrap());
-        sqlx::query("INSERT INTO lark_app_routes VALUES('app','owner','reserve','reserve','oc_a','1',?)").bind(now()+1000).execute(&pool).await.unwrap();
+        assert!(has_pending_meeting(&pool,&c).await.unwrap());
+        sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at) VALUES('app','owner','reserve','reserve','oc_a','1',?)").bind(now()+1000).execute(&pool).await.unwrap();
         for status in ["recording","completed","failed","interrupted","manual"] {
             sqlx::query("INSERT OR REPLACE INTO lark_auto_recordings(app_id,owner_id,remote_id,status,updated_at) VALUES('app','owner','1',?,?)").bind(status).bind(now()).execute(&pool).await.unwrap();
-            assert!(!has_pending_launch(&pool,&c).await.unwrap(), "status {status}");
+            assert!(!has_pending_meeting(&pool,&c).await.unwrap(), "status {status}");
         }
         sqlx::query("DELETE FROM lark_auto_recordings").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO lark_meeting_signals VALUES('app','owner','1','123456789','vc.meeting.meeting_ended_v1',?,1)").bind(now()*1000).execute(&pool).await.unwrap();
-        assert!(!has_pending_launch(&pool,&c).await.unwrap());
-        assert!(!claim(&pool,&c,"1").await.unwrap());
+        assert!(!has_pending_meeting(&pool,&c).await.unwrap());
+        assert!(!claim(&pool,&c,"1","123456789").await.unwrap());
         sqlx::query("UPDATE lark_meeting_launches SET created_at=?").bind(now()+1).execute(&pool).await.unwrap();
-        assert!(has_pending_launch(&pool,&c).await.unwrap(), "an old ended instance cannot retire a new reservation");
+        assert!(has_pending_meeting(&pool,&c).await.unwrap(), "an old ended instance cannot retire a new reservation");
     }
 }

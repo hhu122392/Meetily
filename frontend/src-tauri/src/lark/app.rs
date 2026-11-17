@@ -572,9 +572,15 @@ pub(super) async fn receive(
                 MeetingReference::Id(id) => ("id", id.clone(), Some(id)),
                 MeetingReference::Number(no) => ("number", no, None),
             };
-            sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(app_id,owner_id,reference,reference_kind,chat_id) DO UPDATE SET remote_id=excluded.remote_id,expires_at=excluded.expires_at")
-            .bind(&current.app_id).bind(&current.owner_id).bind(reference).bind(kind).bind(chat).bind(remote).bind(now()+21600)
+            let record_bound_at = (kind == "number" && !current.manual_mode && current.auto_record
+                && current.recording_source == RecordingSource::Local && timestamp >= current.auto_record_since)
+                .then_some(timestamp);
+            sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at,local_record_bound_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(app_id,owner_id,reference,reference_kind,chat_id) DO UPDATE SET remote_id=excluded.remote_id,expires_at=excluded.expires_at,local_record_bound_at=excluded.local_record_bound_at")
+                .bind(&current.app_id).bind(&current.owner_id).bind(reference).bind(kind).bind(chat).bind(remote).bind(now()+21600).bind(record_bound_at)
             .execute(&mut *tx).await.map_err(db_error)?;
+            tx.commit().await.map_err(db_error)?;
+            if record_bound_at.is_some() { super::meeting_state::invalidate(); }
+            return Ok(());
         }
     }
     tx.commit().await.map_err(db_error)?;
@@ -1231,6 +1237,7 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+        sqlx::raw_sql(include_str!("../../migrations/20261117000000_bound_meeting_recording.sql")).execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!("../../migrations/20261020010000_lark_end_meeting.sql")).execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!(
             "../../migrations/20261015020000_add_lark_auto_recording.sql"
