@@ -1,0 +1,16 @@
+{
+  "scopes": {
+    "tenant": [
+      "wiki:wiki",
+      "docx:document",
+      "docx:document.block:convert",
+      "im:chat:read",
+      "im:message:send_as_bot"
+    ],
+    "user": [
+      "drive:drive:readonly",
+      "docx:document",
+      "docx:document.block:convert"
+    ]
+  }
+}

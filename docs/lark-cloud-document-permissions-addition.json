@@ -1,0 +1,9 @@
+{
+  "scopes": {
+    "tenant": [
+      "docx:document.block:convert",
+      "docx:document"
+    ],
+    "user": []
+  }
+}

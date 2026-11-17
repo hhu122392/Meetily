@@ -5,6 +5,7 @@
       "im:message:send_as_bot",
       "im:chat:read",
       "im:resource",
+      "minutes:minutes.media:export",
       "vc:meeting.meetingevent:read",
       "vc:reserve",
       "vc:reserve:readonly"

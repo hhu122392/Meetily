@@ -1,6 +1,10 @@
 # Lark 会议助手权限申请清单
 
-文档日期：2026 年 11 月 7 日。适用范围：国际版 Lark 企业自建应用、Meetily 中文定制版 0.4.1。权限清单按当前代码实际请求与调用整理，适用于在另一家公司重新申请。
+2026-11-16 功能增量：行动项确认后同步任务所需的 `task:task:write` 用户权限和群成员读取权限，见 [行动项同步说明](./20261116行动项确认与Lark任务同步.md) 及 [增量导入文件](./lark-action-tasks-permissions.json)。下文的历史后台核对结果不代表这些新增权限已经审批发布。
+
+核对日期：2026 年 11 月 13 日。适用范围：国际版 Lark 企业自建应用、Meetily 中文定制版 0.4.1（20261107 安装包）。本清单按现有“会议助手”已发布应用的后台配置整理，并与客户端实际调用对照，供另一家公司复用配置；不是最小权限方案。
+
+现有应用已启用、配置已发布：应用身份 8 项，用户身份／OAuth 范围 7 项，长连接应用身份事件 4 项。核对过程未修改后台权限，也未创建测试会议。差异和验证边界见 [现有应用配置核对记录](./Lark现有应用配置核对记录-20261113.md)。新公司仍需自行申请、发布和验收。
 
 配套阅读：[Lark 与 Meetily 配置及变更说明](./Lark与Meetily配置及变更说明.md)。机器可读清单：[权限与事件核对清单](./lark-permissions-checklist.json)。后台批量导入文件：[权限导入 JSON](./lark-permissions-import.json)。
 
@@ -20,7 +24,7 @@
 
 **运行安排：** 同一应用配置一个主要在线处理实例。另一台电脑使用相同账号时，应退出其 Meetily，或停用其中的企业应用连接。当前版本没有跨设备任务认领及共享去重。
 
-**试点验收：** 在指定测试群完成一场无敏感内容的短会，检查创建会议、录音、转写、按模板生成、手动纠错、预览和确认发送，再扩大使用范围。
+**试点验收：** 先使用本机录音和本地模型，在指定测试群完成一场无敏感内容的短会，检查创建会议、录音、转写、按模板生成、手动纠错、预览和确认发送，再扩大使用范围。确认纪要未经人工确认不会发送。当前客户端没有独立的试点群白名单；试点期间仅将机器人加入获批群，不能把审批表里的群名单当成程序访问控制。
 
 ## 二、应用身份权限
 
@@ -32,11 +36,14 @@
 | `im:message:send_as_bot` | 回复会议链接、发送审核确认后的纪要消息 | 无法回复或发群 |
 | `im:chat:read` | 查询和显示目标群名称 | 无法可靠展示目标群名 |
 | `im:resource` | 上传用户选择发送的 Markdown 文件 | 附件上传失败；不发附件时不调用该步骤 |
+| `minutes:minutes.media:export` | 现有应用已开通的应用身份音视频下载权限，按现有配置保留 | 当前客户端下载使用用户身份，此应用身份权限不是该下载流程的必需项 |
 | `vc:meeting.meetingevent:read` | 接收会议状态事件 | 缺少入会、离会、结束等状态通知 |
 | `vc:reserve` | 通过群内指令创建会议预约 | 机器人不能创建会议 |
 | `vc:reserve:readonly` | 查询预约对应的活跃会议 | 创建的预约无法正常关联到实际会议 |
 
 `vc:reserve` 的授权范围较本项目的创建操作更宽；本项目开会流程调用创建预约接口。不要为了省事申请所有聊天记录、通讯录或云文档权限。
+
+**会议事件权限以目标应用后台逐项核对。** 本次实际后台的入会、离会、会议结束事件均显示应用身份 `vc:meeting.meetingevent:read` 已开通并可用，因此沿用此配置，不替换成 `vc:meeting:readonly`。国际版公开事件文档列有 `vc:meeting:readonly`，与本次后台显示存在差异；新公司应展开事件的权限详情确认接受哪项权限，不能仅按中文名称判断，也不要未经核实自动追加两项权限。现有应用的 `vc:meeting:readonly` 仅在用户身份下。
 
 ## 三、用户身份权限／OAuth 范围
 
@@ -48,7 +55,7 @@
 | `offline_access` | 获取刷新凭证并续期授权 | 属于 OAuth 授权范围，按后台当前权限／授权配置方式开通 |
 | `vc:meeting` | 响应“结束会议”指令 | 当前实现要求授权账号在会中且为主持人 |
 | `vc:record` | 请求启动云录制 | 授权账号须有录制资格；当前实现要求在会中且为主持人 |
-| `vc:record:readonly` | 读取云录制信息 | 账号能访问该会议录制 |
+| `vc:record:readonly` | 读取云录制信息 | 用户身份接口要求授权账号是会议所有者；会议结束且录制文件生成后读取，不是只要能看到录制即可 |
 | `vc:meeting:readonly` | 查询会议状态、判断会议是否结束 | 账号具有对应会议信息访问权 |
 | `minutes:minutes.media:export` | 下载妙记中的音视频文件，交由 Meetily 转写 | 文件对授权账号可访问、允许下载 |
 
@@ -77,7 +84,7 @@ vc:meeting.meetingevent:read offline_access vc:meeting vc:record vc:record:reado
 | `vc.meeting.leave_meeting_v1` | 收到离会通知后核验本机录音停止条件 |
 | `vc.meeting.meeting_ended_v1` | 核验整场会议结束、推进后续处理 |
 
-当前自动关联主要针对“@会议助手 开会”创建的会议；不能据此承诺任意原生 Lark 会议都能自动映射到群。程序仍有状态查询和兜底轮询，事件订阅不等于零 API 调用。
+当前自动关联主要针对“@会议助手 开会”通过本应用 API 预约创建的会议。官方入会、离会文档明确限定为通过 API 预约的会议；本次后台权限说明同样限定应用身份接收当前应用预约会议的状态事件。不能把机器人开会测试成功当成普通原生 Lark 会议也能自动识别、关联群或收到相同事件。程序仍有状态查询和兜底轮询，事件订阅不等于零 API 调用。
 
 在“安全设置 → 重定向 URL”添加完整地址：
 
@@ -90,18 +97,21 @@ http://127.0.0.1:18576/lark/callback
 ## 五、批准与交付清单
 
 - [ ] 应用在目标公司创建，机器人能力已启用。
-- [ ] 应用身份 7 项、用户身份／OAuth 范围 7 项按用途核对。
+- [ ] 按现有配置核对应用身份 8 项、用户身份／OAuth 范围 7 项；应用身份音视频下载权限已标记为现有配置额外项。
+- [ ] 三个会议事件的权限详情在目标应用后台显示已开通，不只核对权限中文名。
 - [ ] 长连接、四项事件和重定向 URL 已保存。
 - [ ] 版本已按租户流程发布或审批生效，可用人员范围正确。
 - [ ] 机器人已加入试点群，负责运行的员工可授权。
 - [ ] 云录制资格、下载资格和 API 使用额度已核对。
 - [ ] 主要运行电脑、数据保存政策和模型服务商已确定。
+- [ ] 负责人、试点群、允许操作人员、保存期限、访问人员及删除负责人已填写。
+- [ ] 试点只加入获批群，且已验证未经人工确认不发纪要；如要求程序强制群白名单，应先完成客户端改造。
 - [ ] App Secret 通过公司认可的安全渠道交付，没有放进 Git、文档、截图或群聊。
 
 批量导入 JSON 只包含权限，**不会**创建应用、配置事件、设置重定向地址或发布版本。导入后必须在后台逐项核对身份类型和实际生效状态；如该租户不支持某条导入项，按上表手工核对，不要忽略报错后继续验收。
 
 ## 六、依据与适用边界
 
-本清单依据本仓库当前实现：`frontend/src-tauri/src/lark/oauth.rs` 的授权范围与回调、`app.rs` 的消息及文件 API、`launches.rs` 的会议预约、`meeting_state.rs` 的事件类型、`cloud_recording.rs` 的录制和音视频下载、`ending.rs` 的结束会议调用。与实际租户后台不同的部分，应由应用负责人核实后再启用；文档不表示已为新公司申请或授予任何权限。
+本清单依据现有应用后台的已发布配置，并对照本仓库当前实现：`frontend/src/components/LarkAppSettings.tsx` 的统一授权入口、`frontend/src-tauri/src/lark/oauth.rs` 的授权范围与回调、`app.rs` 的消息及文件 API、`launches.rs` 的会议预约、`meeting_state.rs` 的事件类型、`cloud_recording.rs` 的录制和音视频下载、`ending.rs` 的结束会议调用。客户端授权入口目前同时请求会议控制与云录音权限；选择本机录音不会缩减授权范围。本次仅更新文档，不改变客户端行为。
 
-官方参考：[Lark 开发者后台](https://open.larksuite.com/app)、[创建应用并开通机器人能力](https://open.larksuite.com/document/home/interactive-message-card-sending/create-app-request-permission)。长连接配置顺序与多客户端限制可参考[开放平台长连接说明](https://open.feishu.cn/document/ukTMukTMukTM/uYDNxYjL2QTM24iN0EjN/event-subscription-configure-)；该参考为飞书站点，实际应用仍在国际版 Lark 后台配置，不能混用账号或接口域名。
+官方参考：[Lark 开发者后台](https://open.larksuite.com/app)、[创建应用并开通机器人能力](https://open.larksuite.com/document/home/interactive-message-card-sending/create-app-request-permission.md)、[事件订阅概述](https://open.larksuite.com/document/server-docs/event-subscription/overview-of-event-subscription)、[入会事件](https://open.larksuite.com/document/server-docs/vc-v1/meeting/events/join_meeting.md)、[离会事件](https://open.larksuite.com/document/server-docs/vc-v1/meeting/events/leave_meeting.md)、[会议结束事件](https://open.larksuite.com/document/server-docs/vc-v1/meeting/events/meeting_ended.md)、[获取录制文件](https://open.larksuite.com/document/server-docs/vc-v1/meeting-recording/get.md)。公开文档与后台的权限差异按上文处理；不能混用国内飞书账号或接口域名。

@@ -1,0 +1,6 @@
+{
+  "scopes": {
+    "tenant": ["im:chat.members:read"],
+    "user": ["task:task:write", "offline_access"]
+  }
+}
