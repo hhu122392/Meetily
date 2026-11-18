@@ -100,6 +100,25 @@ fn finalize_recording_start() {
 // Global recording manager and transcription task to keep them alive during recording
 static RECORDING_MANAGER: Mutex<Option<RecordingManager>> = Mutex::new(None);
 static TRANSCRIPTION_TASK: Mutex<Option<JoinHandle<Result<(), String>>>> = Mutex::new(None);
+static REALTIME_CANCEL: Mutex<Option<tokio_util::sync::CancellationToken>> = Mutex::new(None);
+
+fn start_live_preview<R: Runtime>(
+    app: &AppHandle<R>, receiver: tokio::sync::mpsc::UnboundedReceiver<super::AudioChunk>,
+    folder: &str, enabled: bool,
+) {
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let task = if enabled {
+        transcription::realtime::start(app.clone(), receiver, folder.into(), cancel.clone())
+    } else {
+        tokio::spawn(async move {
+            let mut receiver = receiver;
+            while receiver.recv().await.is_some() {}
+            Ok(())
+        })
+    };
+    *REALTIME_CANCEL.lock().unwrap() = Some(cancel);
+    *TRANSCRIPTION_TASK.lock().unwrap() = Some(task);
+}
 
 // Listener ID for proper cleanup - prevents microphone from staying active after recording stops
 
@@ -384,7 +403,7 @@ async fn start_recording_default_inner<R: Runtime>(app: AppHandle<R>, meeting_na
 
     // Start recording with resolved devices (replaces start_recording_with_defaults_and_auto_save call)
     let transcription_receiver = manager
-        .start_recording(microphone_device, system_device, true)
+        .start_recording(microphone_device, system_device, true, prefs.realtime_transcription)
         .await
         .map_err(|error| map_recording_start_error(&app, error))?;
 
@@ -415,14 +434,7 @@ async fn start_recording_default_inner<R: Runtime>(app: AppHandle<R>, meeting_na
     // mic-recovery budget). Shared with the other start path — see helper.
     finalize_recording_start();
 
-    // Drain VAD chunks immediately; full mixed audio is persisted separately.
-    // No inference or transcript-update event may touch a later recording's UI.
-    let task_handle = tokio::spawn(async move {
-        let mut receiver = transcription_receiver;
-        while receiver.recv().await.is_some() {}
-        Ok(())
-    });
-    *TRANSCRIPTION_TASK.lock().unwrap() = Some(task_handle);
+    start_live_preview(&app, transcription_receiver, &folder, prefs.realtime_transcription);
 
     if let (Some(state), Ok(Some(folder))) = (app.try_state::<crate::state::AppState>(), get_meeting_folder_path().await) {
         if let Err(error) = crate::lark::app::recording_started(state.db_manager.pool(), &folder).await {
@@ -431,8 +443,8 @@ async fn start_recording_default_inner<R: Runtime>(app: AppHandle<R>, meeting_na
     }
     // Emit success event
     app.emit("recording-started", serde_json::json!({
-        "background_queue": true,
-        "message": "正在保存音频，结束后后台转写",
+        "background_queue": true, "folder_path":folder, "realtime_transcription":prefs.realtime_transcription,
+        "message": if prefs.realtime_transcription { "实时转写已开启，结束后完整转写并生成纪要" } else { "正在保存音频，结束后后台转写" },
         "devices": ["Default Microphone", "Default System Audio"],
         "workers": 0
     })).map_err(|e| e.to_string())?;
@@ -558,7 +570,7 @@ async fn start_devices_inner<R: Runtime>(
 
     // Start recording with specified devices and auto_save setting
     let transcription_receiver = manager
-        .start_recording(mic_device, system_device, true)
+        .start_recording(mic_device, system_device, true, prefs.realtime_transcription)
         .await
         .map_err(|error| map_recording_start_error(&app, error))?;
 
@@ -599,14 +611,7 @@ async fn start_devices_inner<R: Runtime>(
     // mic-recovery budget). Shared with the other start path — see helper.
     finalize_recording_start();
 
-    // Drain VAD chunks immediately; full mixed audio is persisted separately.
-    // No inference or transcript-update event may touch a later recording's UI.
-    let task_handle = tokio::spawn(async move {
-        let mut receiver = transcription_receiver;
-        while receiver.recv().await.is_some() {}
-        Ok(())
-    });
-    *TRANSCRIPTION_TASK.lock().unwrap() = Some(task_handle);
+    start_live_preview(&app, transcription_receiver, &folder, prefs.realtime_transcription);
 
     if calendar_capture.is_none() {
       if let (Some(state), Ok(Some(folder))) = (app.try_state::<crate::state::AppState>(), get_meeting_folder_path().await) {
@@ -617,8 +622,8 @@ async fn start_devices_inner<R: Runtime>(
     }
     // Emit success event
     app.emit("recording-started", serde_json::json!({
-        "background_queue": true,
-        "message": "正在保存音频，结束后后台转写",
+        "background_queue": true, "folder_path":folder, "realtime_transcription":prefs.realtime_transcription,
+        "message": if prefs.realtime_transcription { "实时转写已开启，结束后完整转写并生成纪要" } else { "正在保存音频，结束后后台转写" },
         "devices": [
             mic_device_name.unwrap_or_else(|| "Default Microphone".to_string()),
             system_device_name.unwrap_or_else(|| "Default System Audio".to_string())
@@ -655,8 +660,10 @@ async fn stop_recording_inner<R: Runtime>(app: AppHandle<R>) -> Result<(), Strin
     let stop_result = manager.stop_streams_and_force_flush().await.map_err(|e|e.to_string());
     // Freeze meeting association at the capture boundary, before background processing.
     if let Err(e) = crate::lark::app::recording_stopped(pool,&folder).await { warn!("{e}"); }
+    if let Some(cancel) = REALTIME_CANCEL.lock().unwrap().take() { cancel.cancel(); }
     let task = TRANSCRIPTION_TASK.lock().unwrap().take();
-    if let Some(task) = task { let _ = task.await; }
+    // Final transcription waits for the live worker through the shared inference lock.
+    if let Some(task) = task { tokio::spawn(async move { let _ = task.await; }); }
     let _ = app.emit("recording-shutdown-progress", serde_json::json!({"stage":"saving_audio"}));
     // Wait only for audio durability, never for ASR or summary generation.
     let saved = manager.save_recording_only(&app).await.map_err(|e|e.to_string());

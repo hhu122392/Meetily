@@ -17,6 +17,8 @@ pub struct RecordingPreferences {
     pub auto_save: bool,
     pub file_format: String,
     #[serde(default)]
+    pub realtime_transcription: bool,
+    #[serde(default)]
     pub preferred_mic_device: Option<String>,
     #[serde(default)]
     pub preferred_system_device: Option<String>,
@@ -31,11 +33,28 @@ impl Default for RecordingPreferences {
             save_folder: get_default_recordings_folder(),
             auto_save: true,
             file_format: "mp4".to_string(),
+            realtime_transcription: false,
             preferred_mic_device: None,
             preferred_system_device: None,
             #[cfg(target_os = "macos")]
             system_audio_backend: Some("coreaudio".to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod realtime_tests {
+    use super::*;
+
+    #[test]
+    fn old_preferences_keep_realtime_disabled_and_enabled_choice_round_trips() {
+        let mut value = serde_json::to_value(RecordingPreferences::default()).unwrap();
+        value.as_object_mut().unwrap().remove("realtime_transcription");
+        let mut prefs: RecordingPreferences = serde_json::from_value(value).unwrap();
+        assert!(!prefs.realtime_transcription);
+        prefs.realtime_transcription = true;
+        let saved = serde_json::to_value(prefs).unwrap();
+        assert!(serde_json::from_value::<RecordingPreferences>(saved).unwrap().realtime_transcription);
     }
 }
 

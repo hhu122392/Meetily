@@ -11,7 +11,7 @@ use rubato::{Resampler, SincFixedIn, SincInterpolationParameters, SincInterpolat
 use super::devices::AudioDevice;
 use super::recording_state::{AudioChunk, AudioError, RecordingState, DeviceType};
 use super::audio_processing::{audio_to_mono, LoudnessNormalizer, NoiseSuppressionProcessor, HighPassFilter};
-use super::vad::{ContinuousVadProcessor};
+use super::vad::LiveVadProcessor;
 
 /// How long a silence must last before the VAD closes a speech segment, and
 /// therefore how long the audio clips handed to the ASR engine are.
@@ -693,7 +693,7 @@ pub struct AudioPipeline {
     receiver: mpsc::UnboundedReceiver<AudioChunk>,
     transcription_sender: mpsc::UnboundedSender<AudioChunk>,
     state: Arc<RecordingState>,
-    vad_processor: Option<ContinuousVadProcessor>,
+    vad_processor: Option<LiveVadProcessor>,
     sample_rate: u32,
     chunk_id_counter: u64,
     // Performance optimization: reduce logging frequency
@@ -753,10 +753,10 @@ impl AudioPipeline {
         // batch value (2000ms, `import.rs`/`retranscription.rs`) was tried here
         // first, but under continuous system audio it kept a VAD segment open
         // indefinitely and withheld live transcript emission, so live and batch
-        // deliberately diverge. Bounded live segments under continuous speech
-        // are tracked in #756.
+        // deliberately diverge. Live preview also seals an eight-second window.
+
         let vad_processor = if live_transcription {
-            Some(ContinuousVadProcessor::new(sample_rate, VAD_REDEMPTION_TIME_MS)?)
+            Some(LiveVadProcessor::new(sample_rate, VAD_REDEMPTION_TIME_MS)?)
         } else {
             None
         };
@@ -998,6 +998,7 @@ impl AudioPipelineManager {
         mic_device_kind: super::device_detection::InputDeviceKind,
         system_device_name: String,
         system_device_kind: super::device_detection::InputDeviceKind,
+        live_transcription: bool,
     ) -> Result<()> {
         // Log device information for adaptive buffering
         info!("🎙️ Starting pipeline with device info:");
@@ -1019,7 +1020,7 @@ impl AudioPipelineManager {
             mic_device_kind,
             system_device_name,
             system_device_kind,
-            false, // Saved-audio queue owns VAD and transcription; capture only mixes/saves.
+            live_transcription,
         )?;
         state.set_audio_sender(audio_sender.clone());
 

@@ -17,6 +17,56 @@ pub struct SpeechSegment {
     pub confidence: f32,
 }
 
+/// Live preview seals an eight-second window even when the speaker never pauses.
+/// Batch transcription continues to use the continuous processor for longer context.
+pub struct LiveVadProcessor {
+    processor: ContinuousVadProcessor,
+    sample_rate: u32,
+    redemption_ms: u32,
+    window_samples: usize,
+    offset_samples: usize,
+}
+
+impl LiveVadProcessor {
+    pub fn new(sample_rate: u32, redemption_ms: u32) -> Result<Self> {
+        Ok(Self { processor: ContinuousVadProcessor::new(sample_rate, redemption_ms)?,
+            sample_rate, redemption_ms, window_samples: 0, offset_samples: 0 })
+    }
+
+    fn offset(&self, mut segments: Vec<SpeechSegment>) -> Vec<SpeechSegment> {
+        let ms = self.offset_samples as f64 * 1000.0 / self.sample_rate as f64;
+        for segment in &mut segments {
+            segment.start_timestamp_ms += ms;
+            segment.end_timestamp_ms += ms;
+        }
+        segments
+    }
+
+    pub fn process_audio(&mut self, mut samples: &[f32]) -> Result<Vec<SpeechSegment>> {
+        let mut result = Vec::new();
+        let limit = self.sample_rate as usize * 8;
+        while !samples.is_empty() {
+            if self.window_samples == limit {
+                self.processor = ContinuousVadProcessor::new(self.sample_rate, self.redemption_ms)?;
+                self.offset_samples += self.window_samples;
+                self.window_samples = 0;
+            }
+            let count = samples.len().min(limit - self.window_samples);
+            let segments = self.processor.process_audio(&samples[..count])?;
+            result.extend(self.offset(segments));
+            self.window_samples += count;
+            samples = &samples[count..];
+            if self.window_samples == limit { result.extend(self.flush()?); }
+        }
+        Ok(result)
+    }
+
+    pub fn flush(&mut self) -> Result<Vec<SpeechSegment>> {
+        let segments = self.processor.flush()?;
+        Ok(self.offset(segments))
+    }
+}
+
 /// Processes audio in 30ms chunks but returns complete speech segments
 pub struct ContinuousVadProcessor {
     session: VadSession,
@@ -447,6 +497,25 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn live_windows_are_bounded_and_keep_recording_relative_timestamps() {
+        let mut vad = LiveVadProcessor::new(16000, 500).unwrap();
+        let audio = generate_test_audio_with_speech(25.0, 16000);
+        let mut segments = Vec::new();
+        for chunk in audio.chunks(480) {
+            segments.extend(vad.process_audio(chunk).unwrap());
+            assert!(vad.window_samples <= 8 * 16000);
+        }
+        segments.extend(vad.flush().unwrap());
+        assert_eq!(vad.offset_samples + vad.window_samples, audio.len());
+        assert_eq!(vad.offset_samples, 24 * 16000);
+        for segment in segments {
+            assert!(segment.end_timestamp_ms <= 25_000.0);
+            assert!(segment.end_timestamp_ms >= segment.start_timestamp_ms);
+            assert!(segment.samples.len() <= 8 * 16000);
+        }
+    }
 
     /// Generate synthetic speech-like audio with alternating speech/silence
     fn generate_test_audio_with_speech(duration_seconds: f32, sample_rate: u32) -> Vec<f32> {

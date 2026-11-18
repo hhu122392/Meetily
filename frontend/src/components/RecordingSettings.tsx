@@ -14,6 +14,7 @@ export interface RecordingPreferences {
   save_folder: string;
   auto_save: boolean;
   file_format: string;
+  realtime_transcription?: boolean;
   preferred_mic_device: string | null;
   preferred_system_device: string | null;
 }
@@ -118,6 +119,7 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
     setSaving(true);
     try {
       await invoke('set_recording_preferences', { preferences: prefs });
+      setPreferences(prefs);
       onSave?.(prefs);
 
       // Show success toast with device details
@@ -158,6 +160,16 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
       </div>
 
       {/* Recording Notification Toggle */}
+      <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+        <div>
+          <label htmlFor="realtime-transcription" className="font-medium">实时转写</label>
+          <p className="text-sm text-gray-600">边录音边显示文字，支持手动录音和指定会议号自动录音。停止后用完整录音完成最终转写，再生成纪要。对下一场录音生效。</p>
+        </div>
+        <Switch id="realtime-transcription" checked={preferences.realtime_transcription ?? false}
+          disabled={saving || isRecording}
+          onCheckedChange={enabled => void savePreferences({ ...preferences, realtime_transcription: enabled })} />
+      </div>
+
       <div className="flex items-center justify-between p-4 border rounded-lg">
         <div className="flex-1">
           <div className="font-medium">{t("Recording Start Notification")}</div>

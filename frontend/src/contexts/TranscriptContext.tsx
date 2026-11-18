@@ -7,6 +7,7 @@ import { useRecordingState } from './RecordingStateContext';
 import { transcriptService } from '@/services/transcriptService';
 import { recordingService } from '@/services/recordingService';
 import { indexedDBService } from '@/services/indexedDBService';
+import { useRealtimeTranscripts } from '@/hooks/useRealtimeTranscripts';
 
 interface TranscriptContextType {
   transcripts: Transcript[];
@@ -26,6 +27,7 @@ const TranscriptContext = createContext<TranscriptContextType | undefined>(undef
 
 export function TranscriptProvider({ children }: { children: ReactNode }) {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
+  useRealtimeTranscripts(setTranscripts);
   const [meetingTitle, setMeetingTitle] = useState('+ New Call');
   const [currentMeetingId, setCurrentMeetingId] = useState<string | null>(null);
 
