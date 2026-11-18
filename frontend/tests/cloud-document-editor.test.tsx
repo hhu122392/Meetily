@@ -13,9 +13,9 @@ const invoke=mock(async(command:string,args?:any):Promise<any>=>{
   if(command==='summary_markdown_save'){file={...file,content:args.content,hash:args.content};return {...file};}
   if(command==='lark_document_save'){if(saveError)throw saveError;document={id:'binding',title:args.title,documentUrl:'https://team.larksuite.com/wiki/doc',revision:document?8:4,savedHash:file.hash,status:'ready',detail:''};return {...document};}
   if(command==='lark_archive_project_save'){projects=[{name:args.name,parentUrl:args.parentUrl}];}
-  if(command==='lark_manual_context')return {title:'会议',meetingTime:'2026-11-16T10:00',participants:'甲',absent:'',host:'甲',summary:'核对验收',markdown:{name:'纪要.md'},documents:document?[{...document,title:document.title||'会议',available:true}]:[]};
+  if(command==='lark_manual_context')return {title:'会议',meetingTime:'2026-11-16T10:00',participants:'甲',absent:'',host:'甲',summary:'核对验收',markdown:{name:'纪要.md'},documents:document?[{...document,title:document.title||'会议',project:'战略会',available:true}]:[]};
   if(command==='lark_manual_groups')return [{id:'oc_test',name:'测试群'}];
-  if(command==='lark_manual_preview')return {id:'draft',chatName:'测试群',card:{header:{title:{tag:'plain_text',content:'会议'}},elements:[]},document:{documentUrl:document.documentUrl}};
+  if(command==='lark_manual_preview')return {id:'draft',chatName:'测试群',card:{header:{title:{tag:'plain_text',content:'会议'}},elements:[]},documents:args.review.documentIds?.map((id:string)=>({id,documentUrl:document.documentUrl}))||[]};
 });
 mock.module('@tauri-apps/api/core',()=>({invoke}));
 const Box=({children}:{children?:ReactNode})=><div>{children}</div>;
@@ -70,9 +70,12 @@ test('发送需单独打开选群和确认，预览只附已保存链接',async(
   await act(async()=>button('发送到群').props.onClick());
   expect(field('附云文档链接').props.checked).toBe(false);
   await act(async()=>field('附云文档链接').props.onChange({target:{checked:true}}));
+  expect(field(`附上文档：${document.title}（战略会）`).props.checked).toBe(false);
+  await act(async()=>field(`附上文档：${document.title}（战略会）`).props.onChange({target:{checked:true}}));
   await act(async()=>field('发送目标群').props.onChange({target:{value:'oc_test'}}));
+  await act(async()=>field('确认出席和缺席名单').props.onChange({target:{checked:true}}));
   await act(async()=>button('预览发送内容').props.onClick());
-  expect(invoke.mock.calls.find(c=>c[0]==='lark_manual_preview')?.[1]?.review.documentId).toBe('binding');
+  expect(invoke.mock.calls.find(c=>c[0]==='lark_manual_preview')?.[1]?.review.documentIds).toEqual(['binding']);
   expect(invoke.mock.calls.some(c=>c[0]==='lark_manual_send'||c[0]==='lark_document_save'||c[0]==='summary_export_markdown')).toBe(false);
   await act(async()=>button('确认发送到所选群').props.onClick());expect(invoke.mock.calls.filter(c=>c[0]==='lark_manual_send')).toHaveLength(1);
 });

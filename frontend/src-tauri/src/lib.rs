@@ -667,6 +667,7 @@ pub fn run() {
             summary::meeting_settings::meeting_summary_settings_read,
             summary::meeting_settings::meeting_template_people_read,
             summary::meeting_settings::meeting_template_people_save,
+            summary::meeting_settings::meeting_template_people_update,
             summary::meeting_settings::meeting_summary_settings_save,
             summary::markdown_export::summary_markdown_read,
             summary::markdown_export::summary_markdown_save,

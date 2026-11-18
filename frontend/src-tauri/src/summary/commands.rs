@@ -495,6 +495,7 @@ pub async fn api_process_transcript<R: Runtime>(
     if let Some(prompt) = custom_prompt { meeting_settings.custom_prompt = prompt; }
     if let Some(template) = template_id { meeting_settings.template_id = template; }
     super::meeting_settings::save(&pool, &m_id, &meeting_settings).await?;
+    meeting_settings=super::attendance::refresh_text(&pool,&m_id,&text).await?;
     let final_prompt = meeting_settings.prompt();
     let final_template_id = meeting_settings.template_id.clone();
     let template_snapshot = super::templates::get_template(&final_template_id)?;

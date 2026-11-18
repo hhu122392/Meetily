@@ -198,7 +198,7 @@ export default function PageContent({
       <details className="max-h-[40%] shrink-0 overflow-y-auto border-b bg-white px-4 py-2 text-sm">
         <summary className="cursor-pointer">会议背景与人员设置 · {meetingSettings.ready ? (meetingSettings.dirty ? '未保存' : '已保存') : '加载中'}</summary>
         <p className="my-2 text-xs text-gray-500">设置只属于当前会议；生成时自动保存并固定本次内容。参会名单不代表说话人身份。</p>
-        <TemplatePeople meetingId={meeting.id} settings={meetingSettings.settings} disabled={!meetingSettings.ready || meetingSettings.saving} save={meetingSettings.save} update={meetingSettings.update} />
+        <TemplatePeople meetingId={meeting.id} settings={meetingSettings.settings} disabled={!meetingSettings.ready || meetingSettings.saving} save={meetingSettings.save} update={meetingSettings.update} refresh={meetingSettings.refresh} />
         <CalendarMeetingInfo meetingId={meeting.id} disabled={!meetingSettings.ready || meetingSettings.saving} update={meetingSettings.update} />
         <label className="my-2 block">会议背景<textarea aria-label="会议背景" className="mt-1 w-full rounded border p-2" disabled={!meetingSettings.ready || meetingSettings.saving} value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} onBlur={() => { if (meetingSettings.ready && meetingSettings.dirty && !meetingSettings.saving) void meetingSettings.save().catch(() => {}); }} /></label>
         <div className="flex flex-wrap gap-3">

@@ -6,8 +6,9 @@ const saved = new Map<string, MeetingSummarySettings>();
 let deferred: (() => void) | null = null;
 let hold = false;
 let failure = '';
+let pendingRead:Promise<MeetingSummarySettings>|null=null;
 const invoke = mock(async (command: string, args: any) => {
-  if (command === 'meeting_summary_settings_read') return {...(saved.get(args.meetingId) ?? empty)};
+  if (command === 'meeting_summary_settings_read') return pendingRead??{...(saved.get(args.meetingId) ?? empty)};
   if (hold) await new Promise<void>(resolve => {deferred=resolve;});
   if (failure) throw Error(failure);
   saved.set(args.meetingId, {...args.settings});
@@ -17,7 +18,7 @@ let state: ReturnType<typeof useMeetingSummarySettings>;
 let renderer: ReactTestRenderer;
 function View({id}: {id:string}) {state=useMeetingSummarySettings(id);return null;}
 async function show(id:string) { await act(async () => { if (renderer) renderer.update(<View id={id}/>); else renderer=create(<View id={id}/>); }); }
-afterEach(async () => { deferred?.(); await act(async () => renderer?.unmount());renderer=undefined as any;saved.clear();invoke.mockClear();hold=false;deferred=null;failure=''; });
+afterEach(async () => { deferred?.(); await act(async () => renderer?.unmount());renderer=undefined as any;saved.clear();invoke.mockClear();hold=false;deferred=null;failure='';pendingRead=null; });
 test('会议背景、人员与模板分别保存，切换会议不会串用', async () => {
   await show('a');
   await act(async () => state.update({templateId:'daily_standup',customPrompt:'会议A背景',participants:'小明',host:'小李'}));
@@ -25,6 +26,14 @@ test('会议背景、人员与模板分别保存，切换会议不会串用', as
   await show('b'); expect(state.settings).toEqual(empty);
   await show('a'); expect(state.settings.customPrompt).toBe('会议A背景');expect(state.settings.host).toBe('小李');
   expect(state.settings.templateId).toBe('daily_standup');expect(state.dirty).toBe(false);
+});
+test('自动回填期间手动修改与明确清空不会被异步结果覆盖',async()=>{
+  await show('a');let resolve!:(s:MeetingSummarySettings)=>void;
+  pendingRead=new Promise(r=>{resolve=r;});let request!:Promise<void>;
+  await act(async()=>{request=state.refresh();});
+  await act(async()=>state.update({participants:'',absent:'人工缺席'}));
+  await act(async()=>{resolve({...empty,participants:'自动出席',absent:'自动缺席',attendance:{participantsManual:false,absentManual:false,evidence:[],conflicts:[]}});await request;});
+  expect(state.settings.participants).toBe('');expect(state.settings.absent).toBe('人工缺席');expect(state.settings.attendance?.participantsManual).toBe(true);expect(state.dirty).toBe(true);
 });
 test('保存期间后续编辑保留为未保存，生成拿到点击时的快照', async () => {
   await show('a'); await act(async () => state.update({customPrompt:'第一版'}));

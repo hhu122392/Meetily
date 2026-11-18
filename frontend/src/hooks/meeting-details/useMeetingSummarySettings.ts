@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-export type MeetingSummarySettings = { templateId: string; customPrompt: string; participants: string; absent: string; host: string };
+export type AttendanceMetadata = { participantsManual: boolean; absentManual: boolean; evidence: {name:string;status:string;quote:string}[]; conflicts: string[] };
+export type MeetingSummarySettings = { templateId: string; customPrompt: string; participants: string; absent: string; host: string; attendance?:AttendanceMetadata|null };
 const defaults: MeetingSummarySettings = { templateId: 'standard_meeting', customPrompt: '', participants: '', absent: '', host: '' };
 export function useMeetingSummarySettings(meetingId: string) {
   const [state, setState] = useState({ id: '', settings: defaults, saved: defaults });
@@ -20,8 +21,26 @@ export function useMeetingSummarySettings(meetingId: string) {
     return () => { active = false; if (currentId.current === meetingId) currentId.current = ''; };
   }, [meetingId]);
   const update = useCallback((patch: Partial<MeetingSummarySettings>) => {
-    setState(previous => previous.id === meetingId ? { ...previous, settings: { ...previous.settings, ...patch } } : previous);
+    setState(previous => {
+      if(previous.id!==meetingId)return previous;
+      const settings={...previous.settings,...patch};
+      if('participants' in patch||'absent' in patch){settings.attendance={participantsManual:false,absentManual:false,evidence:[],conflicts:[],...previous.settings.attendance,...('participants' in patch?{participantsManual:true}:{}),...('absent' in patch?{absentManual:true}:{})};}
+      return {...previous,settings};
+    });
   }, [meetingId]);
+  const refresh=useCallback(async()=>{
+    const loaded=await invoke<MeetingSummarySettings>('meeting_summary_settings_read',{meetingId});
+    if(currentId.current!==meetingId)return;
+    setState(previous=>{
+      if(previous.id!==meetingId)return previous;
+      const merged={...loaded};
+      for(const key of ['templateId','customPrompt','participants','absent','host'] as const){if(previous.settings[key]!==previous.saved[key])merged[key]=previous.settings[key];}
+      if(previous.settings.attendance?.participantsManual)merged.participants=previous.settings.participants;
+      if(previous.settings.attendance?.absentManual)merged.absent=previous.settings.absent;
+      if(previous.settings.attendance?.participantsManual||previous.settings.attendance?.absentManual){merged.attendance={evidence:[],conflicts:[],...loaded.attendance,participantsManual:!!(loaded.attendance?.participantsManual||previous.settings.attendance?.participantsManual),absentManual:!!(loaded.attendance?.absentManual||previous.settings.attendance?.absentManual)};}
+      return {id:meetingId,settings:merged,saved:loaded};
+    });
+  },[meetingId]);
   const save = useCallback((): Promise<MeetingSummarySettings> => {
     if (!ready) return Promise.reject(Error('会议设置尚未加载，不能保存或生成纪要'));
     const snapshot = { ...settings };
@@ -50,5 +69,5 @@ export function useMeetingSummarySettings(meetingId: string) {
     pending.current = { key, promise: result };
     return result;
   }, [meetingId, ready, settings]);
-  return { settings, ready, update, save, saving, error, dirty: ready && JSON.stringify(settings) !== JSON.stringify(state.saved) };
+  return { settings, ready, update, save, refresh, saving, error, dirty: ready && JSON.stringify(settings) !== JSON.stringify(state.saved) };
 }

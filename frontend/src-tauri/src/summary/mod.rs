@@ -31,6 +31,7 @@ pub struct CustomOpenAIConfig {
 }
 
 pub mod commands;
+pub mod attendance;
 pub mod markdown_export;
 pub mod meeting_settings;
 pub(crate) mod language_detection;

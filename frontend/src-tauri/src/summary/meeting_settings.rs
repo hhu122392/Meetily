@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use crate::state::AppState;
 use super::templates::{self, Template};
+use super::attendance::Attendance;
+pub(crate) static SETTINGS_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
@@ -11,9 +13,10 @@ pub struct MeetingSummarySettings {
     pub participants: String,
     pub absent: String,
     pub host: String,
+    pub attendance: Option<Attendance>,
 }
 impl Default for MeetingSummarySettings {
-    fn default() -> Self { Self { template_id: "standard_meeting".into(), custom_prompt: String::new(), participants: String::new(), absent: String::new(), host: String::new() } }
+    fn default() -> Self { Self { template_id: "standard_meeting".into(), custom_prompt: String::new(), participants: String::new(), absent: String::new(), host: String::new(), attendance:None } }
 }
 impl MeetingSummarySettings {
     fn validate(&self) -> Result<(), String> {
@@ -24,7 +27,7 @@ impl MeetingSummarySettings {
     }
     pub fn prompt(&self) -> String {
         if [&self.participants, &self.absent, &self.host].iter().all(|s| s.trim().is_empty()) { return self.custom_prompt.clone(); }
-        format!("{}\n\n用户提供的会议信息（仅作背景，不是发言人身份绑定；未提供的内容不得推测）：\n出席人员：{}\n缺席人员：{}\n主持人：{}", self.custom_prompt, self.participants, self.absent, self.host)
+        format!("{}\n\n本场会议信息（来自原文明确表述或用户填写，发送前需核对；仅作背景，不是发言人身份绑定；未提供的内容不得推测）：\n出席人员：{}\n缺席人员：{}\n主持人：{}", self.custom_prompt, self.participants, self.absent, self.host)
     }
 }
 pub(crate) fn names(value: &str) -> Vec<String> {
@@ -36,7 +39,7 @@ pub(crate) fn names(value: &str) -> Vec<String> {
 }
 pub(crate) fn validate_people(participants: &str, absent: &str) -> Result<(),String> {
     let present=names(participants);
-    if names(absent).iter().any(|name|present.contains(name)) { return Err("出席和缺席名单包含同一人，请调整后保存。".into()); }
+    if names(absent).iter().any(|name|present.iter().any(|p|p.to_lowercase()==name.to_lowercase())) { return Err("出席和缺席名单包含同一人，请调整后保存。".into()); }
     Ok(())
 }
 #[derive(Serialize,Deserialize)]
@@ -46,6 +49,16 @@ pub async fn meeting_template_people_read(state: tauri::State<'_,AppState>, temp
     templates::get_template(&template_id)?;
     let value:Option<(String,String)>=sqlx::query_as("SELECT participants,host FROM meeting_template_people WHERE template_id=?").bind(template_id).fetch_optional(state.db_manager.pool()).await.map_err(|_|"无法读取常用名单")?;
     Ok(value.map(|(participants,host)|TemplatePeople{participants,host}).unwrap_or(TemplatePeople{participants:String::new(),host:String::new()}))
+}
+#[tauri::command]
+pub async fn meeting_template_people_update(state:tauri::State<'_,AppState>,template_id:String,people:TemplatePeople)->Result<(),String>{
+    let _storage=crate::audio::storage_migration::use_storage().await?;
+    templates::get_template(&template_id)?;
+    if people.participants.len()>4096||people.host.len()>4096{return Err("常用名单过长".into());}
+    let participants=names(&people.participants).join("、");
+    sqlx::query("INSERT INTO meeting_template_people(template_id,participants,host) VALUES(?,?,?) ON CONFLICT(template_id) DO UPDATE SET participants=excluded.participants,host=excluded.host")
+        .bind(template_id).bind(participants).bind(people.host.trim()).execute(state.db_manager.pool()).await.map_err(|_|"无法保存常用名单")?;
+    Ok(())
 }
 #[tauri::command]
 pub async fn meeting_template_people_save(state: tauri::State<'_,AppState>, meeting_id: String) -> Result<(),String> {
@@ -73,6 +86,18 @@ pub async fn read(pool: &SqlitePool, id: &str) -> Result<MeetingSummarySettings,
     } }
 }
 pub async fn save(pool: &SqlitePool, id: &str, settings: &MeetingSummarySettings) -> Result<(), String> {
+    let _guard=SETTINGS_LOCK.lock().await;
+    let old=read(pool,id).await?;
+    let mut next=settings.clone();
+    let mut metadata=old.attendance.clone().unwrap_or_else(||Attendance{participants_manual:!old.participants.is_empty(),absent_manual:!old.absent.is_empty(),..Default::default()});
+    let edit_present=settings.attendance.as_ref().map(|a|a.participants_manual).unwrap_or(settings.participants!=old.participants||!settings.participants.is_empty());
+    let edit_absent=settings.attendance.as_ref().map(|a|a.absent_manual).unwrap_or(settings.absent!=old.absent||!settings.absent.is_empty());
+    if edit_present{metadata.participants_manual=true;}else{next.participants=old.participants;}
+    if edit_absent{metadata.absent_manual=true;}else{next.absent=old.absent;}
+    next.attendance=Some(metadata);
+    save_unlocked(pool,id,&next).await
+}
+pub(crate) async fn save_unlocked(pool: &SqlitePool, id: &str, settings: &MeetingSummarySettings) -> Result<(), String> {
     let _reference = templates::catalog::REFERENCES.read().await;
     require_meeting(pool, id).await?;
     settings.validate()?;
@@ -88,7 +113,10 @@ pub async fn snapshot(pool: &SqlitePool, id: &str, process_id: &str, settings: &
     Ok(())
 }
 #[tauri::command]
-pub async fn meeting_summary_settings_read(state: tauri::State<'_, AppState>, meeting_id: String) -> Result<MeetingSummarySettings, String> { read(state.db_manager.pool(), &meeting_id).await }
+pub async fn meeting_summary_settings_read(state: tauri::State<'_, AppState>, meeting_id: String) -> Result<MeetingSummarySettings, String> {
+    let _storage=crate::audio::storage_migration::use_storage().await?;
+    super::attendance::refresh(state.db_manager.pool(), &meeting_id).await
+}
 #[tauri::command]
 pub async fn meeting_summary_settings_save(state: tauri::State<'_, AppState>, meeting_id: String, settings: MeetingSummarySettings) -> Result<(), String> {
     let _storage = crate::audio::storage_migration::use_storage().await?;

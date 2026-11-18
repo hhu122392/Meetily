@@ -19,6 +19,8 @@ pub async fn load_context(pool: &SqlitePool, meeting_id: &str) -> Result<Option<
     let mut names: Vec<String> = [&settings.participants, &settings.host, &settings.absent]
         .into_iter().flat_map(|text| text.split(|c: char| c.is_whitespace() || matches!(c, ',' | '，' | '、' | ';' | '；')))
         .map(str::trim).filter(|name| !name.is_empty()).map(str::to_owned).collect();
+    let roster:Option<String>=sqlx::query_scalar("SELECT participants FROM meeting_template_people WHERE template_id=?").bind(&settings.template_id).fetch_optional(pool).await.map_err(|e|e.to_string())?;
+    if let Some(roster)=roster{names.extend(crate::summary::meeting_settings::names(&roster));}
     names.sort(); names.dedup();
     Ok(Some(RecognitionContext { canonical_names: names, canonical_terms: Vec::new() }))
 }
