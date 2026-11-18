@@ -125,8 +125,10 @@ test('常用人员仅作候选，逐人选择不会覆盖其他已填写人员',
   await act(async()=>{renderer=create(<TemplatePeople meetingId="one" settings={settings} disabled={false} save={async()=>settings} update={update}/>);});
   expect(update).not.toHaveBeenCalled();
   await act(async()=>field('常用人员 甲').props.onChange({target:{value:'present'}}));
-  expect(update).toHaveBeenCalledWith({participants:'本次人员、甲',absent:'乙'});
+  expect(update).toHaveBeenCalledWith({participants:'本次人员、甲'});
   expect(field('常用人员 丙').props.value).toBe('');
+  await act(async()=>field('常用人员 乙').props.onChange({target:{value:'present'}}));
+  expect(update).toHaveBeenLastCalledWith({participants:'本次人员、乙',absent:''});
 });
 
 test('消息模板切换自动失效旧预览，保存自定义模板不会发送',async()=>{

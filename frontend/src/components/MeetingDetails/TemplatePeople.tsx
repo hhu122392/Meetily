@@ -26,7 +26,10 @@ export function TemplatePeople({ meetingId, settings, disabled, save, update, re
   const mark=(name:string,status:string)=>{
     const present=names(settings.participants).filter(n=>n!==name),absent=names(settings.absent).filter(n=>n!==name);
     if(status==='present')present.push(name);if(status==='absent')absent.push(name);
-    update({participants:present.join('、'),absent:absent.join('、')});setMessage('已按你的选择填写本场名单，后续自动提取不会覆盖手动修改。');
+    const patch:Partial<MeetingSummarySettings>={};
+    if(present.join('、')!==settings.participants)patch.participants=present.join('、');
+    if(absent.join('、')!==settings.absent)patch.absent=absent.join('、');
+    update(patch);setMessage('已按你的选择填写本场名单，后续自动提取不会覆盖手动修改。');
   };
   return <div className="my-2 space-y-2">
     <AttendanceEvidence attendance={settings.attendance}/>
