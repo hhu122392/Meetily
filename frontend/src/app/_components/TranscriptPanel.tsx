@@ -9,7 +9,7 @@ import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import { ModalType } from '@/hooks/useModalState';
 import { useIsLinux } from '@/hooks/usePlatform';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { t, useUiLanguage } from "@/i18n";
 
 /**
@@ -20,7 +20,6 @@ import { t, useUiLanguage } from "@/i18n";
  */
 
 interface TranscriptPanelProps {
-  calendarPanel?: ReactNode;
   // indicates stop-processing state for transcripts; derived from backend statuses.
   isProcessingStop: boolean;
   isStopping: boolean;
@@ -28,7 +27,6 @@ interface TranscriptPanelProps {
 }
 
 export function TranscriptPanel({
-  calendarPanel,
   isProcessingStop,
   isStopping,
   showModal
@@ -102,7 +100,7 @@ export function TranscriptPanel({
       )}
 
       {/* Transcript content */}
-      {calendarPanel && <div className="px-4">{calendarPanel}</div>}
+
       <div className="pb-20">
         <div className="flex justify-center">
           <div className="w-2/3 max-w-[750px]">

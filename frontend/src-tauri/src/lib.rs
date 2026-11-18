@@ -838,11 +838,10 @@ pub fn run() {
             lark::locations::lark_directory_tree,
             lark::locations::lark_directory_progress,
             lark::locations::lark_directory_cancel,
-            lark::calendar::lark_calendar_status,
-            lark::calendar::lark_calendar_sync,
-            lark::calendar::lark_calendar_link,
+
+
             lark::calendar::lark_calendar_meeting,
-            lark::calendar::lark_calendar_start_recording,
+
             lark::manual::meeting_processing_stats,
             lark::manual::lark_manual_groups,
             lark::manual::lark_manual_preview,

@@ -128,6 +128,9 @@ pub(super) async fn authorized_config_locked(pool: &SqlitePool) -> Result<AppCon
 #[tauri::command]
 pub async fn lark_app_authorize(handle: tauri::AppHandle, state: tauri::State<'_, AppState>, include_meeting_control: Option<bool>, include_cloud_recording: Option<bool>, calendar_only: Option<bool>, documents_only: Option<bool>, tasks_only: Option<bool>) -> Result<String, String> {
     let calendar_only = calendar_only.unwrap_or(false);
+    if calendar_only {
+        return Err("日历同步功能已停用，请使用会议助手指定会议号。".into());
+    }
     let documents_only=documents_only.unwrap_or(false);
     let tasks_only=tasks_only.unwrap_or(false);
     if [calendar_only,documents_only,tasks_only].iter().filter(|v|**v).count()>1 {return Err("一次只能选择一种授权入口。".into());}

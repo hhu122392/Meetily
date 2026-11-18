@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LarkCredentialImport } from '@/components/LarkCredentialImport';
-import { CalendarRefreshSettings } from '@/components/CalendarRefreshSettings';
 
 type AppStatus = {
   app_id: string; has_secret: boolean; enabled: boolean; auto_send: boolean;
@@ -94,7 +93,7 @@ export function LarkAppSettings() {
       <option value="automatic">群指令开会 · 自动关联（由指定电脑接收）</option>
     </select></label>
     {manualMode&&<div className="rounded border p-3 text-sm"><p>录音来源：本地录音（麦克风和系统声音）</p><p className="mt-1 text-xs text-gray-500">云录音配置保留在“群指令开会 · 自动关联”模式中。若需切换，请先修改上方使用方式，再选择录音来源、保存并重新授权。</p></div>}
-    <CalendarRefreshSettings />
+
     <LarkCredentialImport appId={appId} secretReady={!!secret.trim() || hasSavedSecret}
       disabled={busy || !initialized.current} onImport={credentials => {
         if (credentials.appId !== undefined && credentials.appId !== appId.trim()) {
@@ -127,7 +126,7 @@ export function LarkAppSettings() {
       </div>}
     </div>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enabled} disabled={busy} onChange={e => setEnabled(e.target.checked)} />启用会议助手</label>
-    {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音；不启动或下载 Lark 云录音，不接收机器人开会事件。保存后回到首页「近期会议」，连接我的 Lark 日历即可同步周期日程。日历只申请读取权限，会后在会议详情选择目标群并确认发送。</p> : <>
+    {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音手动录音，会后在会议详情选择目标群并确认发送。需要指定会议号入会自动录音时，请选择「群指令开会 · 自动关联」，启用本机自动录音后在群里发送会议号。</p> : <>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={autoSend} disabled={busy} onChange={e => setAutoSend(e.target.checked)} />新录音生成纪要后准备发往唯一绑定群（需审核确认）</label>
     <label className="flex items-center gap-2 text-sm"><input id="lark-auto-record" type="checkbox" checked={autoRecord} disabled={busy} onChange={e => setAutoRecord(e.target.checked)} />{recordingSource === 'local' ? '加入助手新建或本人绑定的会议时自动录音' : '加入会议助手新建的会议时自动录音'}</label>
     <div className="space-y-2">
