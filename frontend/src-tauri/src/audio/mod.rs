@@ -25,6 +25,7 @@ pub mod recording_jobs;
 pub mod recording_preferences;
 pub mod storage_migration;
 pub mod recording_saver;
+pub(crate) mod recording_protection;
 pub mod incremental_saver;  // NEW: Incremental audio saving with checkpoints
 pub mod level_monitor;
 pub mod simple_level_monitor;

@@ -10,6 +10,9 @@ pub mod worker;
 pub mod completion;
 pub mod realtime;
 
+#[cfg(test)]
+mod replay_benchmark;
+
 // Re-export commonly used types
 pub use provider::{TranscriptionError, TranscriptionProvider, TranscriptResult};
 pub use whisper_provider::WhisperProvider;

@@ -16,13 +16,27 @@ pub fn start<R: Runtime>(
         // Drain capture independently of inference; slow models cannot grow an unbounded preview queue.
         let (sender, mut receiver) = mpsc::channel(4);
         let drain_cancel = cancel.clone();
+        let drain_app = app.clone();
+        let drain_folder = folder.clone();
         let drain = tokio::spawn(async move {
+            let mut warned = false;
             loop {
                 tokio::select! {
                     biased;
                     _ = drain_cancel.cancelled() => break,
                     chunk = input.recv() => match chunk {
-                        Some(chunk) => { let _ = sender.try_send(chunk); }
+                        Some(chunk) => {
+                            if let Err(error) = sender.try_send(chunk) {
+                                if matches!(error, mpsc::error::TrySendError::Closed(_)) { break; }
+                                if !warned {
+                                    warned = true;
+                                    let _ = drain_app.emit("realtime-transcription-status", json!({
+                                        "folder_path":drain_folder,
+                                        "message":"实时转写暂时跟不上，部分文字会在会后补齐；录音继续保存。"
+                                    }));
+                                }
+                            }
+                        }
                         None => break,
                     }
                 }

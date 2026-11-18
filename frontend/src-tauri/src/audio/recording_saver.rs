@@ -55,6 +55,7 @@ pub struct RecordingSaver {
     transcript_segments: Arc<Mutex<Vec<TranscriptSegment>>>,
     accumulation_task: Option<tokio::task::JoinHandle<Result<(), String>>>,
     save_folder: PathBuf,
+    health: Arc<Mutex<super::recording_protection::SaveHealth>>,
 }
 
 impl RecordingSaver {
@@ -67,6 +68,7 @@ impl RecordingSaver {
             transcript_segments: Arc::new(Mutex::new(Vec::new())),
             accumulation_task: None,
             save_folder: super::recording_preferences::get_default_recordings_folder(),
+            health: Arc::new(Mutex::new(Default::default())),
         }
     }
 
@@ -135,6 +137,10 @@ impl RecordingSaver {
 
     pub fn set_save_folder(&mut self, folder: PathBuf) { self.save_folder = folder; }
 
+    pub(crate) fn save_health(&self) -> Arc<Mutex<super::recording_protection::SaveHealth>> {
+        self.health.clone()
+    }
+
     /// Start accumulation with optional incremental saving
     ///
     /// # Arguments
@@ -152,10 +158,19 @@ impl RecordingSaver {
 
         let name = self.meeting_name.clone().ok_or_else(|| anyhow::anyhow!("录音名称为空"))?;
         self.initialize_meeting_folder(&name, auto_save)?;
+        if auto_save {
+            let folder = self.meeting_folder.as_ref().unwrap();
+            if let Ok(available) = super::recording_protection::available_space(folder) {
+                if super::recording_protection::space_state(available, 0) == super::recording_protection::SpaceState::Stop {
+                    anyhow::bail!("录音磁盘剩余空间不足 256 MiB，请清理空间或更换保存目录后再录音。");
+                }
+            }
+        }
 
         // Start accumulation task
         let incremental_saver_arc = self.incremental_saver.clone();
         let save_audio = auto_save;
+        let health = self.health.clone();
 
         self.accumulation_task = Some(tokio::spawn(async move {
             let mut failure = None;
@@ -169,9 +184,16 @@ impl RecordingSaver {
                         let mut saver_guard = saver_arc.lock().await;
                         if let Err(e) = saver_guard.add_chunk(chunk) {
                             failure = Some(format!("音频片段保存失败：{e}"));
+                            health.lock().unwrap().failure = failure.clone();
+                            // Keep the failed buffer for finalization/recovery, but do not
+                            // accumulate more audio indefinitely after a storage failure.
+                            break;
                         }
+                        health.lock().unwrap().saved_bytes = saver_guard.saved_bytes();
                     } else {
                         failure = Some("无法建立录音保存目录".into());
+                        health.lock().unwrap().failure = failure.clone();
+                        break;
                     }
                 } else {
                     // auto_save is false: discard audio chunk (no-op)
@@ -443,6 +465,26 @@ impl RecordingSaver {
 #[cfg(test)]
 mod queue_tests {
     use super::*;
+    #[tokio::test]
+    async fn storage_failure_closes_capture_queue_and_keeps_failed_buffer_bounded() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut saver = RecordingSaver::new();
+        saver.set_save_folder(temp.path().to_owned());
+        saver.set_meeting_name(Some("保存故障测试".into()));
+        let (send, receive) = mpsc::unbounded_channel();
+        saver.start_accumulation(true, receive).unwrap();
+        let health = saver.save_health();
+        // Simulate the recording directory disappearing without filling the real disk.
+        std::fs::remove_dir(saver.get_meeting_folder().unwrap().join(".checkpoints")).unwrap();
+        let chunk = AudioChunk { data: vec![0.1; 30 * 48000], sample_rate: 48000,
+            timestamp: 0.0, chunk_id: 0, device_type: super::super::recording_state::DeviceType::Microphone };
+        send.send(chunk.clone()).unwrap();
+        let result = tokio::time::timeout(std::time::Duration::from_secs(5), saver.accumulation_task.take().unwrap()).await.unwrap().unwrap();
+        assert!(result.is_err());
+        assert!(health.lock().unwrap().failure.as_ref().unwrap().contains("保存失败"));
+        assert!(send.send(chunk).is_err());
+        assert_eq!(saver.incremental_saver.as_ref().unwrap().lock().await.buffered_samples(), 30 * 48000);
+    }
     #[tokio::test]
     async fn selected_directory_and_audio_tail_are_preserved_across_consecutive_captures() {
         let temp = tempfile::tempdir().unwrap();

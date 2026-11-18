@@ -130,6 +130,18 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
     return () => { disposed = true; unlisten?.(); };
   }, []);
 
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen<{ level: string; message: string }>('recording-protection', ({ payload }) => {
+      if (disposed) return;
+      if (payload.level === 'recovered') toast.dismiss('recording-protection');
+      else if (payload.level === 'error') toast.error(payload.message, { id: 'recording-protection', duration: Infinity, closeButton: true });
+      else toast.warning(payload.message, { id: 'recording-protection', duration: Infinity, closeButton: true });
+    }).then(fn => { if (disposed) fn(); else unlisten = fn; }).catch(console.error);
+    return () => { disposed = true; unlisten?.(); };
+  }, []);
+
   /**
    * Start polling backend state (called when recording starts)
    */
@@ -165,12 +177,15 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
         // Recording started
         const unlistenStarted = await recordingService.onRecordingStarted(() => {
           console.log('[RecordingStateContext] Recording started event');
+          toast.dismiss('recording-protection');
+          toast.dismiss('recording-save-error');
           setState(prev => ({
             ...prev,
             isRecording: true,
             isPaused: false,
             isActive: true,
             status: RecordingStatus.RECORDING,  // NEW: Set status to RECORDING
+            statusMessage: undefined,
           }));
           startPolling();
         });
@@ -188,6 +203,7 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
         // Recording stopped
         const unlistenStopped = await recordingService.onRecordingStopped((payload) => {
           console.log('[RecordingStateContext] Recording stopped event:', payload);
+          if (payload.save_error) toast.error(`录音保存未完成：${payload.save_error}`, { id: 'recording-save-error', duration: Infinity, closeButton: true });
           setState(prev => {
             // Set status to STOPPING if not already in stop flow
             // This ensures smooth UI transition for tray/keyboard stops
@@ -202,7 +218,7 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
             return {
               ...prev,
               status: newStatus,
-              statusMessage: payload.background_queued ? '音频已保存，后台排队处理' : newStatus === RecordingStatus.STOPPING ? 'Stopping recording...' : prev.statusMessage,
+              statusMessage: payload.save_error ? `录音保存未完成：${payload.save_error}` : payload.background_queued ? '音频已保存，后台排队处理' : newStatus === RecordingStatus.STOPPING ? 'Stopping recording...' : prev.statusMessage,
               isRecording: false,
               isPaused: false,
               isActive: false,

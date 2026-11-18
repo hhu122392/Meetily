@@ -118,6 +118,55 @@ fn start_live_preview<R: Runtime>(
     };
     *REALTIME_CANCEL.lock().unwrap() = Some(cancel);
     *TRANSCRIPTION_TASK.lock().unwrap() = Some(task);
+    spawn_recording_protection(app.clone(), folder.to_owned());
+}
+
+fn recording_matches(folder: &str) -> bool {
+    IS_RECORDING.load(Ordering::SeqCst) && RECORDING_MANAGER.lock().unwrap().as_ref()
+        .and_then(|m| m.get_meeting_folder()).is_some_and(|p| p.to_string_lossy() == folder)
+}
+
+fn spawn_recording_protection<R: Runtime>(app: AppHandle<R>, folder: String) {
+    use super::recording_protection::{available_space, space_state, SpaceState};
+    let Some(health) = RECORDING_MANAGER.lock().unwrap().as_ref().map(|m| m.save_health()) else { return; };
+    tokio::spawn(async move {
+        let mut ticks = 0_u64;
+        let mut warning = String::new();
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            if !recording_matches(&folder) { return; }
+            let (mut failure, saved) = { let state = health.lock().unwrap(); (state.failure.clone(), state.saved_bytes) };
+            if failure.is_none() && ticks % 15 == 0 {
+                let path = std::path::PathBuf::from(&folder);
+                let available = tokio::task::spawn_blocking(move || available_space(&path)).await;
+                if !recording_matches(&folder) { return; }
+                let next_warning = match available {
+                    Ok(Ok(bytes)) => match space_state(bytes, saved) {
+                        SpaceState::Stop => { failure = Some("磁盘空间不足，已触发保护停录，正在保存现有音频。请清理空间后检查录音。".into()); String::new() },
+                        SpaceState::Warning => "录音磁盘空间偏低，请尽快清理空间。空间不足以安全保存时会自动停止录音。".to_owned(),
+                        SpaceState::Healthy => String::new(),
+                    },
+                    _ => "暂时无法检查录音磁盘空间，请检查保存目录；录音仍在继续。".to_owned(),
+                };
+                if failure.is_none() && next_warning != warning {
+                    let _ = app.emit("recording-protection", serde_json::json!({"folder_path":folder,
+                        "level":if next_warning.is_empty() { "recovered" } else { "warning" }, "message":next_warning}));
+                    warning = next_warning;
+                }
+            }
+            ticks += 1;
+            if let Some(reason) = failure {
+                // A manual stop/new start may race with disk IO. Re-check the exact
+                // capture under the same lock as start/stop before touching streams.
+                let _operation = RECORDING_COMMAND_LOCK.lock().await;
+                if !recording_matches(&folder) { return; }
+                let message = format!("{reason}\n录音已触发保护停止；已成功保存的片段会保留。未写入磁盘的音频可能不完整，请核对。");
+                let _ = app.emit("recording-protection", serde_json::json!({"folder_path":folder,"level":"error","message":message}));
+                if let Err(error) = stop_recording_inner(app.clone()).await { warn!("录音保护停止：{error}"); }
+                return;
+            }
+        }
+    });
 }
 
 // Listener ID for proper cleanup - prevents microphone from staying active after recording stops
@@ -675,7 +724,7 @@ async fn stop_recording_inner<R: Runtime>(app: AppHandle<R>) -> Result<(), Strin
         let _ = transcription::completion::set_status(pool,&folder,"failed",error).await;
     }
     let _ = app.emit("recording-stopped", serde_json::json!({
-        "message":"录音已停止并保存，可以开始下一场；后台依次转写和总结",
+        "message":if failure.is_some() { "录音已停止，保存未完成；请检查错误并恢复已保存片段" } else { "录音已停止并保存，可以开始下一场；后台依次转写和总结" },
         "folder_path":folder,"meeting_name":title,"meeting_id":queued.as_ref().ok(),
         "background_queued":true,"save_error":failure
     }));

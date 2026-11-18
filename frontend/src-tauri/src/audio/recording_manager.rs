@@ -218,6 +218,10 @@ impl RecordingManager {
         self.recording_saver.set_save_folder(folder);
     }
 
+    pub(crate) fn save_health(&self) -> Arc<std::sync::Mutex<super::recording_protection::SaveHealth>> {
+        self.recording_saver.save_health()
+    }
+
     /// Start recording with specified devices
     ///
     /// On macOS, the command entry points wake audio and verify microphone
