@@ -130,8 +130,8 @@ export function SummaryPanel({
         }
       } catch (err) {
         console.error('Failed to load summary language:', err);
-        toast.warning('Could not load saved summary language', {
-          description: 'Using Auto until meeting metadata can be read.',
+        toast.warning(t('Could not load saved summary language'), {
+          description: t('Using Auto until meeting metadata can be read.'),
         });
         if (!cancelled && languageLoadVersionRef.current === loadVersion) setSummaryLang(null);
       }
@@ -163,8 +163,8 @@ export function SummaryPanel({
             setSummaryLang(saved.language);
             setSummaryLangStorage(saved.storage);
             if (saved.storage === 'local_fallback') {
-              toast.info('Summary language saved on this device', {
-                description: 'This meeting has no recording folder, so the preference cannot be written to meeting metadata.',
+              toast.info(t('Summary language saved on this device'), {
+                description: t('This meeting has no recording folder, so the preference cannot be written to meeting metadata.'),
               });
             }
             if (request.language) {
@@ -181,7 +181,7 @@ export function SummaryPanel({
             activeMeetingIdRef.current === request.meetingId
           ) {
             console.error('Failed to persist summary language:', err);
-            toast.error('Failed to save summary language');
+            toast.error(t('Failed to save summary language'));
             setSummaryLang(request.rollback.language);
             setSummaryLangStorage(request.rollback.storage);
             return;

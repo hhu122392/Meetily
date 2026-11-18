@@ -341,7 +341,7 @@ const Sidebar: React.FC = () => {
 
       // Show success toast
       toast.success(t("Meeting deleted successfully"), {
-        description: "All associated data has been removed"
+        description: t("All associated data has been removed")
       });
 
       // If deleting the active meeting, navigate to home
@@ -351,7 +351,7 @@ const Sidebar: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to delete meeting:', error);
-      toast.error("Failed to delete meeting", {
+      toast.error(t("Failed to delete meeting"), {
         description: error instanceof Error ? error.message : String(error)
       });
     }
@@ -413,7 +413,7 @@ const Sidebar: React.FC = () => {
       setEditingTitle('');
     } catch (error) {
       console.error('Failed to update meeting title:', error);
-      toast.error("Failed to update meeting title", {
+      toast.error(t("Failed to update meeting title"), {
         description: error instanceof Error ? error.message : String(error)
       });
     }

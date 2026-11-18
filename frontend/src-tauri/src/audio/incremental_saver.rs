@@ -41,7 +41,7 @@ impl IncrementalAudioSaver {
 
         // Verify checkpoints directory exists
         if !checkpoints_dir.exists() {
-            return Err(anyhow!("Checkpoints directory does not exist: {}", checkpoints_dir.display()));
+            return Err(anyhow!("录音片段目录不存在：{}", checkpoints_dir.display()));
         }
 
         Ok(Self {
@@ -135,7 +135,7 @@ impl IncrementalAudioSaver {
         }
 
         if self.checkpoint_count == 0 {
-            return Err(anyhow!("No audio checkpoints to merge - recording may have failed"));
+            return Err(anyhow!("没有可合并的录音片段，录音可能未成功保存"));
         }
 
         // Merge all checkpoints using FFmpeg concat
@@ -173,7 +173,7 @@ impl IncrementalAudioSaver {
 
             // Verify checkpoint exists
             if !checkpoint_path.exists() {
-                return Err(anyhow!("Checkpoint file missing: {}", checkpoint_path.display()));
+                return Err(anyhow!("录音片段文件缺失：{}", checkpoint_path.display()));
             }
 
             // Use absolute path for FFmpeg (required for safe mode)
@@ -184,7 +184,7 @@ impl IncrementalAudioSaver {
         std::fs::write(&list_file, list_content)?;
 
         let ffmpeg_path = find_ffmpeg_path()
-            .ok_or_else(|| anyhow!("FFmpeg not found. Please install FFmpeg to finalize recordings."))?;
+            .ok_or_else(|| anyhow!("未找到 FFmpeg，无法完成录音保存，请修复或重新安装 Meetily。"))?;
         info!("Using FFmpeg at: {:?}", ffmpeg_path);
 
         // Run FFmpeg concat command
@@ -215,12 +215,12 @@ impl IncrementalAudioSaver {
         if !ffmpeg_output.status.success() {
             let stderr = String::from_utf8_lossy(&ffmpeg_output.stderr);
             error!("FFmpeg merge failed: {}", stderr);
-            return Err(anyhow!("FFmpeg concat failed: {}", stderr));
+            return Err(anyhow!("FFmpeg 合并录音失败：{}", stderr));
         }
 
         // Verify output file was created
         if !output.exists() {
-            return Err(anyhow!("Merged audio file was not created: {}", output.display()));
+            return Err(anyhow!("未生成合并后的录音文件：{}", output.display()));
         }
 
         info!("Successfully merged {} checkpoints → {}",
@@ -302,7 +302,7 @@ pub async fn recover_audio_from_checkpoints(
             chunk_count: 0,
             estimated_duration_seconds: 0.0,
             audio_file_path: None,
-            message: "No audio checkpoints found".to_string(),
+            message: "未找到录音片段".to_string(),
         });
     }
 
@@ -316,7 +316,7 @@ pub async fn recover_audio_from_checkpoints(
             chunk_count: 0,
             estimated_duration_seconds: 0.0,
             audio_file_path: None,
-            message: "No audio checkpoint files found".to_string(),
+            message: "未找到录音片段文件".to_string(),
         });
     }
 
@@ -336,22 +336,22 @@ pub async fn recover_audio_from_checkpoints(
 
     for entry in &checkpoint_files {
         let path = entry.path().canonicalize()
-            .map_err(|e| format!("Failed to canonicalize path: {}", e))?;
+            .map_err(|e| format!("解析录音文件路径失败：{}", e))?;
         concat_content.push_str(&concat_line(&path));
     }
 
     std::fs::write(&concat_file_path, concat_content)
-        .map_err(|e| format!("Failed to write concat file: {}", e))?;
+        .map_err(|e| format!("写入录音合并清单失败：{}", e))?;
 
     // Run FFmpeg to merge chunks
     let output_path = folder_path.join("audio.mp4");
     let pending = folder_path.join(format!(".recovery-pending-{}.partial", uuid::Uuid::new_v4()));
     let output_path_str = output_path.to_str()
-        .ok_or("Invalid output path")?
+        .ok_or("录音输出路径无效")?
         .to_string();
 
     let ffmpeg_path = find_ffmpeg_path()
-        .ok_or_else(|| "FFmpeg not found. Please install FFmpeg to recover audio.".to_string())?;
+        .ok_or_else(|| "未找到 FFmpeg，无法恢复录音，请修复或重新安装 Meetily。".to_string())?;
     info!("Using FFmpeg at: {:?}", ffmpeg_path);
 
     let mut command = std::process::Command::new(ffmpeg_path);
@@ -402,7 +402,7 @@ pub async fn recover_audio_from_checkpoints(
                 chunk_count,
                 estimated_duration_seconds: estimated_duration,
                 audio_file_path: None,
-                message: format!("FFmpeg failed: {}", error),
+                message: format!("FFmpeg 恢复录音失败：{}", error),
             })
         }
         Err(e) => {
@@ -413,7 +413,7 @@ pub async fn recover_audio_from_checkpoints(
                 chunk_count,
                 estimated_duration_seconds: estimated_duration,
                 audio_file_path: None,
-                message: format!("Failed to run FFmpeg: {}", e),
+                message: format!("无法启动 FFmpeg 恢复录音：{}", e),
             })
         }
     }
@@ -430,7 +430,7 @@ pub async fn cleanup_checkpoints(meeting_folder: String) -> Result<(), String> {
 
     if checkpoints_dir.exists() {
         std::fs::remove_dir_all(&checkpoints_dir)
-            .map_err(|e| format!("Failed to remove checkpoints directory: {}", e))?;
+            .map_err(|e| format!("清理录音片段目录失败：{}", e))?;
         info!("Successfully cleaned up checkpoints directory");
     } else {
         info!("No checkpoints directory to clean up");
@@ -453,7 +453,7 @@ pub async fn has_audio_checkpoints(meeting_folder: String) -> Result<bool, Strin
 
     // Scan for .mp4 checkpoint files
     let has_mp4_files = std::fs::read_dir(&checkpoints_dir)
-        .map_err(|e| format!("Failed to read checkpoints directory: {}", e))?
+        .map_err(|e| format!("读取录音片段目录失败：{}", e))?
         .filter_map(|entry| entry.ok())
         .any(|entry| {
             checkpoint_index(&entry.path()).is_some()
@@ -571,6 +571,6 @@ mod tests {
         // Try to finalize without adding any chunks
         let result = saver.finalize().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("No audio checkpoints"));
+        assert!(result.unwrap_err().to_string().contains("没有可合并的录音片段"));
     }
 }

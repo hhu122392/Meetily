@@ -24,11 +24,11 @@ pub fn encode_single_audio(
     debug!("Starting FFmpeg process for {} bytes of audio data", data.len());
 
     if data.is_empty() {
-        return Err(anyhow::anyhow!("No audio data provided for encoding"));
+        return Err(anyhow::anyhow!("没有可编码的音频数据"));
     }
 
     let ffmpeg_path = find_ffmpeg_path().ok_or_else(|| {
-        anyhow::anyhow!("FFmpeg not found. Please install FFmpeg to save recordings.")
+        anyhow::anyhow!("未找到 FFmpeg，无法保存录音，请修复或重新安装 Meetily。")
     })?;
 
     debug!("Using FFmpeg at: {:?}", ffmpeg_path);
@@ -98,7 +98,7 @@ pub fn encode_single_audio(
         error!("FFmpeg process failed with status: {}", status);
         error!("FFmpeg stderr: {}", stderr);
         return Err(anyhow::anyhow!(
-            "FFmpeg process failed with status: {}",
+            "FFmpeg 音频编码失败，退出状态：{}",
             status
         ));
     }

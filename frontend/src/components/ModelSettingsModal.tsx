@@ -521,7 +521,7 @@ export function ModelSettingsModal({
       }
     } catch (err) {
       console.error('Error loading Built-in AI models:', err);
-      toast.error('Failed to load Built-in AI models');
+      toast.error(t('Failed to load Built-in AI models'));
     }
   };
 
@@ -631,7 +631,7 @@ export function ModelSettingsModal({
         console.log('Custom OpenAI config saved successfully');
       } catch (err) {
         console.error('Failed to save custom OpenAI config:', err);
-        toast.error('Failed to save custom OpenAI configuration');
+        toast.error(t('Failed to save custom OpenAI configuration'));
         return;
       }
     }
@@ -673,7 +673,7 @@ export function ModelSettingsModal({
   // Test custom OpenAI connection
   const testCustomOpenAIConnection = async () => {
     if (!customOpenAIEndpoint.trim() || !customOpenAIModel.trim()) {
-      toast.error('Please enter endpoint URL and model name first');
+      toast.error(t('Please enter endpoint URL and model name first'));
       return;
     }
 
@@ -733,8 +733,8 @@ export function ModelSettingsModal({
 
       // Check if Ollama is not installed and show appropriate error
       if (isOllamaNotInstalledError(errorMsg)) {
-        toast.error('Ollama is not installed', {
-          description: 'Please download and install Ollama before downloading models.',
+        toast.error(t('Ollama is not installed'), {
+          description: t('Please download and install Ollama before downloading models.'),
           duration: 7000,
           action: {
             label: t("Download"),

@@ -68,7 +68,7 @@ export function useMeetingData({ meeting, summaryData, onMeetingUpdated }: UseMe
       toast.success(t("Changes saved successfully"));
     } catch (error) {
       console.error('Failed to save changes:', error);
-      toast.error("Failed to save changes", { description: String(error) });
+      toast.error(t("Failed to save changes"), { description: String(error) });
     } finally {
       setIsSaving(false);
     }

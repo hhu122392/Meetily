@@ -152,7 +152,7 @@ export function useModelConfiguration({ serverAddress }: UseModelConfigurationPr
       await Analytics.trackSettingsChanged('model_config', `${payload.provider}_${payload.model}`);
     } catch (error) {
       console.error('Failed to save model config:', error);
-      toast.error("Failed to save summary settings", { description: String(error) });
+      toast.error(t("Failed to save summary settings"), { description: String(error) });
       if (error instanceof Error) {
         setError(error.message);
       } else {

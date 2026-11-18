@@ -111,7 +111,7 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
       });
     } catch (error) {
       console.error('Failed to save notification preference:', error);
-      toast.error('Failed to save preference');
+      toast.error(t('Failed to save preference'));
     }
   };
 
@@ -130,7 +130,7 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
       });
     } catch (error) {
       console.error('Failed to save recording preferences:', error);
-      toast.error("Failed to save device preferences", {
+      toast.error(t("Failed to save device preferences"), {
         description: error instanceof Error ? error.message : String(error)
       });
     } finally {

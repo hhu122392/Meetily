@@ -53,7 +53,7 @@ export function useCopyOperations({
       return allData.transcripts;
     } catch (error) {
       console.error('❌ Error fetching all transcripts:', error);
-      toast.error('Failed to fetch transcripts for copying');
+      toast.error(t('Failed to fetch transcripts for copying'));
       return [];
     }
   }, []);
@@ -92,7 +92,7 @@ export function useCopyOperations({
       .join('\n');
 
     await navigator.clipboard.writeText(header + date + fullTranscript);
-    toast.success("Transcript copied to clipboard");
+    toast.success(t("Transcript copied to clipboard"));
 
     // Track copy analytics
     const wordCount = allTranscripts
@@ -109,7 +109,7 @@ export function useCopyOperations({
   // Copy summary to clipboard
   const handleCopySummary = useCallback(async () => {
     if (!hasVisibleSummaryContent(aiSummary)) {
-      toast.error('No summary content available to copy');
+      toast.error(t('No summary content available to copy'));
       return;
     }
     try {
@@ -158,7 +158,7 @@ export function useCopyOperations({
       // If still no summary content, show message
       if (!summaryMarkdown.trim()) {
         console.error('❌ No summary content available to copy');
-        toast.error('No summary content available to copy');
+        toast.error(t('No summary content available to copy'));
         return;
       }
 
@@ -191,7 +191,7 @@ export function useCopyOperations({
       });
     } catch (error) {
       console.error('❌ Failed to copy summary:', error);
-      toast.error("Failed to copy summary");
+      toast.error(t("Failed to copy summary"));
     }
   }, [aiSummary, meetingTitle, meeting, blockNoteSummaryRef]);
 

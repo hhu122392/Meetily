@@ -68,7 +68,7 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
       });
 
       setImportState('success');
-      toast.success('Database imported successfully! Reloading...');
+      toast.success(t('Database imported successfully! Reloading...'));
 
       // Wait 1 second for user to see success, then reload window to refresh all data
       setTimeout(() => {
@@ -90,7 +90,7 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
       await invoke('initialize_fresh_database');
 
       setImportState('success');
-      toast.success('Database initialized successfully! Starting app...');
+      toast.success(t('Database initialized successfully! Starting app...'));
 
       // Wait 1 second for user to see success, then reload window to start fresh
       setTimeout(() => {

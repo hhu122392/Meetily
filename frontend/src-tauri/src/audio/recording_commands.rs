@@ -174,7 +174,7 @@ fn spawn_recording_protection<R: Runtime>(app: AppHandle<R>, folder: String) {
 
 const TRANSCRIPTION_RUNTIME_START_ERROR_CODE: &str =
     "TRANSCRIPTION_RUNTIME_INITIALIZATION_FAILED";
-const TRANSCRIPTION_RUNTIME_USER_MESSAGE: &str = "Speech recognition could not initialize. Restart Meetily. If the problem continues, repair or reinstall the app.";
+const TRANSCRIPTION_RUNTIME_USER_MESSAGE: &str = "语音识别初始化失败，请重启 Meetily；如仍失败，请修复或重新安装应用。";
 
 // ============================================================================
 // PUBLIC TYPES
@@ -355,7 +355,7 @@ async fn prepare_audio_for_recording(
 
     if let Err(e) = super::devices::verify_microphone_access().await {
         error!("Microphone access verification failed: {}", e);
-        return Err(format!("Microphone access required: {}", e));
+        return Err(format!("需要麦克风访问权限：{}", e));
     }
     Ok(())
 }
@@ -780,7 +780,7 @@ pub async fn pause_recording<R: Runtime>(app: AppHandle<R>) -> Result<(), String
 
     // Check if currently recording
     if !IS_RECORDING.load(Ordering::SeqCst) {
-        return Err("No recording is currently active".to_string());
+        return Err("当前没有正在进行的录音".to_string());
     }
 
     // Access the recording manager and pause it
@@ -814,7 +814,7 @@ pub async fn resume_recording<R: Runtime>(app: AppHandle<R>) -> Result<(), Strin
 
     // Check if currently recording
     if !IS_RECORDING.load(Ordering::SeqCst) {
-        return Err("No recording is currently active".to_string());
+        return Err("当前没有正在进行的录音".to_string());
     }
 
     // Access the recording manager and resume it

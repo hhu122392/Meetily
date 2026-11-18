@@ -125,7 +125,7 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
       });
 
       console.log('[UpdateDialog] Update installed successfully');
-      toast.success('Update installed successfully. The app will restart...');
+      toast.success(t('Update installed successfully. The app will restart...'));
 
       // Mark download as complete before closing
       setIsDownloading(false);
@@ -139,7 +139,7 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
       console.error('Update failed:', err);
       setError(err.message || 'Failed to download or install update');
       setIsDownloading(false);
-      toast.error('Update failed: ' + (err.message || t("Unknown error")));
+      toast.error(t('Update failed: ') + (err.message || t("Unknown error")));
     }
   };
 

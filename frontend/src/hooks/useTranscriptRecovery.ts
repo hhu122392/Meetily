@@ -5,6 +5,7 @@
  * Provides functionality to detect, preview, and recover meetings from IndexedDB.
  */
 
+import { t } from "@/i18n";
 import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { indexedDBService, MeetingMetadata, StoredTranscript } from '@/services/indexedDBService';
@@ -113,13 +114,13 @@ export function useTranscriptRecovery(): UseTranscriptRecoveryReturn {
       // 1. Load meeting metadata
       const metadata = await indexedDBService.getMeetingMetadata(meetingId);
       if (!metadata) {
-        throw new Error('Meeting metadata not found');
+        throw new Error(t('Meeting metadata not found'));
       }
 
       // 2. Load all transcripts
       const transcripts = await loadMeetingTranscripts(meetingId);
       if (transcripts.length === 0) {
-        throw new Error('No transcripts found for this meeting');
+        throw new Error(t('No transcripts found for this meeting'));
       }
 
       // 3. Check for folder path
@@ -149,7 +150,7 @@ export function useTranscriptRecovery(): UseTranscriptRecoveryReturn {
             status: 'failed',
             chunk_count: 0,
             estimated_duration_seconds: 0,
-            message: error instanceof Error ? error.message : 'Unknown error'
+            message: error instanceof Error ? error.message : typeof error === 'string' ? error : t('Unknown error')
           };
         }
       } else {
@@ -157,7 +158,7 @@ export function useTranscriptRecovery(): UseTranscriptRecoveryReturn {
           status: 'none',
           chunk_count: 0,
           estimated_duration_seconds: 0,
-          message: 'No folder path available'
+          message: t('No folder path available')
         };
       }
 
@@ -188,8 +189,8 @@ export function useTranscriptRecovery(): UseTranscriptRecoveryReturn {
         await applyPinnedSummaryLanguageToMeeting(savedMeetingId);
       } catch (error) {
         console.warn('Failed to apply pinned summary language to recovered meeting:', error);
-        toast.warning('Could not apply default summary language', {
-          description: 'The recovered meeting was saved, but the default summary language was not applied.',
+        toast.warning(t('Could not apply default summary language'), {
+          description: t('The recovered meeting was saved, but the default summary language was not applied.'),
         });
       }
 

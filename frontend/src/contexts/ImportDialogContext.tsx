@@ -1,5 +1,6 @@
 'use client';
 
+import { t } from "@/i18n";
 import { createContext, useContext, useCallback, ReactNode } from 'react';
 import { useConfig } from './ConfigContext';
 import { toast } from 'sonner';
@@ -27,8 +28,8 @@ export function ImportDialogProvider({ children, onOpen }: ImportDialogProviderP
   const openImportDialog = useCallback((filePath?: string | null) => {
     // Gate: Check beta feature flag before opening dialog
     if (!betaFeatures.importAndRetranscribe) {
-      toast.error('Beta feature disabled', {
-        description: 'Enable "Import Audio & Retranscribe" in Settings > Beta to use this feature.'
+      toast.error(t('Beta feature disabled'), {
+        description: t('Enable "Import Audio & Retranscribe" in Settings > Beta to use this feature.')
       });
       return;
     }

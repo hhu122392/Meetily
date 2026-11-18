@@ -81,7 +81,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
         console.log('Tauri is initialized and ready, is_recording result:', result);
       } catch (error) {
         console.error('Tauri initialization error:', error);
-        alert('Failed to initialize recording. Please check the console for details.');
+        alert(t('Failed to initialize recording. Please check the console for details.'));
       }
     };
     checkTauri();
@@ -117,25 +117,27 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
       const errorMsg = error instanceof Error ? error.message : String(error);
 
       // Check for device-related errors
-      if (errorMsg.includes('microphone') || errorMsg.includes('mic') || errorMsg.includes('input')) {
+      if (/recording start timed out/i.test(errorMsg)) {
+        setDeviceError({ title: t('Recording Failed'), message: t('Recording start timed out — please try again') });
+      } else if (/microphone|\bmic\b|input|麦克风/i.test(errorMsg)) {
         setDeviceError({
           title: t("Microphone Not Available"),
-          message: 'Unable to access your microphone. Please check that:\n• Your microphone is connected\n• The app has microphone permissions\n• No other app is using the microphone'
+          message: t('Unable to access your microphone. Please check that:\n• Your microphone is connected\n• The app has microphone permissions\n• No other app is using the microphone')
         });
-      } else if (errorMsg.includes('system audio') || errorMsg.includes('speaker') || errorMsg.includes('output')) {
+      } else if (/system audio|speaker|output|系统音频|系统声音/i.test(errorMsg)) {
         setDeviceError({
           title: t("System Audio Not Available"),
-          message: 'Unable to capture system audio. Please check that:\n• A virtual audio device (like BlackHole) is installed\n• The app has screen recording permissions (macOS)\n• System audio is properly configured'
+          message: t('Unable to capture system audio. Please check that:\n• A virtual audio device (like BlackHole) is installed\n• The app has screen recording permissions (macOS)\n• System audio is properly configured')
         });
-      } else if (errorMsg.includes('permission')) {
+      } else if (/permission|权限/i.test(errorMsg)) {
         setDeviceError({
           title: t("Permission Required"),
-          message: 'Recording permissions are required. Please:\n• Grant microphone access in System Settings\n• Grant screen recording access for system audio (macOS)\n• Restart the app after granting permissions'
+          message: t('Recording permissions are required. Please:\n• Grant microphone access in System Settings\n• Grant screen recording access for system audio (macOS)\n• Restart the app after granting permissions')
         });
       } else {
         setDeviceError({
           title: t("Recording Failed"),
-          message: 'Unable to start recording. Please check your audio device settings and try again.'
+          message: t('Unable to start recording. Please check your audio device settings and try again.')
         });
       }
     }
@@ -217,7 +219,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
       console.log('Recording paused successfully');
     } catch (error) {
       console.error('Failed to pause recording:', error);
-      alert('Failed to pause recording. Please check the console for details.');
+      alert(t('Failed to pause recording. Please check the console for details.'));
     } finally {
       setIsPausing(false);
     }
@@ -235,7 +237,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
       console.log('Recording resumed successfully');
     } catch (error) {
       console.error('Failed to resume recording:', error);
-      alert('Failed to resume recording. Please check the console for details.');
+      alert(t('Failed to resume recording. Please check the console for details.'));
     } finally {
       setIsResuming(false);
     }
@@ -429,7 +431,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             {isPaused ? <Play size={16} /> : <Pause size={16} />}
                             {(isPausing || isResuming) && (
                               <div className="absolute -top-8 text-gray-600 font-medium text-xs">
-                                {isPausing ? 'Pausing...' : 'Resuming...'}
+                                {isPausing ? t('Pausing...') : t('Resuming...')}
                               </div>
                             )}
                           </button>

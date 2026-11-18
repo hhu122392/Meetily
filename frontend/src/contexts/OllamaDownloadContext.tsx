@@ -1,5 +1,6 @@
 'use client';
 
+import { t } from "@/i18n";
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { toast } from 'sonner';
@@ -79,7 +80,7 @@ export function OllamaDownloadProvider({ children }: { children: React.ReactNode
             console.log(`✅ [OllamaDownloadContext] Download complete for ${modelName}`);
 
             toast.success(`Model ${modelName} downloaded!`, {
-              description: 'Model is now ready to use',
+              description: t('Model is now ready to use'),
               duration: 4000
             });
 

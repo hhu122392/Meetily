@@ -1,5 +1,6 @@
 'use client';
 
+import { t } from "@/i18n";
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode, MutableRefObject } from 'react';
 import { Transcript, TranscriptUpdate } from '@/types';
 import { toast } from 'sonner';
@@ -476,7 +477,7 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
       .join('\n');
     navigator.clipboard.writeText(fullTranscript);
 
-    toast.success("Transcript copied to clipboard");
+    toast.success(t("Transcript copied to clipboard"));
   }, [transcripts]);
 
   // Force flush buffer (for final transcript processing)

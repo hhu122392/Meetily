@@ -176,7 +176,7 @@ export function ModelManager({
       } catch (err) {
         console.error('Failed to initialize Whisper:', err);
         setError(err instanceof Error ? err.message : t("Failed to load models"));
-        toast.error('Failed to load transcription models', {
+        toast.error(t('Failed to load transcription models'), {
           description: err instanceof Error ? err.message : t("Unknown error"),
           duration: 5000
         });
@@ -252,7 +252,7 @@ export function ModelManager({
           // Clean up throttle data
           progressThrottleRef.current.delete(modelName);
 
-          toast.success(`${getModelIcon(model?.accuracy || 'Good')} ${displayName} ready!`, {
+          toast.success(`${getModelIcon(model?.accuracy || 'Good')} ${t('{model} ready!').replace('{model}', displayName)}`, {
             description: t("Model downloaded and ready to use"),
             duration: 4000
           });
@@ -293,7 +293,7 @@ export function ModelManager({
           // Clean up throttle data
           progressThrottleRef.current.delete(modelName);
 
-          toast.error(`Failed to download ${displayName}`, {
+          toast.error(t('Failed to download {model}').replace('{model}', displayName), {
             description: error,
             duration: 6000,
             action: {
@@ -339,8 +339,8 @@ export function ModelManager({
       const outcome = await WhisperAPI.cancelDownload(modelName);
       if (outcome === 'pending') {
         reconcileCancellation(modelName);
-        toast.info(`Cancelling ${displayName}...`, {
-          description: 'The download is still shutting down. Retry will be available when cleanup completes.',
+        toast.info(t('Cancelling {model}...').replace('{model}', displayName), {
+          description: t('The download is still shutting down. Retry will be available when cleanup completes.'),
           duration: 4000
         });
         return;
@@ -351,7 +351,7 @@ export function ModelManager({
       reconcileCancellation(modelName);
     } catch (err) {
       console.error('Failed to cancel download:', err);
-      toast.error('Failed to cancel download', {
+      toast.error(t('Failed to cancel download'), {
         description: err instanceof Error ? err.message : t("Unknown error"),
         duration: 4000
       });
@@ -376,7 +376,7 @@ export function ModelManager({
         )
       );
 
-      toast.info(`Downloading ${displayName}...`, {
+      toast.info(t('Downloading {model}...').replace('{model}', displayName), {
         description: t("This may take a few minutes"),
         duration: 5000
       });
@@ -411,7 +411,7 @@ export function ModelManager({
     }
 
     const displayName = getDisplayName(modelName);
-    toast.success(`Switched to ${displayName}`, {
+    toast.success(t('Switched to {model}').replace('{model}', displayName), {
       duration: 3000
     });
   };
@@ -426,8 +426,8 @@ export function ModelManager({
       const modelList = await WhisperAPI.getAvailableModels();
       setModels(modelList);
 
-      toast.success(`${displayName} deleted`, {
-        description: 'Model removed to free up space',
+      toast.success(t('{model} deleted').replace('{model}', displayName), {
+        description: t('Model removed to free up space'),
         duration: 3000
       });
 
@@ -437,7 +437,7 @@ export function ModelManager({
       }
     } catch (err) {
       console.error('Failed to delete model:', err);
-      toast.error(`Failed to delete ${displayName}`, {
+      toast.error(t('Failed to delete {model}').replace('{model}', displayName), {
         description: err instanceof Error ? err.message : t("Delete failed"),
         duration: 4000
       });

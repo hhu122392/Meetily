@@ -39,11 +39,11 @@ export function About() {
             if (info.available) {
                 setShowUpdateDialog(true);
             } else {
-                toast.success('You are running the latest version');
+                toast.success(t('You are running the latest version'));
             }
         } catch (error: any) {
             console.error('Failed to check for updates:', error);
-            toast.error('Failed to check for updates: ' + (error.message || t("Unknown error")));
+            toast.error(t('Failed to check for updates: ') + (error.message || t("Unknown error")));
         } finally {
             setIsChecking(false);
         }

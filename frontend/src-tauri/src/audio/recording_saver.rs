@@ -273,7 +273,7 @@ impl RecordingSaver {
             segments.clone()
         } else {
             error!("Failed to lock transcript segments for writing");
-            return Err(anyhow::anyhow!("Failed to lock transcript segments"));
+            return Err(anyhow::anyhow!("无法访问转写片段，请稍后重试"));
         };
 
         info!("Writing {} transcript segments to JSON", segments_clone.len());
@@ -306,7 +306,7 @@ impl RecordingSaver {
         // Verify temp file was written correctly
         if !temp_path.exists() {
             error!("Temp transcript file does not exist after write: {}", temp_path.display());
-            return Err(anyhow::anyhow!("Temp file verification failed"));
+            return Err(anyhow::anyhow!("临时转写文件校验失败"));
         }
 
         // Atomic rename
@@ -371,12 +371,12 @@ impl RecordingSaver {
                 }
                 Err(e) => {
                     error!("❌ Failed to finalize incremental saver: {}", e);
-                    return Err(format!("Failed to finalize audio: {}", e));
+                    return Err(format!("完成录音保存失败：{}", e));
                 }
             }
         } else {
             error!("No incremental saver initialized - cannot save recording");
-            return Err("No incremental saver initialized".to_string());
+            return Err("录音分片保存尚未初始化".to_string());
         };
 
         accumulation_result?;
@@ -385,14 +385,14 @@ impl RecordingSaver {
         if let Some(folder) = &self.meeting_folder {
             if let Err(e) = self.write_transcripts_json(folder) {
                 error!("❌ Failed to write final transcripts: {}", e);
-                return Err(format!("Failed to save transcripts: {}", e));
+                return Err(format!("保存转写内容失败：{}", e));
             }
 
             // Verify transcripts were written correctly
             let transcript_path = folder.join("transcripts.json");
             if !transcript_path.exists() {
                 error!("❌ Transcript file was not created at: {}", transcript_path.display());
-                return Err("Transcript file verification failed".to_string());
+                return Err("转写文件校验失败".to_string());
             }
             info!("✅ Transcripts saved and verified at: {}", transcript_path.display());
         }
@@ -414,7 +414,7 @@ impl RecordingSaver {
 
             if let Err(e) = self.write_metadata(folder, &metadata) {
                 error!("❌ Failed to update metadata to completed: {}", e);
-                return Err(format!("Failed to update metadata: {}", e));
+                return Err(format!("更新会议信息失败：{}", e));
             }
 
             info!("✅ Metadata updated with duration: {:?}s", metadata.duration_seconds);

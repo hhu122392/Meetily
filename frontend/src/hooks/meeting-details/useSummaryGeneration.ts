@@ -30,8 +30,8 @@ async function resolveSummaryLanguage(
     if (perMeeting.language) return perMeeting.language;
   } catch (err) {
     console.warn('Failed to load meeting summary language:', err);
-    toast.warning('Could not load saved summary language', {
-      description: 'Using Auto for this generation.',
+    toast.warning(t('Could not load saved summary language'), {
+      description: t('Using Auto for this generation.'),
     });
   }
 
@@ -45,8 +45,8 @@ async function resolveSummaryLanguage(
   try {
     const detection = await detectAndCacheSummaryLanguage(meetingId, transcriptTexts);
     if (detection.reason === 'tie') {
-      toast.warning('Bilingual transcript detected', {
-        description: 'Pick a summary language manually if Auto chooses the wrong fallback.',
+      toast.warning(t('Bilingual transcript detected'), {
+        description: t('Pick a summary language manually if Auto chooses the wrong fallback.'),
       });
     }
     return detection.language;
@@ -101,7 +101,7 @@ export function useSummaryGeneration({
   const [summaryStatus, setSummaryStatus] = useState<SummaryStatus>(() => restoredSummaryStatus(restored));
   const [summaryError, setSummaryError] = useState<string | null>(() =>
     restoredSummaryStatus(restored) === 'error'
-      ? restored?.error || 'Summary generation failed. Please retry.'
+      ? restored?.error || t('Summary generation failed. Please retry.')
       : null,
   );
   const mountedRef = useRef(true);
@@ -121,15 +121,15 @@ export function useSummaryGeneration({
   const getSummaryStatusMessage = useCallback((status: SummaryStatus) => {
     switch (status) {
       case 'processing':
-        return 'Processing transcript...';
+        return t('Processing transcript...');
       case 'summarizing':
-        return 'Generating summary...';
+        return t('Generating summary...');
       case 'regenerating':
-        return 'Regenerating summary...';
+        return t('Regenerating summary...');
       case 'completed':
-        return 'Summary completed';
+        return t('Summary completed');
       case 'error':
-        return 'Error generating summary';
+        return t('Error generating summary');
       default:
         return '';
     }
@@ -163,10 +163,10 @@ export function useSummaryGeneration({
       return;
     }
     activeProcessIdRef.current = null;
-    setSummaryError(message);
+    setSummaryError(t(message));
     setSummaryStatus('error');
-    toast.error(`Failed to ${isRegeneration ? 'regenerate' : 'generate'} summary`, {
-      description: message,
+    toast.error(t(isRegeneration ? 'Failed to regenerate summary' : 'Failed to generate summary'), {
+      description: t(message),
     });
     await finishGeneration(generationId, outcome);
   }, [finishGeneration, meeting.id]);
@@ -215,7 +215,7 @@ export function useSummaryGeneration({
         } catch (error) {
           console.error('Failed to reload previous summary after generation failure:', error);
           await failGeneration(generationId, isRegeneration,
-            `${errorMessage}. The saved summary could not be reloaded. Please reopen this meeting.`);
+            `${errorMessage} ${t('The saved summary could not be reloaded. Please reopen this meeting.')}`);
           return;
         }
         if (!mountedRef.current || visibleMeetingIdRef.current !== meeting.id || generationId !== generationIdRef.current) {
@@ -226,8 +226,8 @@ export function useSummaryGeneration({
           setAiSummary(restoredSummary);
           setSummaryStatus('completed');
           setSummaryError(null);
-          toast.error('Failed to regenerate summary', {
-            description: `${errorMessage}. Your previous summary has been restored.`,
+          toast.error(t('Failed to regenerate summary'), {
+            description: `${errorMessage} ${t('Your previous summary has been restored.')}`,
           });
           activeProcessIdRef.current = null;
           await finishGeneration(generationId, 'generation_error');
@@ -257,14 +257,14 @@ export function useSummaryGeneration({
       activeProcessIdRef.current = null;
       setSummaryError(null);
       if (metadata.normalizationFallback) {
-        toast.warning('Summary generated with fallback', {
-          description: 'English normalization failed, so the original sanitized summary was kept.',
+        toast.warning(t('Summary generated with fallback'), {
+          description: t('English normalization failed, so the original sanitized summary was kept.'),
         });
       } else {
-        toast.success('Summary generated successfully!', {
+        toast.success(t('Summary generated successfully!'), {
           description: metadata.reasoningStripped
-            ? 'Your meeting summary is ready. Model reasoning was filtered out of the notes.'
-            : 'Your meeting summary is ready',
+            ? t('Your meeting summary is ready. Model reasoning was filtered out of the notes.')
+            : t('Your meeting summary is ready'),
           duration: 4000,
         });
       }
@@ -297,7 +297,7 @@ export function useSummaryGeneration({
     const status = restoredSummaryStatus(initialSummary);
     setSummaryStatus(status);
     setSummaryError(status === 'error'
-      ? initialSummary.error || 'Summary generation failed. Please retry.'
+      ? initialSummary.error || t('Summary generation failed. Please retry.')
       : null);
     if (status !== 'processing' || !initialSummary.start) return;
 
@@ -389,7 +389,7 @@ export function useSummaryGeneration({
       startSummaryPolling(meeting.id, processId, result =>
         pollingResultRef.current(result, generationId, isRegeneration));
     } catch (error) {
-      await failGeneration(generationId, isRegeneration, error instanceof Error ? error.message : 'Summary generation failed.');
+      await failGeneration(generationId, isRegeneration, error instanceof Error ? error.message : t('Summary generation failed.'));
     }
   }, [
     prepareMeetingSettings,
@@ -435,7 +435,7 @@ export function useSummaryGeneration({
       return allData.transcripts;
     } catch (error) {
       console.error('❌ Error fetching all transcripts:', error);
-      toast.error('Failed to fetch transcripts for summary generation');
+      toast.error(t('Failed to fetch transcripts for summary generation'));
       return [];
     }
   }, []);
@@ -458,14 +458,14 @@ export function useSummaryGeneration({
   }, []);
 
   const showPreflightError = useCallback((message: string) => {
-    setSummaryError(message);
+    setSummaryError(t(message));
     setSummaryStatus('error');
-    toast.error(message);
+    toast.error(t(message));
   }, []);
 
   const handleGenerateSummary = useCallback(async (customPrompt: string = '') => {
     if (isModelConfigLoading) {
-      toast.info('Loading model configuration, please wait...');
+      toast.info(t('Loading model configuration, please wait...'));
       return;
     }
     const allTranscripts = await fetchAllTranscripts(meeting.id);
@@ -527,7 +527,7 @@ export function useSummaryGeneration({
 
     if (!allTranscripts.length) {
       console.error('No transcripts available for regeneration');
-      toast.error('No transcripts available for summary regeneration');
+      toast.error(t('No transcripts available for summary regeneration'));
       return;
     }
 
@@ -548,7 +548,7 @@ export function useSummaryGeneration({
       setSummaryError(null);
       await finishGeneration(generationId, 'cancelled');
       toast.info(t("Summary generation stopped"), {
-        description: 'You can generate a new summary anytime',
+        description: t('You can generate a new summary anytime'),
         duration: 3000,
       });
       return;
@@ -570,12 +570,12 @@ export function useSummaryGeneration({
         setSummaryError(null);
         await finishGeneration(generationId, 'cancelled');
         toast.info(t("Summary generation stopped"), {
-          description: 'You can generate a new summary anytime',
+          description: t('You can generate a new summary anytime'),
           duration: 3000,
         });
       } else if (activeProcessIdRef.current === processId) {
-        toast.info('Summary is already finishing', {
-          description: 'Waiting for the latest result.',
+        toast.info(t('Summary is already finishing'), {
+          description: t('Waiting for the latest result.'),
         });
       }
     } catch (error) {
@@ -584,8 +584,8 @@ export function useSummaryGeneration({
         generationId === generationIdRef.current
         && activeProcessIdRef.current === processId
       ) {
-        toast.error('Failed to stop summary generation', {
-          description: 'Generation is still running; waiting for its latest status.',
+        toast.error(t('Failed to stop summary generation'), {
+          description: t('Generation is still running; waiting for its latest status.'),
         });
       }
     }

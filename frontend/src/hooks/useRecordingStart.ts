@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranscripts } from '@/contexts/TranscriptContext';
@@ -73,7 +74,7 @@ export function useRecordingStart(
       const randomTitle = calendar?.title || generateMeetingTitle();
       setMeetingTitle(randomTitle);
       // Capture is independent of model availability; background jobs report model failures.
-      setStatus(RecordingStatus.STARTING, 'Initializing recording...');
+      setStatus(RecordingStatus.STARTING, t('Initializing recording...'));
 
       // Start the actual backend recording
       console.log('Starting backend recording with meeting:', randomTitle);
@@ -113,12 +114,12 @@ export function useRecordingStart(
 
       const isRuntimeError = isTranscriptionRuntimeStartError(error);
       if (errorMsg.includes('Recording start timed out')) {
-        toast.error('Recording start timed out — please try again');
+        toast.error(t('Recording start timed out — please try again'));
       }
 
       setStatus(RecordingStatus.ERROR, isRuntimeError
-        ? TRANSCRIPTION_RUNTIME_USER_MESSAGE
-        : errorMsg);
+        ? t(TRANSCRIPTION_RUNTIME_USER_MESSAGE)
+        : errorMsg.includes('Recording start timed out') ? t('Recording start timed out — please try again') : t(errorMsg));
       setIsRecording(false); // Reset state on error
       Analytics.trackButtonClick('start_recording_error', 'home_page');
       if (isRuntimeError) return;
@@ -145,7 +146,7 @@ export function useRecordingStart(
             const generatedMeetingTitle = generateMeetingTitle();
 
             // Set STARTING status before initiating backend recording
-            setStatus(RecordingStatus.STARTING, 'Initializing recording...');
+            setStatus(RecordingStatus.STARTING, t('Initializing recording...'));
 
             console.log('Auto-starting backend recording with meeting:', generatedMeetingTitle);
             const result = await recordingService.startRecordingWithDevices(
@@ -174,10 +175,10 @@ export function useRecordingStart(
             } else {
               const isRuntimeError = isTranscriptionRuntimeStartError(error);
               setStatus(RecordingStatus.ERROR, isRuntimeError
-                ? TRANSCRIPTION_RUNTIME_USER_MESSAGE
-                : errorMsg);
+                ? t(TRANSCRIPTION_RUNTIME_USER_MESSAGE)
+                : errorMsg.includes('Recording start timed out') ? t('Recording start timed out — please try again') : t(errorMsg));
               if (!isRuntimeError) {
-                alert(`Failed to start recording.\n\n${errorMsg}`);
+                alert(`${t('Failed to start recording.')}\n\n${errorMsg.includes('Recording start timed out') ? t('Recording start timed out — please try again') : t(errorMsg)}`);
               }
             }
             Analytics.trackButtonClick('start_recording_error', 'sidebar_auto');
@@ -219,7 +220,7 @@ export function useRecordingStart(
         const generatedMeetingTitle = generateMeetingTitle();
 
         // Set STARTING status before initiating backend recording
-        setStatus(RecordingStatus.STARTING, 'Initializing recording...');
+        setStatus(RecordingStatus.STARTING, t('Initializing recording...'));
 
         console.log('Starting backend recording with meeting:', generatedMeetingTitle);
         const result = await recordingService.startRecordingWithDevices(
@@ -248,10 +249,10 @@ export function useRecordingStart(
         } else {
           const isRuntimeError = isTranscriptionRuntimeStartError(error);
           setStatus(RecordingStatus.ERROR, isRuntimeError
-            ? TRANSCRIPTION_RUNTIME_USER_MESSAGE
-            : errorMsg);
+            ? t(TRANSCRIPTION_RUNTIME_USER_MESSAGE)
+            : errorMsg.includes('Recording start timed out') ? t('Recording start timed out — please try again') : t(errorMsg));
           if (!isRuntimeError) {
-            alert(`Failed to start recording.\n\n${errorMsg}`);
+            alert(`${t('Failed to start recording.')}\n\n${errorMsg.includes('Recording start timed out') ? t('Recording start timed out — please try again') : t(errorMsg)}`);
           }
         }
         Analytics.trackButtonClick('start_recording_error', 'sidebar_direct');
