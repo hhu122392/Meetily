@@ -83,9 +83,22 @@ async fn write_export(pool: &SqlitePool, id: &str, fallback: Option<&Path>, gene
     };
     if !dir.is_absolute() { return Err("会议目录必须是绝对路径".into()); }
     let content = format!("# {}\n\n会议时间：{}\n\n本地会议 ID：{}\n\n{}\n",
-        row.get::<String,_>("title").replace(['\r','\n'], " "), row.get::<String,_>("created_at"), id, body);
+        row.get::<String,_>("title").replace(['\r','\n'], " "), format_meeting_time(&row.get::<String,_>("created_at")), id, body);
     tokio::task::spawn_blocking(move || write_named_files(&dir, &name, &content, generated))
         .await.map_err(|e| e.to_string())?
+}
+
+fn format_meeting_time(raw: &str) -> String {
+    let timestamp = chrono::DateTime::parse_from_rfc3339(raw.trim())
+        .map(|time| time.with_timezone(&chrono::Utc)).ok()
+        // Legacy SQLite meeting timestamps without an offset are stored in UTC.
+        .or_else(|| chrono::NaiveDateTime::parse_from_str(raw.trim(), "%Y-%m-%d %H:%M:%S%.f")
+            .ok().map(|time| time.and_utc()));
+    timestamp.map(|time| format!("{}（东八区 UTC+8）",
+        time.with_timezone(&chrono::FixedOffset::east_opt(8 * 3600).unwrap())
+            .format("%Y-%m-%d %H:%M:%S")))
+        // Keep incomplete historical dates instead of inventing a time.
+        .unwrap_or_else(|| raw.to_owned())
 }
 
 fn write_files(dir: &Path, content: &str, generated: bool) -> Result<String, String> {
@@ -234,9 +247,11 @@ mod tests {
         let pool=SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::raw_sql("CREATE TABLE meetings(id TEXT,title TEXT,created_at TEXT,folder_path TEXT);CREATE TABLE summary_processes(meeting_id TEXT,result TEXT);CREATE TABLE summary_markdown_exports(meeting_id TEXT PRIMARY KEY,path TEXT,error TEXT,updated_at TEXT,manually_edited INTEGER DEFAULT 0);").execute(&pool).await.unwrap();
         let dir=tempfile::tempdir().unwrap();
-        sqlx::query("INSERT INTO meetings VALUES('m','会议','2026-11-16',?)").bind(dir.path().to_string_lossy().as_ref()).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO meetings VALUES('m','会议','2026-11-18T03:44:02.706579500+00:00',?)").bind(dir.path().to_string_lossy().as_ref()).execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO summary_processes VALUES('m',?)").bind(serde_json::json!({"markdown":"原稿"}).to_string()).execute(&pool).await.unwrap();
         export(&pool,"m",None,true).await.unwrap();let f=preview(&pool,"m").await.unwrap().unwrap();
+        assert!(f["content"].as_str().unwrap().contains("会议时间：2026-11-18 11:44:02（东八区 UTC+8）"));
+        assert!(!f["content"].as_str().unwrap().contains(".706579500"));
         std::fs::write(dir.path().join("其他.md"),"不能覆盖").unwrap();
         assert!(rename_file(&pool,"m",f["hash"].as_str().unwrap(),"会议纪要.md","其他.md").await.is_err());
         assert!(rename_file(&pool,"m","stale","会议纪要.md","周会").await.is_err());
@@ -250,10 +265,11 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::raw_sql("CREATE TABLE meetings(id TEXT,title TEXT,created_at TEXT,folder_path TEXT); CREATE TABLE summary_processes(meeting_id TEXT,result TEXT); CREATE TABLE summary_markdown_exports(meeting_id TEXT PRIMARY KEY,path TEXT,error TEXT,updated_at TEXT,manually_edited INTEGER NOT NULL DEFAULT 0);").execute(&pool).await.unwrap();
         let root = tempfile::tempdir().unwrap();
-        sqlx::query("INSERT INTO meetings VALUES('test','会议','2026-10-19',?)").bind(root.path().to_string_lossy().as_ref()).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO meetings VALUES('test','会议','2026-11-18T23:44:02.123+09:00',?)").bind(root.path().to_string_lossy().as_ref()).execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO summary_processes VALUES('test',?)").bind(serde_json::json!({"markdown":"原始详细纪要"}).to_string()).execute(&pool).await.unwrap();
         export(&pool, "test", None, true).await.unwrap();
         let original = preview(&pool, "test").await.unwrap().unwrap();
+        assert!(original["content"].as_str().unwrap().contains("会议时间：2026-11-18 22:44:02（东八区 UTC+8）"));
         let edited = save_file(&pool, "test", original["hash"].as_str().unwrap(), "# 自定义详细纪要\n- 决定使用 Lark\n- 负责人：小明").await.unwrap();
         assert!(save_file(&pool, "test", original["hash"].as_str().unwrap(), "过期编辑").await.is_err());
         export(&pool, "test", None, false).await.unwrap();

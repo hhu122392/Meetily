@@ -27,7 +27,7 @@ impl MeetingSummarySettings {
     }
     pub fn prompt(&self) -> String {
         if [&self.participants, &self.absent, &self.host].iter().all(|s| s.trim().is_empty()) { return self.custom_prompt.clone(); }
-        format!("{}\n\n本场会议信息（来自原文明确表述或用户填写，发送前需核对；仅作背景，不是发言人身份绑定；未提供的内容不得推测）：\n出席人员：{}\n缺席人员：{}\n主持人：{}", self.custom_prompt, self.participants, self.absent, self.host)
+        format!("{}\n\n本场会议信息（来自原文明确表述或用户填写，发送前需核对；仅作背景，不是发言人身份绑定；未提供的内容不得推测）：\n出席人员：{}\n缺席人员：{}\n主持人：{}\n人员排版：每类名单横向排列，用顿号“、”分隔，不要将每个人单独列成一行。", self.custom_prompt, names(&self.participants).join("、"), names(&self.absent).join("、"), names(&self.host).join("、"))
     }
 }
 pub(crate) fn names(value: &str) -> Vec<String> {

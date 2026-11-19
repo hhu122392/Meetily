@@ -47,7 +47,7 @@ fn validate(review: &Review) -> Result<(), String> {
     if !valid_chat(&review.chat_id) { return Err("请选择机器人已加入的目标群。".into()); }
     super::card::validate_message_edit(&review.title, &review.summary)?;
     if [&review.participants, &review.absent, &review.host].iter().any(|s| s.chars().count() > 1000) { return Err("人员名单过长。".into()); }
-    chrono::NaiveDateTime::parse_from_str(&review.meeting_time, "%Y-%m-%dT%H:%M").map_err(|_| "请填写完整的会议日期和时间（北京时间）。")?;
+    parse_review_time(&review.meeting_time).map_err(|_| "请填写完整的会议日期和时间（北京时间）。")?;
     meeting_settings::validate_people(&review.participants, &review.absent)?;
     Ok(())
 }
@@ -78,15 +78,23 @@ fn check_document_snapshot(current: &Value, preview: &Value) -> Result<(), Strin
 }
 fn display_names(value: &str) -> String {
     let names = meeting_settings::names(value);
-    if names.is_empty() { "未填写".into() } else { names.join("\n") }
+    if names.is_empty() { "未填写".into() } else { names.join("、") }
+}
+fn parse_review_time(value: &str) -> Result<chrono::NaiveDateTime, chrono::ParseError> {
+    chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S")
+        .or_else(|_| chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M"))
+}
+fn display_time(value: &str) -> String {
+    parse_review_time(value).map(|time| time.format("%Y-%m-%d %H:%M:%S").to_string())
+        .unwrap_or_else(|_| value.to_owned())
 }
 fn card(review: &Review) -> Value {
     json!({"config":{"wide_screen_mode":true},"header":{"template":"blue","title":{"tag":"plain_text","content":format!("会议纪要｜{}",review.title.trim())}},
         "elements":[
-            {"tag":"div","text":{"tag":"plain_text","content":format!("会议时间（北京时间）\n{}",review.meeting_time.replace('T'," "))}},
-            {"tag":"div","text":{"tag":"plain_text","content":format!("出席人员\n{}",display_names(&review.participants))}},
-            {"tag":"div","text":{"tag":"plain_text","content":format!("缺席人员\n{}",display_names(&review.absent))}},
-            {"tag":"div","text":{"tag":"plain_text","content":format!("主持人\n{}",display_names(&review.host))}},
+            {"tag":"div","text":{"tag":"plain_text","content":format!("会议时间（北京时间）\n{}",display_time(&review.meeting_time))}},
+            {"tag":"div","text":{"tag":"plain_text","content":format!("出席人员：{}",display_names(&review.participants))}},
+            {"tag":"div","text":{"tag":"plain_text","content":format!("缺席人员：{}",display_names(&review.absent))}},
+            {"tag":"div","text":{"tag":"plain_text","content":format!("主持人：{}",display_names(&review.host))}},
             {"tag":"hr"}, {"tag":"div","text":{"tag":"plain_text","content":review.summary}},
             {"tag":"note","elements":[{"tag":"plain_text","content":"由 Meetily 本地录音生成，已人工审核"}]}
         ]})
@@ -94,7 +102,7 @@ fn card(review: &Review) -> Value {
 fn review_card(review: &Review, documents: &[Value]) -> Result<Value,String> {
     let mut value=card(review);
     if let Some(pattern)=&review.message_template {
-        let time=review.meeting_time.replace('T'," ");let present=display_names(&review.participants);let absent=display_names(&review.absent);let host=display_names(&review.host);
+        let time=display_time(&review.meeting_time);let present=display_names(&review.participants);let absent=display_names(&review.absent);let host=display_names(&review.host);
         let links=if documents.is_empty(){"未附云文档".into()}else{documents.iter().map(|d|d["documentUrl"].as_str().unwrap_or("")).collect::<Vec<_>>().join("\n")};
         let body=super::message_templates::render(pattern,&[("会议名称",&review.title),("会议时间",&time),("出席人员",&present),("缺席人员",&absent),("主持人",&host),("概要",&review.summary),("云文档链接",&links)])?;
         value["elements"]=json!([{"tag":"div","text":{"tag":"plain_text","content":body}}]);
@@ -135,7 +143,7 @@ pub async fn lark_manual_context(state: tauri::State<'_,AppState>, meeting_id: S
         .bind(&c.app_id).bind(&meeting_id).bind(&c.owner_id).fetch_all(pool).await.map_err(db_error)?;
     let timestamp=chrono::DateTime::parse_from_rfc3339(&created).map(|d|d.timestamp()).ok()
         .or_else(||chrono::NaiveDateTime::parse_from_str(&created,"%Y-%m-%d %H:%M:%S%.f").ok().map(|d|d.and_utc().timestamp()));
-    let time=timestamp.and_then(|t|chrono::DateTime::from_timestamp(t,0)).map(|d|d.with_timezone(&chrono::FixedOffset::east_opt(8*3600).unwrap()).format("%Y-%m-%dT%H:%M").to_string()).unwrap_or_default();
+    let time=timestamp.and_then(|t|chrono::DateTime::from_timestamp(t,0)).map(|d|d.with_timezone(&chrono::FixedOffset::east_opt(8*3600).unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string()).unwrap_or_default();
     let recent=sqlx::query("SELECT status,detail,sent_at,payload FROM lark_manual_drafts WHERE meeting_id=? AND status!='preview' ORDER BY created_at DESC,rowid DESC LIMIT 1").bind(&meeting_id).fetch_optional(pool).await.map_err(db_error)?;
     Ok(json!({"title":title,"meetingTime":time,"participants":settings.participants,"absent":settings.absent,"host":settings.host,"attendance":settings.attendance,
         "summary":super::card::summary_overview(file["content"].as_str().unwrap_or("")),"markdown":file,
@@ -203,7 +211,7 @@ pub async fn lark_manual_preview(state: tauri::State<'_,AppState>, meeting_id: S
     let id=uuid::Uuid::new_v4().simple().to_string();
     let original=file["content"].as_str().ok_or("完整纪要缺失")?;
     let body=original.lines().enumerate().filter(|(i,line)|!(*i==0&&line.starts_with("# "))&&!line.starts_with("会议时间：")&&!line.starts_with("本地会议 ID：")).map(|(_,line)|line).collect::<Vec<_>>().join("\n");
-    let document_content=format!("# {}\n会议时间（北京时间）：{}\n出席人员：{}\n缺席人员：{}\n主持人：{}\n\n{}",review.title,review.meeting_time.replace('T'," "),display_names(&review.participants),display_names(&review.absent),display_names(&review.host),body);
+    let document_content=format!("# {}\n会议时间（北京时间）：{}\n出席人员：{}\n缺席人员：{}\n主持人：{}\n\n{}",review.title,display_time(&review.meeting_time),display_names(&review.participants),display_names(&review.absent),display_names(&review.host),body);
     let payload=json!({"chatId":review.chat_id,"chatName":name,"card":value,"markdown":file,"review":review,"archive":archive,"documentContent":document_content,"document":document,"documents":documents});
     sqlx::query("INSERT INTO lark_manual_drafts(id,meeting_id,app_id,config_revision,source_revision,payload,created_at) VALUES(?,?,?,?,?,?,?)")
         .bind(&id).bind(&meeting_id).bind(&c.app_id).bind(config_revision(&c)).bind(revision).bind(payload.to_string()).bind(now()).execute(pool).await.map_err(db_error)?;
@@ -343,10 +351,13 @@ mod tests {
         assert!(check_document_snapshot(&docs[0],&docs[0]).is_ok());
     }
     #[test]
-    fn metadata_uses_explicit_time_and_separate_absent_lines() {
-        let r=review(); validate(&r).unwrap(); let c=card(&r);
-        assert_eq!(c["elements"][0]["text"]["content"],"会议时间（北京时间）\n2026-11-14 09:30");
-        assert_eq!(c["elements"][2]["text"]["content"],"缺席人员\n丙\n丁");
+    fn metadata_uses_seconds_and_inline_names() {
+        let mut r=review(); r.participants="甲\n乙，甲".into(); r.absent="丙；丁".into(); validate(&r).unwrap(); let c=card(&r);
+        assert_eq!(c["elements"][0]["text"]["content"],"会议时间（北京时间）\n2026-11-14 09:30:00");
+        assert_eq!(c["elements"][1]["text"]["content"],"出席人员：甲、乙");
+        assert_eq!(c["elements"][2]["text"]["content"],"缺席人员：丙、丁");
+        r.meeting_time="2026-11-14T09:30:42".into(); validate(&r).unwrap();
+        assert_eq!(card(&r)["elements"][0]["text"]["content"],"会议时间（北京时间）\n2026-11-14 09:30:42");
     }
     #[test]
     fn invalid_destination_date_and_conflicting_attendance_are_rejected() {

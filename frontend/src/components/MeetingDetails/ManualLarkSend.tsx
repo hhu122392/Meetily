@@ -13,7 +13,7 @@ type Delivery={status:string;detail:string};
 type Preview={id:string;chatName:string;card:LarkPreviewCard;documents?:{id:string;documentUrl:string}[];includeMarkdown?:boolean;markdown?:{name:string;size:number}};
 const initial:Review={chatId:'',title:'',meetingTime:'',participants:'',absent:'',host:'',summary:'',project:''};
 const simpleTemplate='{会议名称}\n会议时间：{会议时间}\n\n{概要}';
-const customTemplate='{会议名称}\n会议时间：{会议时间}\n出席人员：\n{出席人员}\n缺席人员：\n{缺席人员}\n主持人：{主持人}\n\n{概要}\n\n云文档：{云文档链接}';
+const customTemplate='{会议名称}\n会议时间：{会议时间}\n出席人员：{出席人员}\n缺席人员：{缺席人员}\n主持人：{主持人}\n\n{概要}\n\n云文档：{云文档链接}';
 export function ManualLarkSend({meetingId,saveEdits,disabled,compact=false,documentId}:{meetingId:string;saveEdits:()=>Promise<void>;disabled?:boolean;compact?:boolean;documentId?:string}){
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [groups,setGroups]=useState<{id:string;name:string}[]>([]),[review,setReview]=useState<Review>(initial);
@@ -39,7 +39,7 @@ export function ManualLarkSend({meetingId,saveEdits,disabled,compact=false,docum
       <DialogHeader><DialogTitle>会议助手 · 选群发送</DialogTitle><DialogDescription>{documentId?'发送已保存的云文档链接和概要，不会修改云文档。':'核对后发送概要卡片；云文档请从工具栏单独保存。'}</DialogDescription></DialogHeader>
       {!busy&&!groups.length&&<p>未加载到群，请确认机器人已加入目标群且有读取群信息权限。</p>}
       <label>目标群<select aria-label="发送目标群" className="w-full rounded border p-2" disabled={busy||sent} value={review.chatId} onChange={e=>change({chatId:e.target.value})}><option value="">请选择目标群</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}（{g.id.slice(-6)}）</option>)}</select></label>
-      <div className="grid gap-3 sm:grid-cols-2"><label>会议名称<input aria-label="发送会议名称" className="w-full rounded border p-2" maxLength={100} disabled={busy||sent} value={review.title} onChange={e=>change({title:e.target.value})}/></label><label>会议时间（北京时间）<input aria-label="发送会议时间" className="w-full rounded border p-2" type="datetime-local" disabled={busy||sent} value={review.meetingTime} onChange={e=>change({meetingTime:e.target.value})}/></label></div>
+      <div className="grid gap-3 sm:grid-cols-2"><label>会议名称<input aria-label="发送会议名称" className="w-full rounded border p-2" maxLength={100} disabled={busy||sent} value={review.title} onChange={e=>change({title:e.target.value})}/></label><label>会议时间（北京时间）<input aria-label="发送会议时间" className="w-full rounded border p-2" type="datetime-local" step={1} disabled={busy||sent} value={review.meetingTime} onChange={e=>change({meetingTime:e.target.value})}/></label></div>
       <div className="grid gap-3 sm:grid-cols-3">{([['participants','出席人员'],['absent','缺席人员'],['host','主持人']] as const).map(([key,name])=><label key={key}>{name}<textarea aria-label={`发送${name}`} className="w-full rounded border p-2" rows={2} maxLength={1000} disabled={busy||sent} value={review[key]} onChange={e=>change({[key]:e.target.value})}/></label>)}</div>
       <AttendanceEvidence attendance={attendance?{...attendance,participantsManual:attendance.participantsManual||!!review.participantsEdited,absentManual:attendance.absentManual||!!review.absentEdited}:null}/>
       <label className="block rounded border bg-muted/30 p-3 text-sm"><input type="checkbox" aria-label="确认出席和缺席名单" checked={!!review.attendanceConfirmed} disabled={busy||sent} onChange={e=>change({attendanceConfirmed:e.target.checked})}/> 我已核对出席、缺席名单；未明确提到的人员保持留空</label>
