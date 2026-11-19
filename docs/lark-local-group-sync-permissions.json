@@ -1,0 +1,14 @@
+{
+  "scopes": {
+    "user": [
+      "im:chat:read",
+      "im:message:readonly",
+      "im:message.group_msg:get_as_user",
+      "vc:meeting.meetingevent:read",
+      "vc:meeting",
+      "calendar:calendar.event:read",
+      "offline_access"
+    ],
+    "tenant": ["im:chat:read", "im:message:send_as_bot"]
+  }
+}

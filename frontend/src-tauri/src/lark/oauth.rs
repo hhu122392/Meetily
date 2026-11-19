@@ -12,6 +12,7 @@ use tokio::{
 
 pub const REDIRECT: &str = "http://127.0.0.1:18576/lark/callback";
 const AUTH_SCOPE: &str = "vc:meeting.meetingevent:read offline_access";
+const GROUP_SCOPE: &str = "im:chat:read im:message:readonly im:message.group_msg:get_as_user";
 const CALENDAR_SCOPE: &str = "calendar:calendar.event:read offline_access";
 fn document_scope(calendar:bool)->String {
     let mut scope="drive:drive:readonly docx:document docx:document.block:convert offline_access".to_owned();
@@ -51,7 +52,7 @@ fn apply_calendar_mode(c: &mut AppConfig) {
     c.calendar_auth_revision = uuid::Uuid::new_v4().to_string();
 }
 fn auth_scope(meeting_control: bool) -> String {
-    if meeting_control { format!("{AUTH_SCOPE} vc:meeting calendar:calendar.event:read") } else { AUTH_SCOPE.into() }
+    if meeting_control { format!("{AUTH_SCOPE} vc:meeting calendar:calendar.event:read {GROUP_SCOPE}") } else { AUTH_SCOPE.into() }
 }
 fn requested_scope(meeting_control: bool, cloud: bool) -> String {
     let mut scope = auth_scope(meeting_control);
@@ -178,8 +179,8 @@ pub async fn lark_app_authorize(handle: tauri::AppHandle, state: tauri::State<'_
         }).await;
         match result {
             Ok(Ok(())) => {
-                if calendar_only||documents_only { app::restart(pool.clone()).await; }
-                app::status(if tasks_only {"Lark 任务已连接，仅在人工确认后创建任务。"} else if documents_only {"个人云空间已连接，保存文档不会自动发群。"} else if calendar_only { "日历已连接：本地录音，会后手动选群发送" } else { "用户授权完成，等待长连接和会议识别。" }).await;
+                app::restart(pool.clone()).await;
+                app::status(if tasks_only {"Lark 任务已连接，仅在人工确认后创建任务。"} else if documents_only {"个人云空间已连接，保存文档不会自动发群。"} else { "本人账号已登录，请选择会议群并保存；群同步使用本人的读取权限。" }).await;
             }
             Ok(Err(e)) => app::status(e).await,
             Err(_) => app::status("Lark 用户授权等待超时，请重试。").await,
@@ -222,11 +223,16 @@ async fn complete(handle: &tauri::AppHandle, pool: &SqlitePool, original: &AppCo
         None,
     )
     .await?;
+    let previous_owner = c.owner_id.clone();
     c.owner_id = user["open_id"]
         .as_str()
         .filter(|s| s.starts_with("ou_"))
         .ok_or("未取得授权用户身份。")?
         .into();
+    if c.owner_id != previous_owner {
+        c.sync_groups.clear();
+        c.auto_record_since = app::now();
+    }
     let tenant = user["tenant_key"].as_str().filter(|t| !t.trim().is_empty()).ok_or("Lark 未返回公司标识，未保存本次授权。")?;
     crate::company::bind_identity(handle, &c.app_id, Some(tenant))?;
     app::save(pool, &c).await?;

@@ -1,14 +1,13 @@
-//! Event-triggered invalidation with a shared, bounded polling fallback.
+//! Per-account meeting polling shared by capture and association; no event delivery dependency.
 use super::{app::{self, AppConfig, db_error, now}, oauth, routing::active_meeting};
 use serde_json::Value;
 use sqlx::SqlitePool;
-use std::{future::Future, sync::atomic::{AtomicI64, AtomicU64, Ordering}, time::{Duration, Instant}};
+use std::{future::Future, sync::atomic::{AtomicU64, Ordering}, time::{Duration, Instant}};
 use tokio::sync::{Mutex, Notify};
 
 pub(super) type Meeting = (String, String, String);
-const FALLBACK: Duration = Duration::from_secs(60);
+const FALLBACK: Duration = Duration::from_secs(5);
 static REVISION: AtomicU64 = AtomicU64::new(1);
-static SETTLE_UNTIL: AtomicI64 = AtomicI64::new(0);
 static CACHE: Mutex<StateCache> = Mutex::const_new(StateCache { entry: None, sequence: 0 });
 pub(super) static CHANGED: Notify = Notify::const_new();
 
@@ -30,9 +29,8 @@ impl StateCache {
         }
         let result = fetch().await;
         self.sequence += 1;
-        // Event delivery can precede the query API's state update. Briefly reconcile,
-        // then return to the minute fallback rather than missing the first minute of audio.
-        let ttl = if result.is_ok() && now() < SETTLE_UNTIL.load(Ordering::SeqCst) { Duration::from_secs(5) } else { FALLBACK };
+        // Poll promptly while armed/recording; back off errors so quota failures cannot spin.
+        let ttl = if result.is_err() { Duration::from_secs(60) } else { FALLBACK };
         self.entry = Some(Entry { identity, revision, expires: Instant::now() + ttl, result: result.clone() });
         result.map(|m| (m, self.sequence))
     }
@@ -102,7 +100,6 @@ pub(super) async fn receive(pool: &SqlitePool, c: &AppConfig, value: &Value) -> 
     tx.commit().await.map_err(db_error)?;
     if changed {
         log::info!("Lark meeting event accepted: type={kind}, meeting_id={id}");
-        SETTLE_UNTIL.store(now() + 15, Ordering::SeqCst);
         invalidate();
     }
     Ok(())

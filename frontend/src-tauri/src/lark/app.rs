@@ -47,6 +47,7 @@ pub(crate) struct AppConfig {
     pub user_token: String,
     pub refresh_token: String,
     pub expires_at: i64,
+    pub sync_groups: Vec<super::group_sync::SyncGroup>,
 }
 
 pub(super) fn now() -> i64 {
@@ -263,7 +264,7 @@ pub async fn lark_app_status(state: tauri::State<'_, AppState>) -> Result<Value,
             "auto_record":c.auto_record,"recording_source":c.recording_source,"automation":automation,"allow_group_launch":c.allow_group_launch,
             "authorized":super::oauth::authorization_status(&c).1,"authorization_status":super::oauth::authorization_status(&c).0,"owner_id":c.owner_id,"connection":STATUS.lock().await.clone(),
             "launches":launches.iter().map(|r|json!({"request_id":r.get::<String,_>("request_id"),"chat_id":r.get::<String,_>("chat_id"),"topic":r.get::<String,_>("topic"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"meeting_url":r.get::<Option<String>,_>("meeting_url")})).collect::<Vec<_>>(),
-            "invitations":super::scheduled::list(pool,&c).await?,
+            "sync_groups":c.sync_groups,"commands":super::group_sync::recent(pool,&c).await?,
             "routes":routes.iter().map(|r| json!({"reference":r.get::<String,_>("reference"),"chat_id":r.get::<String,_>("chat_id"),"remote_id":r.get::<Option<String>,_>("remote_id")})).collect::<Vec<_>>(),
             "deliveries":deliveries.iter().map(|r| json!({"meeting_id":r.get::<String,_>("meeting_id"),"chat_id":r.get::<String,_>("chat_id"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail")})).collect::<Vec<_>>(),
             "recording":recording.map(|r| json!({"remote_id":r.get::<Option<String>,_>("remote_id"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"topic":r.get::<Option<String>,_>("topic"),"blocked":r.get::<i64,_>("blocked")!=0,"detail":r.get::<String,_>("detail"),"stopped":r.get::<i64,_>("stopped")!=0}))
@@ -283,6 +284,7 @@ pub async fn lark_app_save(
     allow_group_launch: Option<bool>,
     recording_source: Option<RecordingSource>,
     manual_mode: Option<bool>,
+    sync_groups: Option<Vec<super::group_sync::SyncGroup>>,
 ) -> Result<(), String> {
     let _policy = super::auto_recording::POLICY_LOCK.lock().await;
     let _lock = CONFIG_LOCK.lock().await;
@@ -325,6 +327,17 @@ pub async fn lark_app_save(
         c.allow_group_launch = false;
         c.recording_source = RecordingSource::Local;
     }
+    // New commands only arm local capture. Retain legacy cloud jobs for recovery, never create new ones.
+    c.recording_source = RecordingSource::Local;
+    c.allow_group_launch = false;
+    if let Some(groups) = sync_groups {
+        let old = c.sync_groups.clone();
+        c.sync_groups = super::group_sync::selected_groups(&old, groups, now())?;
+        for removed in old.iter().filter(|g| !c.sync_groups.iter().any(|v|v.id==g.id)) {
+            sqlx::query("UPDATE lark_app_routes SET local_record_bound_at=NULL WHERE app_id=? AND owner_id=? AND chat_id=?")
+                .bind(&c.app_id).bind(&c.owner_id).bind(&removed.id).execute(pool).await.map_err(db_error)?;
+        }
+    }
     crate::company::bind_identity(&app, id, None)?;
     save(pool, &c).await?;
     restart(pool.clone()).await;
@@ -357,7 +370,7 @@ pub async fn restart(pool: SqlitePool) {
     let cancel = CancellationToken::new();
     *worker = Some(cancel.clone());
     tokio::spawn(async move {
-        super::transport::run(pool, c, cancel).await;
+        super::group_sync::run(pool, cancel).await;
     });
 }
 
@@ -967,6 +980,7 @@ pub async fn lark_app_remove_route(
 
 #[tauri::command]
 pub async fn lark_invitation_manage(state:tauri::State<'_,AppState>,id:String,retry:bool)->Result<(),String> {
+    if retry {return Err("预约功能已停用，请在所选群内重新发送会议号或入会链接。".into());}
     super::scheduled::manage(state.db_manager.pool(),&id,retry).await
 }
 

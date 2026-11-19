@@ -11,7 +11,9 @@ pub mod auto_recording;
 pub(crate) mod cloud_recording;
 pub mod app;
 pub(crate) mod routing;
+#[cfg(test)]
 mod transport;
+pub mod group_sync;
 pub mod oauth;
 pub mod manual;
 pub mod calendar;

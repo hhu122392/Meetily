@@ -146,7 +146,7 @@ pub async fn run<R: Runtime>(handle: AppHandle<R>, pool: SqlitePool) {
     let mut owned: Option<Owned> = None;
     let mut cooldown = 0;
     let mut last_error = String::new();
-    // This local timer checks ownership/settings only; current() shares a 60s API cache.
+    // Local checks share a 5s successful API cache and a 60s error cache.
     let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
     loop {
         tokio::select! { _=timer.tick()=>{}, _=meeting_state::CHANGED.notified()=>{} }
@@ -237,6 +237,7 @@ async fn tick<R: Runtime>(
     let c = config?;
     if !c.enabled
         || c.manual_mode
+        || c.sync_groups.is_empty()
         || !c.auto_record
         || c.auto_record_since == 0
         || !FRONTEND_READY.load(Ordering::SeqCst)
@@ -257,6 +258,8 @@ async fn tick<R: Runtime>(
     let _policy = POLICY_LOCK.lock().await;
     let latest = app::load(pool).await?;
     if !latest.enabled
+        || latest.manual_mode
+        || latest.sync_groups.is_empty()
         || !latest.auto_record
         || latest.app_id != c.app_id
         || latest.owner_id != c.owner_id

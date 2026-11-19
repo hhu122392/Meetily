@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LarkCredentialImport } from '@/components/LarkCredentialImport';
 
+type SyncGroup = {id:string; name:string; since?:number};
 type AppStatus = {
   app_id: string; has_secret: boolean; enabled: boolean; auto_send: boolean;
   manual_mode?: boolean;
+  sync_groups?: SyncGroup[];
+  commands?: {id:string; chat_id:string; meeting_no:string|null; detail:string; ack_state:string}[];
   authorized: boolean; owner_id: string; connection: string;
   auto_record?: boolean; automation?: string | null;
   recording_source?: 'cloud' | 'local';
@@ -31,10 +34,6 @@ const launchLabels: Record<string, string> = {
   link_sending: '正在发送链接', sent: '链接已发送', failed: '创建失败',
   link_failed: '已创建，链接发送失败', unknown: '结果不确定，请核对', expired: '请求已过期',
 };
-const invitationLabels: Record<string, string> = {
-  queued: '等待核对', ready: '等待开会提醒', sending: '正在发送', sent: '已提醒',
-  failed: '处理失败', unknown: '送达待核对', expired: '已过期', invalid: '邀请不完整', cancelled: '已取消', duplicate: '已合并',
-};
 
 export function LarkAppSettings() {
   const [status, setStatus] = useState<AppStatus | null>(null);
@@ -45,8 +44,11 @@ export function LarkAppSettings() {
   const [manualMode, setManualMode] = useState(true);
   const [autoSend, setAutoSend] = useState(false);
   const [autoRecord, setAutoRecord] = useState(false);
-  const [recordingSource, setRecordingSource] = useState<'cloud' | 'local'>('local');
-  const [allowGroupLaunch, setAllowGroupLaunch] = useState(false);
+  const recordingSource = 'local';
+  const allowGroupLaunch = false;
+  const [syncGroups, setSyncGroups] = useState<SyncGroup[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<SyncGroup[]>([]);
+  const groupIdentity = useRef('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const lock = useRef(false);
@@ -63,9 +65,11 @@ export function LarkAppSettings() {
       setAppId(value.app_id); setEnabled(value.enabled); setAutoSend(value.auto_send);
       setManualMode(!value.app_id || !!value.manual_mode);
       setAutoRecord(value.auto_record ?? false);
-      setRecordingSource((!value.app_id || value.manual_mode) ? 'local' : (value.recording_source ?? 'local'));
-      setAllowGroupLaunch(value.allow_group_launch ?? false);
+      setSyncGroups(value.sync_groups ?? []);
     }
+    const identity = `${value.app_id}:${value.owner_id}`;
+    if (groupIdentity.current && groupIdentity.current !== identity) { setSyncGroups(value.sync_groups ?? []); setAvailableGroups([]); }
+    groupIdentity.current = identity;
     setStatus(value);
   }, []);
 
@@ -92,17 +96,17 @@ export function LarkAppSettings() {
     </div>
     <label className="block space-y-1"><span>使用方式</span><select aria-label="会议助手使用方式" className="w-full rounded border p-2" disabled={busy} value={manualMode ? 'manual' : 'automatic'} onChange={e => {
       const manual = e.target.value === 'manual'; setManualMode(manual);
-      if (manual) { setRecordingSource('local'); setAutoRecord(false); setAllowGroupLaunch(false); }
+      if (manual) { setAutoRecord(false); }
     }}>
       <option value="manual">本地录音 · 手动选群发送（推荐）</option>
-      <option value="automatic">群指令开会 · 自动关联（由指定电脑接收）</option>
+      <option value="automatic">同步群会议 · 本机自动录音（多人共用助手）</option>
     </select></label>
-    {manualMode&&<div className="rounded border p-3 text-sm"><p>录音来源：本地录音（麦克风和系统声音）</p><p className="mt-1 text-xs text-gray-500">云录音配置保留在“群指令开会 · 自动关联”模式中。若需切换，请先修改上方使用方式，再选择录音来源、保存并重新授权。</p></div>}
+    <p className="text-xs text-gray-500">每人登录自己的 Lark 账号、选择自己的会议群；录音保存在各自电脑，无需统一服务。</p>
 
     <LarkCredentialImport appId={appId} secretReady={!!secret.trim() || hasSavedSecret}
       disabled={busy || !initialized.current} onImport={credentials => {
         if (credentials.appId !== undefined && credentials.appId !== appId.trim()) {
-          setAppId(credentials.appId); setSecret(''); setEditingSecret(false);
+          setAppId(credentials.appId); setSecret(''); setEditingSecret(false); setSyncGroups([]); setAvailableGroups([]);
         }
         if (credentials.secret !== undefined) { setSecret(credentials.secret); setEditingSecret(true); }
         setError('');
@@ -110,7 +114,7 @@ export function LarkAppSettings() {
     <div className="space-y-2">
       <Label htmlFor="lark-app-id">App ID</Label>
       <Input id="lark-app-id" placeholder="cli_…" value={appId} disabled={busy} onChange={e => {
-        setAppId(e.target.value); setSecret(''); setEditingSecret(false);
+        setAppId(e.target.value); setSecret(''); setEditingSecret(false); setSyncGroups([]); setAvailableGroups([]);
       }} />
       <Label htmlFor="lark-app-secret">App Secret</Label>
       <div className="flex items-center gap-2">
@@ -131,73 +135,55 @@ export function LarkAppSettings() {
       </div>}
     </div>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enabled} disabled={busy} onChange={e => setEnabled(e.target.checked)} />启用会议助手</label>
-    {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音手动录音，会后在会议详情选择目标群并确认发送。需要指定会议号入会自动录音时，请选择「群指令开会 · 自动关联」，启用本机自动录音后在群里发送会议号。</p> : <>
+    {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音手动录音，会后在会议详情选择目标群并确认发送。需要指定会议号入会自动录音时，请选择「同步群会议 · 本机自动录音」，启用本机自动录音后在群里发送会议号。</p> : <>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={autoSend} disabled={busy} onChange={e => setAutoSend(e.target.checked)} />新录音生成纪要后准备发往唯一绑定群（需审核确认）</label>
-    <label className="flex items-center gap-2 text-sm"><input id="lark-auto-record" type="checkbox" checked={autoRecord} disabled={busy} onChange={e => setAutoRecord(e.target.checked)} />{recordingSource === 'local' ? '加入助手新建或本人绑定的会议时自动录音' : '加入会议助手新建的会议时自动录音'}</label>
-    <div className="space-y-2">
-      <Label htmlFor="lark-recording-source">录音来源</Label>
-      <select id="lark-recording-source" className="w-full rounded-md border bg-transparent p-2 text-sm" value={recordingSource} disabled={busy} onChange={e => setRecordingSource(e.target.value as 'cloud' | 'local')}>
-        <option value="local">本机录音（默认，麦克风和系统声音）</option>
-        <option value="cloud">下载 Lark 云录音（需手动选择）</option>
-      </select>
-      <p className="text-xs text-gray-500">保存后对下一场会议生效；已有任务继续使用原来源。</p>
-      {recordingSource === 'cloud' ? <p className="text-xs text-gray-500">授权本人入会且为主持人时，自动请求 Lark 开始录制。整场会议结束后，等待云文件就绪，下载到当前公司的录音目录，再后台转写和生成纪要；不会录入电脑的其他声音。下载不使用 Lark 语音转文字额度。请保持 Meetily 运行；重启后会继续等待或下载。暂停任务不会停止 Lark 云录制。</p>
-        : <p className="text-xs text-gray-500">已有会议：先保存自动录音设置，再用授权账号在群里发送 <code>@会议助手 会议ID:123 456 789</code>，将示例号码换成本场会议号。保持 Meetily 运行，在这台电脑入会后录制麦克风和系统声音，确认离会后停止。手动停止后本场不再重启。</p>}
+    <label className="flex items-center gap-2 text-sm"><input id="lark-auto-record" type="checkbox" checked={autoRecord} disabled={busy} onChange={e => setAutoRecord(e.target.checked)} />本人加入已同步的指定会议后，自动在本机录音</label>
+    <p className="text-xs text-gray-500">录制麦克风和系统声音，不下载云录音。群指令约每 15 秒同步，待参会和录音时约每 5 秒核验本人状态；可能漏掉入会最初几秒，请等录音提示后再开始讨论。</p>
+    <div className="space-y-2 rounded border p-3">
+      <div className="flex items-center justify-between"><Label>同步会议群</Label><Button variant="outline" disabled={busy || !loginAvailable} onClick={() => void perform(async () => setAvailableGroups(await invoke<SyncGroup[]>('lark_sync_groups')))}>加载我的群</Button></div>
+      <p className="text-xs text-gray-500">只列出本人和会议助手都已加入的群，最多选择 10 个。首次保存后再发指令；重新打开软件只补读最近十分钟，避免旧消息启动录音。</p>
+      {[...availableGroups, ...syncGroups.filter(g => !availableGroups.some(a => a.id === g.id))].map(g => <label key={g.id} className="flex gap-2 text-sm"><input type="checkbox" aria-label={g.name} checked={syncGroups.some(v => v.id === g.id)} disabled={busy} onChange={e => setSyncGroups(previous => e.target.checked ? [...previous, g] : previous.filter(v => v.id !== g.id))} />{g.name}</label>)}
+      {!availableGroups.length && !syncGroups.length && <p className="text-xs text-gray-500">登录后加载并选择群，再点击“保存并连接”。</p>}
     </div>
-    <label className="flex items-center gap-2 text-sm"><input id="lark-allow-group-launch" type="checkbox" checked={allowGroupLaunch} disabled={busy} onChange={e => setAllowGroupLaunch(e.target.checked)} />允许群成员 @会议助手 开会或提交会议邀请</label>
-    <p className="text-xs text-gray-500">开启后，同事可向本机提交完整邀请；仍由本机授权账号入会后录音。纯会议号绑定限授权本人。关闭后只接受授权本人发起。</p>
-    <p className="text-xs text-gray-500">请提前配置已下载的转写模型和纪要模型。云录音仅适用于开启自动录音后由助手新建的会议。</p>
+    <p className="text-xs text-gray-500">在所选群里实际 @会议助手，发送“会议ID:123 456 789”、入会链接或完整邀请，就会立即建立六小时有效的待参会绑定。任何群成员发指令都能同步；只有指令发送者的电脑负责回执。没有预约或到点提醒。多群绑定同一场会议时需手动录音并选群。</p>
     </>}
     <div className="flex gap-2 flex-wrap">
       <Button disabled={busy || !initialized.current || !appId.trim()} onClick={() => void perform(async () => {
-        await invoke('lark_app_save', { appId, secret, enabled, autoSend, autoRecord, allowGroupLaunch, recordingSource, manualMode });
+        await invoke('lark_app_save', { appId, secret, enabled, autoSend, autoRecord, allowGroupLaunch, recordingSource, manualMode, syncGroups });
         setSecret(''); setEditingSecret(false);
       })}>保存并连接</Button>
       {!manualMode && <Button variant="outline" disabled={busy || !hasSavedSecret || !matchesSavedApp} onClick={() => void perform(async () => {
-        const url = await invoke<string>('lark_app_authorize', { includeMeetingControl: true, includeCloudRecording: recordingSource === 'cloud' });
+        const url = await invoke<string>('lark_app_authorize', { includeMeetingControl: true, includeCloudRecording: false });
         await invoke('open_external_url', { url });
       })}>授权会议助手</Button>}
       <Button variant="ghost" disabled={busy} onClick={() => void perform(refresh)}>刷新状态</Button>
     </div>
-    {!manualMode && <p className="text-xs text-gray-500">本机录音申请会议识别、控制和读取日程权限，用于核对日程邀请；选择云录音时才申请录制及下载权限。升级后请重新授权一次。</p>}
+    {!manualMode && <p className="text-xs text-gray-500">升级后请重新授权，新增“以用户身份读取群消息”和群列表权限。应用凭证仍需在本机辅助导入，登录不会自动取得 App Secret。</p>}
     <div className="rounded-md bg-gray-50 p-3 text-sm space-y-2">
       <p>连接：{status?.connection || (error ? '配置读取失败' : '正在读取…')}</p>
-      <p>已保存模式：{!status?.app_id ? '尚未配置' : status.manual_mode ? '本地录音 · 手动选群' : '群指令开会 · 自动关联'}</p>
+      <p>已保存模式：{!status?.app_id ? '尚未配置' : status.manual_mode ? '本地录音 · 手动选群' : '同步群会议 · 本机自动录音'}</p>
       {!status?.manual_mode && <p>Lark 账号：{status?.authorization_status || (status?.authorized ? '已登录' : '未登录')}</p>}
-      <p>自动录音：{status?.auto_record ? (status.recording_source === 'cloud' ? '已开启，适用于助手新建的会议' : '已开启，适用于助手新建或本人绑定的会议') : '未开启'}</p>
-      {!!status?.app_id && <p>已保存录音来源：{status?.recording_source === 'local' ? '本机录音' : '下载 Lark 云录音'}</p>}
-      <p>开会指令：{status?.manual_mode ? '已停用' : status?.allow_group_launch ? '所有已加入机器人的群成员均可发起' : '仅授权本人可发起'}</p>
+      <p>自动录音：{status?.auto_record ? (status.recording_source === 'cloud' ? '已开启，适用于助手新建的会议' : '已开启，适用于所选群内已同步的会议号') : '未开启'}</p>
+      {!!status?.app_id && <p>已保存录音来源：{status?.recording_source === 'cloud' ? '旧云录音配置，请保存切换为本机录音' : '本机录音'}</p>}
+      <p>群同步：{status?.manual_mode ? '已关闭' : `已选择 ${status?.sync_groups?.length ?? 0} 个群`}</p>
       {status?.automation && <p>{status.automation}</p>}
       {status?.recording && <p>最近录音：{status.recording.topic || status.recording.remote_id || '未匹配'} — {status.recording.detail}</p>}
     </div>
     {!manualMode && <details className="text-sm space-y-2">
       <summary className="cursor-pointer font-medium">首次配置与使用步骤</summary>
       <ol className="list-decimal pl-5 space-y-2 mt-2">
-        <li>后台开通机器人发消息、群内 @机器人消息、用户身份会议信息，以及应用身份“更新会议预约信息”“获取会议预约信息”权限，发布应用并把机器人添加到目标群。</li>
-        <li>同时开通用户身份“更新会议信息”“更新会议录制信息”“获取会议录制信息”“获取会议信息”“下载妙记的音视频文件”，完成发布或生效步骤。</li>
-        <li>在“安全设置 → 重定向 URL”添加 <code>http://127.0.0.1:18576/lark/callback</code>。</li>
-        <li>保存连接后，在后台“事件与回调”保存长连接模式，添加“接收消息”事件。</li>
-        <li>点击“授权会议助手”，在 Lark 页面完成一次授权。当前会议查询接口若未对租户开放，会显示错误码，并阻止自动匹配。</li>
-        <li>由此处授权的用户在目标群实际 @机器人，发送 <code>开会</code> 或 <code>开会 研发周会</code>。等待机器人返回链接；无需填写会议号。Meetily 必须保持运行，只有授权本人能发起。</li>
-        <li>选择来源并保存，加入对应 Lark 会议。云录音需本人为主持人，整场会议结束后自动下载并转写；本机录音在本人离会后停止。后台处理完成后到会议详情审核纪要并确认发送。</li>
+        <li>管理员给同一个会议助手开通群列表、以用户身份读取群消息、本人会议状态及机器人发消息权限，发布后将助手加入会议群。</li>
+        <li>每台电脑辅助导入相同应用凭证，回调地址配置为 http://127.0.0.1:18576/lark/callback。</li>
+        <li>每人点击“授权会议助手”登录自己的账号，加载自己的群，勾选需要同步的群和自动录音，保存。</li>
+        <li>在群内实际 @会议助手，发送已有会议号或入会链接，然后本人在这台电脑入会。不要只输入机器人名称。</li>
+        <li>确认录音已开始后再讨论；离会后自动停止并完成转写和纪要，发送仍需本人审核。</li>
       </ol>
-      <p className="mt-2">支持 @会议助手 结束会议，或 结束会议:123456789；仅处理本群机器人会议，限该场发起人或授权账号操作。授权账号须在会中且为当前主持人。</p>
-      <p className="mt-2">会议号绑定六小时内有效，只用于本场会议。下次使用相同会议号时请重新绑定。多个群绑定同一场会议时暂停自动录音。</p>
-      <p>预约提醒：在群里实际 @会议助手，粘贴完整的“加入 Lark 日程”或“邀请你加入 Lark 视频会议”邀请。到开始时间自动向原群发送会议号和入会链接。本机需保持开机、联网且 Meetily 运行；错过开始超过十分钟不补发。</p>
-      <p>日程邀请需先加入授权账号的主日历，并授权 calendar:calendar.event:read；无法核对时可改发带会议号的视频会议邀请。分享周期会议时请选择“此日程”，每次会议分别提交。</p>
-      <p>预约在会前半小时启用本地录音绑定，离会自动停止。提交邀请前请开启本机自动录音；纪要仍需会后确认发送。请只在一台电脑开启群指令接收。</p>
+      <p>日程分享链接需要本人主日历可访问且能核对会议号；失败时改发九位会议号或视频会议入会链接。当前不创建预约、不按邀请时间等待或提醒。</p>
+      <p>录音检测的是登录账号的参会状态，请在这台电脑加入会议；无法区分同一账号在其他设备上的参会。每个账号只在一台电脑开启自动录音。</p>
+      <p>电脑关机、休眠、Meetily 退出或未获权限时无法同步与录音；不会从云端补回漏录的声音。群消息同步会消耗 Lark API 调用额度。</p>
     </details>}
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-    {!!status?.invitations?.length && <div className="space-y-2">
-      <h3 className="font-medium text-sm">会议预约与提醒</h3>
-      {status.invitations.map(i => <div key={i.id} className="text-xs border rounded p-2 space-y-1 break-all">
-        <p>{i.topic} · {invitationLabels[i.status] || i.status}</p>
-        {i.start > 0 && <p>{new Date(i.start * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })}（东八区）</p>}
-        <p>{i.detail}</p><p>来源群：{i.chat_id}{i.meeting_no ? ` · 会议号：${i.meeting_no}` : ''}</p>
-        {i.status === 'failed' && <Button variant="outline" disabled={busy} onClick={() => void perform(() => invoke('lark_invitation_manage', { id: i.id, retry: true }))}>重试核对与提醒</Button>}
-        {['queued', 'ready', 'failed'].includes(i.status) && <Button variant="ghost" disabled={busy} onClick={() => void perform(() => invoke('lark_invitation_manage', { id: i.id, retry: false }))}>取消预约</Button>}
-      </div>)}
-    </div>}
+    {!!status?.commands?.length && <div className="space-y-2"><h3 className="font-medium text-sm">最近群指令</h3>{status.commands.map(c => <div key={c.id} className="text-xs rounded border p-2"><p>{c.meeting_no || '未绑定'} · {c.detail}</p><p>来源群：{c.chat_id}</p><p>群回执：{c.ack_state === 'sent' ? '已发送' : c.ack_state === 'unknown' ? '送达不确定，请核对群消息；不会自动重发' : '由指令发送者的电脑负责'}</p></div>)}</div>}
     {!!status?.launches?.length && <div className="space-y-2">
       <h3 className="font-medium text-sm">最近开会请求</h3>
       {status.launches.map(l => <div className="text-xs border rounded p-2 space-y-1 break-all" key={l.request_id}>

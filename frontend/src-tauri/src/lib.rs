@@ -862,6 +862,7 @@ pub fn run() {
             lark::auto_recording::lark_auto_recording_ready,
             lark::auto_recording::lark_auto_recording_finish,
             lark::app::lark_app_save,
+            lark::group_sync::lark_sync_groups,
             lark::app::lark_app_check_send,
             audio::storage_migration::migrate_recording_storage,
             lark::app::lark_app_preview_summary,
