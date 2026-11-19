@@ -12,6 +12,8 @@ type AppStatus = {
   app_id: string; has_secret: boolean; enabled: boolean; auto_send: boolean;
   manual_mode?: boolean;
   sync_groups?: SyncGroup[];
+  group_sync_mode?: 'automatic' | 'selected';
+  manual_sync_groups?: SyncGroup[];
   commands?: {id:string; chat_id:string; meeting_no:string|null; detail:string; ack_state:string}[];
   authorized: boolean; owner_id: string; connection: string;
   auto_record?: boolean; automation?: string | null;
@@ -47,7 +49,11 @@ export function LarkAppSettings() {
   const recordingSource = 'local';
   const allowGroupLaunch = false;
   const [syncGroups, setSyncGroups] = useState<SyncGroup[]>([]);
+  const [groupSyncMode, setGroupSyncMode] = useState<'automatic' | 'selected'>('automatic');
   const [availableGroups, setAvailableGroups] = useState<SyncGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState('');
+  const [groupsReload, setGroupsReload] = useState(0);
   const [groupSearch, setGroupSearch] = useState('');
   const groupIdentity = useRef('');
   const [busy, setBusy] = useState(false);
@@ -66,10 +72,11 @@ export function LarkAppSettings() {
       setAppId(value.app_id); setEnabled(value.enabled); setAutoSend(value.auto_send);
       setManualMode(!!value.app_id && !!value.manual_mode);
       setAutoRecord(value.auto_record ?? false);
-      setSyncGroups(value.sync_groups ?? []);
+      setGroupSyncMode(value.app_id ? value.group_sync_mode ?? 'automatic' : 'automatic');
+      setSyncGroups(value.manual_sync_groups ?? value.sync_groups ?? []);
     }
     const identity = `${value.app_id}:${value.owner_id}`;
-    if (groupIdentity.current && groupIdentity.current !== identity) { setSyncGroups(value.sync_groups ?? []); setAvailableGroups([]); }
+    if (groupIdentity.current && groupIdentity.current !== identity) { setSyncGroups(value.manual_sync_groups ?? value.sync_groups ?? []); setAvailableGroups([]); }
     groupIdentity.current = identity;
     setStatus(value);
   }, []);
@@ -81,6 +88,20 @@ export function LarkAppSettings() {
     const timer = setInterval(update, 5000);
     return () => { disposed = true; clearInterval(timer); };
   }, [refresh]);
+
+  useEffect(() => {
+    let disposed = false;
+    setAvailableGroups([]); setGroupsError('');
+    if (!loginAvailable || manualMode || groupSyncMode !== 'selected') { setGroupsLoading(false); return; }
+    setGroupsLoading(true);
+    void invoke<SyncGroup[]>('lark_sync_groups').then(items => {
+      if (!Array.isArray(items)) throw '群列表响应异常，请重试。';
+      if (!disposed) setAvailableGroups(items);
+    }).catch(e => {
+      if (!disposed) setGroupsError(typeof e === 'string' ? e : '群列表加载失败，请重试。');
+    }).finally(() => { if (!disposed) setGroupsLoading(false); });
+    return () => { disposed = true; };
+  }, [loginAvailable, manualMode, groupSyncMode, status?.app_id, status?.owner_id, groupsReload]);
 
   async function perform(action: () => Promise<unknown>) {
     if (lock.current) return;
@@ -102,7 +123,7 @@ export function LarkAppSettings() {
       <option value="automatic">同步群会议 · 本机自动录音（默认）</option>
       <option value="manual">本地录音 · 手动选群发送</option>
     </select></label>
-    <p className="text-xs text-gray-500">每人登录自己的 Lark 账号、选择自己的会议群；录音保存在各自电脑，无需统一服务。</p>
+    <p className="text-xs text-gray-500">每人登录自己的 Lark 账号，默认自动发现与会议助手的共同群；录音保存在各自电脑，无需统一服务。</p>
 
     <LarkCredentialImport appId={appId} secretReady={!!secret.trim() || hasSavedSecret}
       disabled={busy || !initialized.current} onImport={credentials => {
@@ -139,19 +160,27 @@ export function LarkAppSettings() {
     {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音手动录音，会后在会议详情选择目标群并确认发送。需要指定会议号入会自动录音时，请选择「同步群会议 · 本机自动录音」，启用本机自动录音后在群里发送会议号。</p> : <>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={autoSend} disabled={busy} onChange={e => setAutoSend(e.target.checked)} />新录音生成纪要后准备发往唯一绑定群（需审核确认）</label>
     <label className="flex items-center gap-2 text-sm"><input id="lark-auto-record" type="checkbox" checked={autoRecord} disabled={busy} onChange={e => setAutoRecord(e.target.checked)} />本人加入已同步的指定会议后，自动在本机录音</label>
-    <p className="text-xs text-gray-500">录制麦克风和系统声音，不下载云录音。逐群轮询，每轮至少 15 秒，群多或翻页时耗时增加；待参会和录音时约每 5 秒核验本人状态。请等录音提示后再开始讨论。</p>
+    <p className="text-xs text-gray-500">录制麦克风和系统声音，不下载云录音。群指令每轮至少 15 秒读取；收到指令立即检查，指令发出后前 5 分钟每 2 秒检查入会，之后每 15 秒检查。录音中每 5 秒检查，首次发现离会后隔 2 秒再次确认。请等录音提示后再开始讨论。</p>
+    <label className="block space-y-1"><span>会议群同步方式</span><select aria-label="会议群同步方式" className="w-full rounded border p-2" disabled={busy} value={groupSyncMode} onChange={e=>setGroupSyncMode(e.target.value as 'automatic'|'selected')}>
+      <option value="automatic">自动发现共同群（默认）</option>
+      <option value="selected">手动指定群</option>
+    </select></label>
+    {groupSyncMode === 'automatic' ? <p className="text-xs text-gray-500">保存并登录后，后台自动发现你和会议助手都在的群，无需勾选。启动或登录后发现一次，之后每 5 分钟更新；群消息每轮至少 15 秒读取一次。首次发现前的旧指令不会补执行，请等连接状态显示完成后再发指令。</p> : <>
     <div className="space-y-2 rounded border p-3">
-      <div className="flex items-center justify-between"><Label>同步会议群</Label><Button variant="outline" disabled={busy || !loginAvailable} onClick={() => void perform(async () => setAvailableGroups(await invoke<SyncGroup[]>('lark_sync_groups')))}>加载我的群</Button></div>
+      <div className="flex items-center justify-between"><Label>同步会议群</Label><Button variant="outline" disabled={busy || groupsLoading || !loginAvailable} onClick={() => setGroupsReload(v => v + 1)}>{groupsLoading ? '正在加载群列表…' : '刷新群列表'}</Button></div>
+      <p className="text-xs text-gray-500">进入设置或登录成功后自动加载群列表，保留已选群。已保存的群消息在后台自动同步，无需反复刷新。</p>
       <p className="text-xs text-gray-500">已选择 {syncGroups.length} 个群，不再限制为 10 个。只列出本人和会议助手都已加入的群，群越多同步等待越长。首次保存后再发指令；只补读最近十分钟，避免旧消息启动录音。</p>
       {(availableGroups.length > 0 || syncGroups.length > 0) && <Input aria-label="搜索会议群" placeholder="搜索会议群" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} />}
       <div className="max-h-60 overflow-y-auto space-y-2">{[...availableGroups, ...syncGroups.filter(g => !availableGroups.some(a => a.id === g.id))].filter(g => g.name.toLowerCase().includes(groupSearch.trim().toLowerCase())).map(g => <label key={g.id} className="flex gap-2 text-sm"><input type="checkbox" aria-label={g.name} checked={syncGroups.some(v => v.id === g.id)} disabled={busy} onChange={e => setSyncGroups(previous => e.target.checked ? [...previous, g] : previous.filter(v => v.id !== g.id))} />{g.name}</label>)}</div>
-      {!availableGroups.length && !syncGroups.length && <p className="text-xs text-gray-500">登录后加载并选择群，再点击“保存并连接”。</p>}
+      {!groupsLoading && !groupsError && !availableGroups.length && !syncGroups.length && <p className="text-xs text-gray-500">{loginAvailable ? '暂未找到你和会议助手都在的群，请先将助手加入会议群。' : '登录后将自动加载群列表，选择群后点击“保存并连接”。'}</p>}
+      {groupsError && <p role="alert" className="text-sm text-red-700">{groupsError} 已选群保持不变，可点击“刷新群列表”重试。</p>}
     </div>
-    <p className="text-xs text-gray-500">在所选群里实际 @会议助手，发送“会议ID:123 456 789”、入会链接或完整邀请，就会立即建立六小时有效的待参会绑定。任何群成员发指令都能同步；只有指令发送者的电脑负责回执。没有预约或到点提醒。多群绑定同一场会议时需手动录音并选群。</p>
+    </>}
+    <p className="text-xs text-gray-500">在同步范围内的群里实际 @会议助手，发送“会议ID:123 456 789”、入会链接或完整邀请，读取后建立六小时有效的待参会绑定。任何群成员发指令都能同步；只有指令发送者的电脑负责回执。多群绑定同一场会议时需手动录音并选群。</p>
     </>}
     <div className="flex gap-2 flex-wrap">
       <Button disabled={busy || !initialized.current || !appId.trim()} onClick={() => void perform(async () => {
-        await invoke('lark_app_save', { appId, secret, enabled, autoSend, autoRecord, allowGroupLaunch, recordingSource, manualMode, syncGroups });
+        await invoke('lark_app_save', { appId, secret, enabled, autoSend, autoRecord, allowGroupLaunch, recordingSource, manualMode, groupSyncMode, syncGroups: groupSyncMode === 'selected' ? syncGroups : null });
         setSecret(''); setEditingSecret(false);
       })}>保存并连接</Button>
       {!manualMode && <Button variant="outline" disabled={busy || !hasSavedSecret || !matchesSavedApp} onClick={() => void perform(async () => {
@@ -165,9 +194,9 @@ export function LarkAppSettings() {
       <p>连接：{status?.connection || (error ? '配置读取失败' : '正在读取…')}</p>
       <p>已保存模式：{!status?.app_id ? '尚未配置' : status.manual_mode ? '本地录音 · 手动选群' : '同步群会议 · 本机自动录音'}</p>
       {!status?.manual_mode && <p>Lark 账号：{status?.authorization_status || (status?.authorized ? '已登录' : '未登录')}</p>}
-      <p>自动录音：{status?.auto_record ? (status.recording_source === 'cloud' ? '已开启，适用于助手新建的会议' : '已开启，适用于所选群内已同步的会议号') : '未开启'}</p>
+      <p>自动录音：{status?.auto_record ? (status.recording_source === 'cloud' ? '已开启，适用于助手新建的会议' : '已开启，适用于同步群内已识别的会议号') : '未开启'}</p>
       {!!status?.app_id && <p>已保存录音来源：{status?.recording_source === 'cloud' ? '旧云录音配置，请保存切换为本机录音' : '本机录音'}</p>}
-      <p>群同步：{status?.manual_mode ? '已关闭' : `已选择 ${status?.sync_groups?.length ?? 0} 个群`}</p>
+      <p>群同步：{status?.manual_mode ? '已关闭' : `${status?.group_sync_mode === 'selected' ? '手动指定' : '自动发现'} · 当前同步 ${status?.sync_groups?.length ?? 0} 个群`}</p>
       {status?.automation && <p>{status.automation}</p>}
       {status?.recording && <p>最近录音：{status.recording.topic || status.recording.remote_id || '未匹配'} — {status.recording.detail}</p>}
     </div>
@@ -176,7 +205,7 @@ export function LarkAppSettings() {
       <ol className="list-decimal pl-5 space-y-2 mt-2">
         <li>管理员给同一个会议助手开通群列表、以用户身份读取群消息、本人会议状态及机器人发消息权限，发布后将助手加入会议群。</li>
         <li>每台电脑辅助导入相同应用凭证，回调地址配置为 http://127.0.0.1:18576/lark/callback。</li>
-        <li>每人点击“授权会议助手”登录自己的账号，加载自己的群，勾选需要同步的群和自动录音，保存。</li>
+        <li>每人点击“授权会议助手”登录自己的账号，默认后台自动发现共同群；也可切换“手动指定群”。开启本人入会自动录音并保存。</li>
         <li>在群内实际 @会议助手，发送已有会议号或入会链接，然后本人在这台电脑入会。不要只输入机器人名称。</li>
         <li>确认录音已开始后再讨论；离会后自动停止并完成转写和纪要，发送仍需本人审核。</li>
       </ol>

@@ -231,6 +231,7 @@ async fn complete(handle: &tauri::AppHandle, pool: &SqlitePool, original: &AppCo
         .into();
     if c.owner_id != previous_owner {
         c.sync_groups.clear();
+        c.manual_sync_groups = None;
         c.auto_record_since = app::now();
     }
     let tenant = user["tenant_key"].as_str().filter(|t| !t.trim().is_empty()).ok_or("Lark 未返回公司标识，未保存本次授权。")?;

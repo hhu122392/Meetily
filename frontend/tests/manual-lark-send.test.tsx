@@ -35,6 +35,41 @@ test('本地录音无需远端会议绑定；选择群和预览不会发送',asy
   expect(invoke.mock.calls.find(c=>c[0]==='lark_manual_send')?.[1]).toEqual({draftId:'draft',acknowledgeDuplicateRisk:false});
 });
 
+test('每次打开自动加载群，默认关联群可手动改选且不会自动发送',async()=>{
+  await mount();
+  await act(async()=>button('关闭').props.onClick());
+  const previous=respond;
+  respond=async(c,args)=>c==='lark_manual_context'?{...context,defaultChatId:'oc_test'}:c==='lark_manual_groups'?[{id:'oc_other',name:'另一个群'},{id:'oc_test',name:'关联群'}]:previous(c,args);
+  await act(async()=>button('选群发送纪要').props.onClick());
+  expect(field('发送目标群').props.value).toBe('oc_test');
+  expect(invoke.mock.calls.filter(c=>c[0]==='lark_manual_groups')).toHaveLength(2);
+  await act(async()=>field('发送目标群').props.onChange({target:{value:'oc_other'}}));
+  await preview();
+  expect(invoke.mock.calls.find(c=>c[0]==='lark_manual_preview')?.[1]?.review).toMatchObject({chatId:'oc_other'});
+  expect(invoke.mock.calls.some(c=>c[0]==='lark_manual_send')).toBe(false);
+});
+
+test('关联群不在最新可发送列表中时留空，不能默认选第一个群',async()=>{
+  await mount();await act(async()=>button('关闭').props.onClick());
+  const previous=respond;
+  respond=async(c,args)=>c==='lark_manual_context'?{...context,defaultChatId:'oc_removed'}:previous(c,args);
+  await act(async()=>button('选群发送纪要').props.onClick());
+  expect(field('发送目标群').props.value).toBe('');
+  expect(button('预览发送内容').props.disabled).toBe(true);
+});
+
+test('关闭重开会刷新群列表，加载失败不沿用上次目标群',async()=>{
+  await mount();await act(async()=>field('发送目标群').props.onChange({target:{value:'oc_test'}}));
+  await act(async()=>button('关闭').props.onClick());
+  const previous=respond;
+  respond=async(c,args)=>{if(c==='lark_manual_groups')throw '群列表加载失败，请重新打开重试。';return previous(c,args);};
+  await act(async()=>button('选群发送纪要').props.onClick());
+  expect(field('发送目标群').props.value).toBe('');
+  expect(button('预览发送内容').props.disabled).toBe(true);
+  expect(renderer!.root.findByProps({role:'alert'}).children.join('')).toContain('群列表加载失败');
+  expect(invoke.mock.calls.some(c=>c[0]==='lark_manual_send')).toBe(false);
+});
+
 test('两个附件默认不选，独立组合，改选必须重新预览且预览不上传',async()=>{
   await mount();expect(field('附云文档链接').props.checked).toBe(false);expect(field('附 Markdown 文件').props.checked).toBe(false);
   await act(async()=>field('发送目标群').props.onChange({target:{value:'oc_test'}}));

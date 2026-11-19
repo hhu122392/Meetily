@@ -139,16 +139,33 @@ pub async fn lark_manual_context(state: tauri::State<'_,AppState>, meeting_id: S
     let (file,title,created,_) = source(pool,&meeting_id).await?;
     let settings=meeting_settings::read(pool,&meeting_id).await?;
     let c=app::load(pool).await?;
+    let default_chat_id=associated_chat(pool,&meeting_id,&c).await?;
     let documents=sqlx::query("SELECT id,title,project,document_url,saved_hash,status FROM lark_editable_documents WHERE app_id=? AND meeting_id=? AND (credential_owner='' OR credential_owner=?) AND document_url IS NOT NULL ORDER BY updated_at DESC")
         .bind(&c.app_id).bind(&meeting_id).bind(&c.owner_id).fetch_all(pool).await.map_err(db_error)?;
     let timestamp=chrono::DateTime::parse_from_rfc3339(&created).map(|d|d.timestamp()).ok()
         .or_else(||chrono::NaiveDateTime::parse_from_str(&created,"%Y-%m-%d %H:%M:%S%.f").ok().map(|d|d.and_utc().timestamp()));
     let time=timestamp.and_then(|t|chrono::DateTime::from_timestamp(t,0)).map(|d|d.with_timezone(&chrono::FixedOffset::east_opt(8*3600).unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string()).unwrap_or_default();
     let recent=sqlx::query("SELECT status,detail,sent_at,payload FROM lark_manual_drafts WHERE meeting_id=? AND status!='preview' ORDER BY created_at DESC,rowid DESC LIMIT 1").bind(&meeting_id).fetch_optional(pool).await.map_err(db_error)?;
-    Ok(json!({"title":title,"meetingTime":time,"participants":settings.participants,"absent":settings.absent,"host":settings.host,"attendance":settings.attendance,
+    Ok(json!({"defaultChatId":default_chat_id,"title":title,"meetingTime":time,"participants":settings.participants,"absent":settings.absent,"host":settings.host,"attendance":settings.attendance,
         "summary":super::card::summary_overview(file["content"].as_str().unwrap_or("")),"markdown":file,
         "documents":documents.iter().map(|r|json!({"id":r.get::<String,_>("id"),"title":r.get::<Option<String>,_>("title").unwrap_or_else(||title.clone()),"project":r.get::<String,_>("project"),"documentUrl":r.get::<String,_>("document_url"),"available":r.get::<String,_>("status")=="ready"&&r.get::<Option<String>,_>("saved_hash").as_deref()==file["hash"].as_str()})).collect::<Vec<_>>(),
         "lastDelivery":recent.map(|r|json!({"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail"),"sentAt":r.get::<Option<i64>,_>("sent_at")}))}))
+}
+
+// Match the actual recorded meeting instance, never a reusable meeting number or
+// another meeting's last-used chat. Conflicting destinations require manual choice.
+async fn associated_chat(pool: &SqlitePool, meeting_id: &str, c: &AppConfig) -> Result<Option<String>,String> {
+    if c.app_id.is_empty() || c.owner_id.is_empty() { return Ok(None); }
+    let chats: Vec<String> = sqlx::query_scalar(
+        "WITH linked AS (
+            SELECT l.remote_id FROM meetings m JOIN lark_recording_links l ON l.folder_path=m.folder_path
+            WHERE m.id=?1 AND l.app_id=?2 AND l.owner_id=?3 AND l.blocked=0 AND l.remote_id IS NOT NULL
+        )
+        SELECT chat_id FROM lark_app_routes WHERE app_id=?2 AND owner_id=?3 AND remote_id IN (SELECT remote_id FROM linked)
+        UNION SELECT chat_id FROM lark_app_deliveries WHERE meeting_id=?1 AND app_id=?2 AND remote_id IN (SELECT remote_id FROM linked)
+        UNION SELECT target_chat_id FROM recording_jobs WHERE meeting_id=?1 AND target_chat_id IS NOT NULL AND EXISTS(SELECT 1 FROM linked)"
+    ).bind(meeting_id).bind(&c.app_id).bind(&c.owner_id).fetch_all(pool).await.map_err(db_error)?;
+    Ok(if chats.len()==1 && valid_chat(&chats[0]) { chats.into_iter().next() } else { None })
 }
 
 #[tauri::command]
@@ -300,6 +317,40 @@ fn attachment_message(chat:&str,draft:&str,key:&str)->Value{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn default_chat_requires_unique_recorded_instance_and_current_identity() {
+        let pool=sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql("CREATE TABLE meetings(id TEXT PRIMARY KEY,folder_path TEXT); INSERT INTO meetings VALUES('local','folder'); INSERT INTO meetings VALUES('unlinked','other');")
+            .execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!("../../migrations/20261015000000_add_lark_app.sql")).execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!("../../migrations/20261015040000_add_recording_jobs.sql")).execute(&pool).await.unwrap();
+        let mut c=AppConfig{app_id:"cli_test".into(),owner_id:"ou_test".into(),..Default::default()};
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+        sqlx::raw_sql("INSERT INTO lark_recording_links(folder_path,app_id,owner_id,remote_id,meeting_no,started_at) VALUES('folder','cli_test','ou_test','instance','123456789',1);
+            INSERT INTO lark_app_routes VALUES('cli_test','ou_test','123456789','number','oc_bound','instance',0);
+            INSERT INTO lark_app_routes VALUES('cli_test','ou_other','123456789','number','oc_other','instance',9999999999);
+            INSERT INTO lark_app_routes VALUES('cli_other','ou_test','123456789','number','oc_other','instance',9999999999);
+            INSERT INTO lark_app_routes VALUES('cli_test','ou_test','123456789','number','oc_reused','another_instance',9999999999);")
+            .execute(&pool).await.unwrap();
+        // The actual instance remains associated after the six-hour recording window.
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap().as_deref(),Some("oc_bound"));
+        assert_eq!(associated_chat(&pool,"unlinked",&c).await.unwrap(),None);
+        c.owner_id="ou_other".into();assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+        c.owner_id="ou_test".into();c.app_id="cli_other".into();assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+        c.app_id="cli_test".into();
+        sqlx::query("INSERT INTO lark_app_routes VALUES('cli_test','ou_test','instance','id','oc_second','instance',0)").execute(&pool).await.unwrap();
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+        sqlx::query("DELETE FROM lark_app_routes WHERE chat_id='oc_second'").execute(&pool).await.unwrap();
+        sqlx::query("UPDATE lark_recording_links SET blocked=1").execute(&pool).await.unwrap();
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+        sqlx::query("UPDATE lark_recording_links SET blocked=0").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM lark_app_routes").execute(&pool).await.unwrap();
+        // A previously frozen delivery can recover the association, but not override a conflict.
+        sqlx::query("INSERT INTO lark_app_deliveries VALUES('local','cli_test','instance','oc_saved','uuid','text','sent','','msg',1)").execute(&pool).await.unwrap();
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap().as_deref(),Some("oc_saved"));
+        sqlx::query("INSERT INTO recording_jobs(meeting_id,folder_path,status,options_json,target_chat_id,created_at,updated_at) VALUES('local','folder','completed','{}','oc_conflict',1,1)").execute(&pool).await.unwrap();
+        assert_eq!(associated_chat(&pool,"local",&c).await.unwrap(),None);
+    }
     #[tokio::test]async fn card_and_file_have_separate_receipts_and_partial_failure_stops(){
         for (attach,fail_card,fail_file,expected_status,count) in [(false,false,false,"sent",1),(true,false,false,"sent",2),(true,false,true,"partial",2),(true,true,false,"unknown",1)]{
             let pool=SqlitePool::connect("sqlite::memory:").await.unwrap();

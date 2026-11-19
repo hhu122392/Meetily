@@ -48,6 +48,8 @@ pub(crate) struct AppConfig {
     pub refresh_token: String,
     pub expires_at: i64,
     pub sync_groups: Vec<super::group_sync::SyncGroup>,
+    pub group_sync_mode: super::group_sync::GroupSyncMode,
+    pub manual_sync_groups: Option<Vec<super::group_sync::SyncGroup>>,
 }
 
 pub(super) fn now() -> i64 {
@@ -264,7 +266,7 @@ pub async fn lark_app_status(state: tauri::State<'_, AppState>) -> Result<Value,
             "auto_record":c.auto_record,"recording_source":c.recording_source,"automation":automation,"allow_group_launch":c.allow_group_launch,
             "authorized":super::oauth::authorization_status(&c).1,"authorization_status":super::oauth::authorization_status(&c).0,"owner_id":c.owner_id,"connection":STATUS.lock().await.clone(),
             "launches":launches.iter().map(|r|json!({"request_id":r.get::<String,_>("request_id"),"chat_id":r.get::<String,_>("chat_id"),"topic":r.get::<String,_>("topic"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"meeting_url":r.get::<Option<String>,_>("meeting_url")})).collect::<Vec<_>>(),
-            "sync_groups":c.sync_groups,"commands":super::group_sync::recent(pool,&c).await?,
+            "sync_groups":c.sync_groups,"group_sync_mode":c.group_sync_mode,"manual_sync_groups":c.manual_sync_groups.as_ref().unwrap_or(&c.sync_groups),"commands":super::group_sync::recent(pool,&c).await?,
             "routes":routes.iter().map(|r| json!({"reference":r.get::<String,_>("reference"),"chat_id":r.get::<String,_>("chat_id"),"remote_id":r.get::<Option<String>,_>("remote_id")})).collect::<Vec<_>>(),
             "deliveries":deliveries.iter().map(|r| json!({"meeting_id":r.get::<String,_>("meeting_id"),"chat_id":r.get::<String,_>("chat_id"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail")})).collect::<Vec<_>>(),
             "recording":recording.map(|r| json!({"remote_id":r.get::<Option<String>,_>("remote_id"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"topic":r.get::<Option<String>,_>("topic"),"blocked":r.get::<i64,_>("blocked")!=0,"detail":r.get::<String,_>("detail"),"stopped":r.get::<i64,_>("stopped")!=0}))
@@ -285,6 +287,7 @@ pub async fn lark_app_save(
     recording_source: Option<RecordingSource>,
     manual_mode: Option<bool>,
     sync_groups: Option<Vec<super::group_sync::SyncGroup>>,
+    group_sync_mode: Option<super::group_sync::GroupSyncMode>,
 ) -> Result<(), String> {
     let _policy = super::auto_recording::POLICY_LOCK.lock().await;
     let _lock = CONFIG_LOCK.lock().await;
@@ -330,9 +333,9 @@ pub async fn lark_app_save(
     // New commands only arm local capture. Retain legacy cloud jobs for recovery, never create new ones.
     c.recording_source = RecordingSource::Local;
     c.allow_group_launch = false;
-    if let Some(groups) = sync_groups {
+    {
         let old = c.sync_groups.clone();
-        c.sync_groups = super::group_sync::selected_groups(&old, groups, now())?;
+        super::group_sync::configure_groups(&mut c, group_sync_mode, sync_groups, now())?;
         for removed in old.iter().filter(|g| !c.sync_groups.iter().any(|v|v.id==g.id)) {
             sqlx::query("UPDATE lark_app_routes SET local_record_bound_at=NULL WHERE app_id=? AND owner_id=? AND chat_id=?")
                 .bind(&c.app_id).bind(&c.owner_id).bind(&removed.id).execute(pool).await.map_err(db_error)?;

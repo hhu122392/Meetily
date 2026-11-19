@@ -132,7 +132,7 @@ describe('Lark preview and sending', () => {
 });
 
 describe('Lark enterprise app configuration', () => {
-  const appStatus = { app_id: 'cli_test', has_secret: true, enabled: true, auto_send: true, authorized: false, owner_id: '', connection: '未授权', routes: [], deliveries: [], recording: null };
+  const appStatus = { app_id: 'cli_test', has_secret: true, enabled: true, auto_send: true, authorized: false, owner_id: '', connection: '未授权', group_sync_mode:'selected', routes: [], deliveries: [], recording: null };
   const pasteCredential = async (text: string) => {
     await act(async () => renderer!.root.findByProps({ id: 'lark-credential-paste' }).props.onPaste({
       preventDefault() {}, clipboardData: { getData: () => text },
@@ -245,6 +245,36 @@ describe('Lark enterprise app configuration', () => {
     await act(async()=>button('保存并连接').props.onClick());
     expect(invoke.mock.calls.find(c=>c[0]==='lark_app_save')?.[1]?.syncGroups).toEqual(groups);
   });
+  test('默认自动发现隐藏群列表，刷新状态不拉群也不提交旧选择',async()=>{
+    respond=async c=>c==='lark_app_status'?{...appStatus,group_sync_mode:undefined,authorized:true,sync_groups:[{id:'oc_common',name:'共同群'}]}:undefined;
+    await act(async()=>{renderer=create(<LarkAppSettings/>);});
+    expect(renderer!.root.findByProps({'aria-label':'会议群同步方式'}).props.value).toBe('automatic');
+    expect(button('刷新群列表')).toBeUndefined();
+    expect(renderer!.root.findAllByProps({'aria-label':'搜索会议群'})).toHaveLength(0);
+    expect(content()).toContain('每 5 分钟');
+    await act(async()=>button('刷新状态').props.onClick());
+    expect(invoke.mock.calls.some(c=>c[0]==='lark_sync_groups')).toBe(false);
+    await act(async()=>button('保存并连接').props.onClick());
+    expect(invoke.mock.calls.find(c=>c[0]==='lark_app_save')?.[1]).toMatchObject({groupSyncMode:'automatic',syncGroups:null});
+  });
+  test('切换手动模式恢复单独保存的名单，刷新状态不覆盖尚未保存的选择',async()=>{
+    const manual=[{id:'oc_manual',name:'手动群'}],found=[...manual,{id:'oc_auto',name:'自动群'}];
+    respond=async c=>c==='lark_app_status'?{...appStatus,group_sync_mode:'automatic',authorized:true,sync_groups:found,manual_sync_groups:manual}:c==='lark_sync_groups'?found:undefined;
+    await act(async()=>{renderer=create(<LarkAppSettings/>);});
+    const mode=()=>renderer!.root.findByProps({'aria-label':'会议群同步方式'});
+    await act(async()=>mode().props.onChange({target:{value:'selected'}}));
+    expect(renderer!.root.findByProps({'aria-label':'手动群'}).props.checked).toBe(true);
+    expect(renderer!.root.findByProps({'aria-label':'自动群'}).props.checked).toBe(false);
+    await act(async()=>renderer!.root.findByProps({'aria-label':'自动群'}).props.onChange({target:{checked:true}}));
+    await act(async()=>button('刷新状态').props.onClick());
+    expect(mode().props.value).toBe('selected');
+    await act(async()=>mode().props.onChange({target:{value:'automatic'}}));
+    expect(button('刷新群列表')).toBeUndefined();
+    await act(async()=>mode().props.onChange({target:{value:'selected'}}));
+    expect(renderer!.root.findByProps({'aria-label':'自动群'}).props.checked).toBe(true);
+    await act(async()=>button('保存并连接').props.onClick());
+    expect(invoke.mock.calls.find(c=>c[0]==='lark_app_save')?.[1]).toMatchObject({groupSyncMode:'selected',syncGroups:found});
+  });
   test('saving sends credentials only to the backend and clears the secret input without sending messages', async () => {
     respond = async command => command === 'lark_app_status' ? appStatus : undefined;
     await act(async () => { renderer = create(<LarkAppSettings />); });
@@ -253,7 +283,7 @@ describe('Lark enterprise app configuration', () => {
     await act(async () => button('更换密钥').props.onClick());
     await act(async () => renderer!.root.findByProps({ id: 'lark-app-secret' }).props.onChange({ target: { value: 'test-only-secret' } }));
     await act(async () => button('保存并连接').props.onClick());
-    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')).toEqual(['lark_app_save', { appId: 'cli_test', secret: 'test-only-secret', enabled: true, autoSend: true, autoRecord: false, allowGroupLaunch: false, recordingSource: 'local', manualMode: false, syncGroups: [] }]);
+    expect(invoke.mock.calls.find(call => call[0] === 'lark_app_save')).toEqual(['lark_app_save', { appId: 'cli_test', secret: 'test-only-secret', enabled: true, autoSend: true, autoRecord: false, allowGroupLaunch: false, recordingSource: 'local', manualMode: false, groupSyncMode:'selected', syncGroups: [] }]);
     expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('********');
     expect(invoke.mock.calls.some(call => call[0].includes('send'))).toBe(false);
   });
@@ -294,14 +324,50 @@ describe('Lark enterprise app configuration', () => {
   test('选择本人群后刷新不覆盖，保存才提交', async () => {
     respond=async command=>command==='lark_app_status'?{...appStatus,authorized:true}:command==='lark_sync_groups'?[{id:'oc_mine',name:'项目群'}]:undefined;
     await act(async()=>{renderer=create(<LarkAppSettings />);});
-    await act(async()=>button('加载我的群').props.onClick());
+    expect(invoke.mock.calls.filter(c=>c[0]==='lark_sync_groups')).toHaveLength(1);
     const group=()=>renderer!.root.findByProps({'aria-label':'项目群'});
     await act(async()=>group().props.onChange({target:{checked:true}}));
     await act(async()=>button('刷新状态').props.onClick());
     expect(group().props.checked).toBe(true);expect(invoke.mock.calls.some(c=>c[0]==='lark_app_save')).toBe(false);
+    expect(invoke.mock.calls.filter(c=>c[0]==='lark_sync_groups')).toHaveLength(1);
+    await act(async()=>button('刷新群列表').props.onClick());
+    expect(group().props.checked).toBe(true);
+    expect(invoke.mock.calls.filter(c=>c[0]==='lark_sync_groups')).toHaveLength(2);
     await act(async()=>button('保存并连接').props.onClick());
     expect(invoke.mock.calls.find(c=>c[0]==='lark_app_save')?.[1]?.syncGroups).toEqual([{id:'oc_mine',name:'项目群'}]);
     expect(invoke.mock.calls.some(c=>c[0].includes('send'))).toBe(false);
+  });
+  test('未登录不加载群，登录成功自动加载，失败可重试且保留已选群',async()=>{
+    let authorized=false,fail=true;
+    respond=async c=>{
+      if(c==='lark_app_status')return {...appStatus,authorized,owner_id:'ou_user',sync_groups:[{id:'oc_saved',name:'已选群'}]};
+      if(c==='lark_sync_groups'){if(fail)throw '群列表网络错误';return [{id:'oc_new',name:'新群'}];}
+    };
+    await act(async()=>{renderer=create(<LarkAppSettings/>);});
+    expect(invoke.mock.calls.some(c=>c[0]==='lark_sync_groups')).toBe(false);
+    authorized=true;await act(async()=>button('刷新状态').props.onClick());
+    expect(content()).toContain('群列表网络错误');
+    expect(renderer!.root.findByProps({'aria-label':'已选群'}).props.checked).toBe(true);
+    await act(async()=>button('刷新状态').props.onClick());
+    expect(invoke.mock.calls.filter(c=>c[0]==='lark_sync_groups')).toHaveLength(1);
+    fail=false;await act(async()=>button('刷新群列表').props.onClick());
+    expect(content()).not.toContain('群列表网络错误');
+    expect(renderer!.root.findByProps({'aria-label':'新群'}).props.checked).toBe(false);
+    expect(renderer!.root.findByProps({'aria-label':'已选群'}).props.checked).toBe(true);
+    expect(invoke.mock.calls.some(c=>c[0]==='lark_app_save')).toBe(false);
+  });
+  test('切换账号后丢弃前一账号延迟返回的群列表',async()=>{
+    let owner='ou_old';let resolveOld!:(value:unknown)=>void;
+    respond=async c=>{
+      if(c==='lark_app_status')return {...appStatus,authorized:true,owner_id:owner};
+      if(c==='lark_sync_groups')return owner==='ou_old'?new Promise(resolve=>{resolveOld=resolve;}):[{id:'oc_new',name:'新账号群'}];
+    };
+    await act(async()=>{renderer=create(<LarkAppSettings/>);});
+    expect(button('正在加载群列表')).toBeDefined();
+    owner='ou_new';await act(async()=>button('刷新状态').props.onClick());
+    await act(async()=>resolveOld([{id:'oc_old',name:'旧账号群'}]));
+    expect(renderer!.root.findAllByProps({'aria-label':'旧账号群'})).toHaveLength(0);
+    expect(renderer!.root.findByProps({'aria-label':'新账号群'}).props.checked).toBe(false);
   });
   test('旧云录音配置再次保存为本地录音，不自动打开录音开关', async () => {
     respond=async command=>command==='lark_app_status'?{...appStatus,recording_source:'cloud'}:undefined;

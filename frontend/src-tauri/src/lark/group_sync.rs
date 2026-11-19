@@ -8,15 +8,61 @@ use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+const DISCOVERY_INTERVAL: Duration = Duration::from_secs(300);
+const MESSAGE_INTERVAL: Duration = Duration::from_secs(15);
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GroupSyncMode {
+    #[default]
+    Automatic,
+    Selected,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SyncGroup {
     pub id: String,
     pub name: String,
     #[serde(default)]
     pub since: i64,
+}
+
+pub(super) fn configure_groups(c: &mut AppConfig, mode: Option<GroupSyncMode>, groups: Option<Vec<SyncGroup>>, clock: i64) -> Result<(), String> {
+    if c.manual_sync_groups.is_none() {
+        c.manual_sync_groups = Some(c.sync_groups.clone());
+    }
+    if let Some(mode) = mode { c.group_sync_mode = mode; }
+    if c.group_sync_mode == GroupSyncMode::Selected {
+        let input = groups.unwrap_or_else(|| c.manual_sync_groups.clone().unwrap_or_default());
+        c.sync_groups = selected_groups(&c.sync_groups, input, clock)?;
+        c.manual_sync_groups = Some(c.sync_groups.clone());
+    }
+    Ok(())
+}
+
+#[derive(Default)]
+struct DiscoverySchedule {
+    identity: (String, String),
+    last: Option<Instant>,
+    since: i64,
+}
+impl DiscoverySchedule {
+    fn due(&mut self, c: &AppConfig, at: Instant, clock: i64) -> bool {
+        let identity = (c.app_id.clone(), c.owner_id.clone());
+        if self.identity != identity {
+            self.identity = identity;
+            self.last = None;
+            self.since = clock;
+        }
+        self.last.is_none_or(|last| at.duration_since(last) >= DISCOVERY_INTERVAL)
+    }
+    fn completed(&mut self, at: Instant, started: i64) {
+        self.last = Some(at);
+        self.since = started;
+    }
 }
 
 fn valid_chat(id: &str) -> bool {
@@ -92,14 +138,42 @@ async fn groups(token: &str) -> Result<Vec<SyncGroup>, String> {
 pub async fn lark_sync_groups(state: tauri::State<'_, AppState>) -> Result<Vec<SyncGroup>, String> {
     let _lock = app::CONFIG_LOCK.lock().await;
     let c = oauth::authorized_config_locked(state.db_manager.pool()).await?;
+    discover_groups(&c).await
+}
+
+async fn discover_groups(c: &AppConfig) -> Result<Vec<SyncGroup>, String> {
     let mine = groups(&c.user_token)
         .await
         .map_err(|e| format!("无法读取本人所在群：{e} 请重新登录并授予群列表权限。"))?;
-    let bot = groups(&app::tenant_token(&c).await?).await?;
+    let bot = groups(&app::tenant_token(c).await?).await?;
     Ok(mine
         .into_iter()
         .filter(|g| bot.iter().any(|b| b.id == g.id))
         .collect())
+}
+
+// Fetch outside the config lock, then recheck policy and identity before persisting.
+async fn apply_discovered_groups(pool: &SqlitePool, snapshot: &AppConfig, groups: Vec<SyncGroup>, since: i64, cancel: &CancellationToken) -> Result<Option<AppConfig>, String> {
+    let _policy = super::auto_recording::POLICY_LOCK.lock().await;
+    let _lock = app::CONFIG_LOCK.lock().await;
+    let mut latest = app::load(pool).await?;
+    if cancel.is_cancelled() || !latest.enabled || latest.manual_mode
+        || latest.group_sync_mode != GroupSyncMode::Automatic
+        || latest.app_id != snapshot.app_id || latest.owner_id != snapshot.owner_id || latest.secret != snapshot.secret {
+        return Ok(None);
+    }
+    let updated = selected_groups(&latest.sync_groups, groups, since)?;
+    let needs_save = updated != latest.sync_groups || latest.manual_sync_groups.is_none();
+    if needs_save {
+        if latest.manual_sync_groups.is_none() { latest.manual_sync_groups = Some(latest.sync_groups.clone()); }
+        for removed in latest.sync_groups.iter().filter(|g| !updated.iter().any(|v| v.id == g.id)) {
+            sqlx::query("UPDATE lark_app_routes SET local_record_bound_at=NULL WHERE app_id=? AND owner_id=? AND chat_id=?")
+                .bind(&latest.app_id).bind(&latest.owner_id).bind(&removed.id).execute(pool).await.map_err(db_error)?;
+        }
+        latest.sync_groups = updated;
+        app::save(pool, &latest).await?;
+    }
+    Ok(Some(latest))
 }
 
 fn next_page(v: &Value, previous: &str) -> Result<String, String> {
@@ -287,7 +361,7 @@ async fn accept(
     let (text, inserted) = match result {
         Ok(no) => {
             let inserted = bind(pool, c, chat, &cmd, &no).await?;
-            (format!("已登记会议 {} {} {}，现在可以入会。\n已登录、同步本群并开启自动录音的 Meetily，会在检测到各自账号入会后开始本地录音。\n不创建预约、不定时提醒，纪要仍需本人确认发送。",&no[..3],&no[3..6],&no[6..]),inserted)
+            (format!("已登记会议 {} {} {}，现在可以入会。\n已登录、同步本群并开启自动录音的 Meetily，会在检测到各自账号入会后开始本地录音。",&no[..3],&no[3..6],&no[6..]),inserted)
         }
         Err(e) => {
             let inserted=sqlx::query("INSERT OR IGNORE INTO lark_group_commands(app_id,owner_id,message_id,chat_id,command_at,detail) VALUES(?,?,?,?,?,?)")
@@ -411,7 +485,8 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
         }
     });
     let mut bot_cache: Option<(String, String, String)> = None;
-    let mut delay = 15;
+    let mut discovery = DiscoverySchedule::default();
+    let mut delay = MESSAGE_INTERVAL.as_secs();
     loop {
         if cancel.is_cancelled() {
             break;
@@ -425,10 +500,22 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
             if !config.enabled || config.manual_mode {
                 return Ok("群同步已关闭".into());
             }
-            if config.sync_groups.is_empty() {
+            if config.group_sync_mode == GroupSyncMode::Selected && config.sync_groups.is_empty() {
                 return Ok("请选择要同步的会议群并保存。".into());
             }
-            let c = oauth::authorized_config(&pool).await?;
+            let mut c = oauth::authorized_config(&pool).await?;
+            if c.group_sync_mode == GroupSyncMode::Automatic {
+                if discovery.due(&c, Instant::now(), now()) {
+                    let started = now();
+                    let groups = discover_groups(&c).await.map_err(|e| format!("自动发现会议群失败，保留原有群信息：{e}"))?;
+                    let Some(updated) = apply_discovered_groups(&pool, &c, groups, discovery.since, &cancel).await? else { return Ok(String::new()); };
+                    c = updated;
+                    discovery.completed(Instant::now(), started);
+                }
+                if c.sync_groups.is_empty() {
+                    return Ok("暂未发现你和会议助手都在的群；每 5 分钟自动更新，请先将助手加入会议群。".into());
+                }
+            }
             if bot_cache
                 .as_ref()
                 .is_none_or(|b| b.0 != c.app_id || b.1 != c.secret)
@@ -478,7 +565,7 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
         let failed = result.is_err();
         match result {
             Ok(message) => {
-                delay = 15;
+                delay = MESSAGE_INTERVAL.as_secs();
                 if !message.is_empty() {
                     app::status(message).await;
                 }
@@ -491,7 +578,7 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
         let pause = if failed {
             Duration::from_secs(delay)
         } else {
-            Duration::from_secs(15)
+            MESSAGE_INTERVAL
                 .saturating_sub(round_started.elapsed())
                 .max(Duration::from_secs(1))
         };
@@ -510,6 +597,81 @@ pub(super) async fn recent(pool: &SqlitePool, c: &AppConfig) -> Result<Vec<Value
 mod tests {
     use super::*;
     use std::sync::Mutex;
+
+    #[test]
+    fn automatic_is_default_and_discovery_runs_every_five_minutes_per_account() {
+        let c: AppConfig = serde_json::from_value(json!({"app_id":"cli_test","owner_id":"ou_test"})).unwrap();
+        assert_eq!(c.group_sync_mode, GroupSyncMode::Automatic);
+        let mut schedule = DiscoverySchedule::default();
+        let start = Instant::now();
+        assert!(schedule.due(&c, start, 1000));
+        assert_eq!(schedule.since, 1000);
+        // A failed discovery is not marked completed and cannot advance its history boundary.
+        assert!(schedule.due(&c, start + Duration::from_secs(60), 1060));
+        assert_eq!(schedule.since, 1000);
+        schedule.completed(start + Duration::from_secs(60), 1060);
+        assert!(!schedule.due(&c, start + Duration::from_secs(359), 1359));
+        assert!(schedule.due(&c, start + Duration::from_secs(360), 1360));
+        assert_eq!(schedule.since, 1060);
+        let other = AppConfig { owner_id: "ou_other".into(), ..c };
+        assert!(schedule.due(&other, start + Duration::from_secs(361), 1361));
+        assert_eq!(schedule.since, 1361);
+        assert_eq!(MESSAGE_INTERVAL, Duration::from_secs(15));
+    }
+
+    #[tokio::test]
+    async fn discovery_preserves_manual_selection_times_and_disarms_removed_groups() {
+        let pool = database().await;
+        let mut c = config("ou_sender");
+        configure_groups(&mut c, Some(GroupSyncMode::Selected), None, now()).unwrap();
+        let selected = c.sync_groups.clone();
+        configure_groups(&mut c, Some(GroupSyncMode::Automatic), Some(vec![]), now()).unwrap();
+        assert_eq!(c.manual_sync_groups.as_ref().unwrap(), &selected);
+        app::save(&pool, &c).await.unwrap();
+        let cancel = CancellationToken::new();
+        let since = now() - 100;
+        let new_group = SyncGroup { id: "oc_new".into(), name: "新群".into(), since: 1 };
+        let mut found = selected.clone(); found.push(new_group.clone());
+        let updated = apply_discovered_groups(&pool, &c, found, since, &cancel).await.unwrap().unwrap();
+        assert_eq!(updated.sync_groups[0].since, selected[0].since);
+        assert_eq!(updated.sync_groups[1].since, since);
+        assert_eq!(updated.manual_sync_groups.as_ref().unwrap(), &selected);
+        sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,expires_at,local_record_bound_at) VALUES('cli_test','ou_sender','123456789','number','oc_test',9999999999,1)").execute(&pool).await.unwrap();
+        let mut updated = apply_discovered_groups(&pool, &updated, vec![new_group], now(), &cancel).await.unwrap().unwrap();
+        let bound: Option<i64> = sqlx::query_scalar("SELECT local_record_bound_at FROM lark_app_routes WHERE chat_id='oc_test'").fetch_one(&pool).await.unwrap();
+        assert!(bound.is_none());
+        assert_eq!(updated.sync_groups[0].since, since);
+        // Returning to selected mode restores the explicit list, not all discovered groups.
+        configure_groups(&mut updated, Some(GroupSyncMode::Selected), None, now()).unwrap();
+        assert_eq!(updated.sync_groups.len(), 1);
+        assert_eq!(updated.sync_groups[0].id, "oc_test");
+    }
+
+    #[tokio::test]
+    async fn late_discovery_cannot_overwrite_account_policy_or_cancellation() {
+        let pool = database().await;
+        let c = config("ou_sender");
+        let cancel = CancellationToken::new();
+        for latest in [
+            AppConfig { owner_id:"ou_other".into(), ..c.clone() },
+            AppConfig { app_id:"cli_other".into(), ..c.clone() },
+            AppConfig { secret:"changed".into(), ..c.clone() },
+            AppConfig { enabled:false, ..c.clone() },
+            AppConfig { manual_mode:true, ..c.clone() },
+            AppConfig { group_sync_mode:GroupSyncMode::Selected, ..c.clone() },
+        ] {
+            app::save(&pool, &latest).await.unwrap();
+            assert!(apply_discovered_groups(&pool, &c, vec![], now(), &cancel).await.unwrap().is_none());
+            assert_eq!(app::load(&pool).await.unwrap().sync_groups, latest.sync_groups);
+        }
+        app::save(&pool, &c).await.unwrap();
+        let invalid = SyncGroup { id:"bad_chat".into(), ..Default::default() };
+        assert!(apply_discovered_groups(&pool, &c, vec![invalid], now(), &cancel).await.is_err());
+        assert_eq!(app::load(&pool).await.unwrap().sync_groups, c.sync_groups);
+        cancel.cancel();
+        assert!(apply_discovered_groups(&pool, &c, vec![], now(), &cancel).await.unwrap().is_none());
+        assert_eq!(app::load(&pool).await.unwrap().sync_groups, c.sync_groups);
+    }
     struct Replies {
         bodies: Mutex<Vec<Value>>,
         fail: bool,

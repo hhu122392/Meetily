@@ -86,23 +86,29 @@ fn notice<R: Runtime>(handle: &AppHandle<R>, message: &str, error: bool) {
     );
 }
 
+#[cfg(test)]
 async fn has_pending_meeting(pool: &SqlitePool, c: &AppConfig) -> Result<bool, String> {
-    let count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM lark_meeting_launches j WHERE j.app_id=? AND j.owner_id=? AND j.created_at>=? AND j.expires_at>? AND j.reserve_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM lark_app_routes r JOIN lark_auto_recordings a ON a.app_id=r.app_id AND a.owner_id=r.owner_id AND a.remote_id=r.remote_id WHERE r.app_id=j.app_id AND r.owner_id=j.owner_id AND r.reference_kind='reserve' AND r.reference=j.reserve_id) AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=j.app_id AND s.owner_id=j.owner_id AND s.meeting_no=j.meeting_no AND s.ended=1 AND s.event_at>=j.created_at*1000)")
+    Ok(pending_meeting_since(pool, c).await?.is_some())
+}
+
+async fn pending_meeting_since(pool: &SqlitePool, c: &AppConfig) -> Result<Option<i64>, String> {
+    let launched:Option<i64>=sqlx::query_scalar("SELECT MAX(j.created_at) FROM lark_meeting_launches j WHERE j.app_id=? AND j.owner_id=? AND j.created_at>=? AND j.expires_at>? AND j.reserve_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM lark_app_routes r JOIN lark_auto_recordings a ON a.app_id=r.app_id AND a.owner_id=r.owner_id AND a.remote_id=r.remote_id WHERE r.app_id=j.app_id AND r.owner_id=j.owner_id AND r.reference_kind='reserve' AND r.reference=j.reserve_id) AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=j.app_id AND s.owner_id=j.owner_id AND s.meeting_no=j.meeting_no AND s.ended=1 AND s.event_at>=j.created_at*1000)")
         .bind(&c.app_id).bind(&c.owner_id).bind(c.auto_record_since).bind(now()).fetch_one(pool).await.map_err(db_error)?;
-    if count > 0 || c.recording_source != app::RecordingSource::Local {
-        return Ok(count > 0);
+    if c.recording_source != app::RecordingSource::Local {
+        return Ok(launched);
     }
-    sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM lark_app_routes r
+    let bound:Option<i64> = sqlx::query_scalar(
+        "SELECT MAX(r.local_record_bound_at) FROM lark_app_routes r
          WHERE r.app_id=? AND r.owner_id=? AND r.reference_kind='number'
            AND r.local_record_bound_at>=? AND r.expires_at>?
            AND NOT EXISTS (SELECT 1 FROM lark_auto_recordings a WHERE a.app_id=r.app_id
                AND a.owner_id=r.owner_id AND a.remote_id=r.remote_id)
            AND NOT EXISTS (SELECT 1 FROM lark_meeting_signals s WHERE s.app_id=r.app_id
                AND s.owner_id=r.owner_id AND s.ended=1 AND (s.remote_id=r.remote_id OR
-               (r.remote_id IS NULL AND s.meeting_no=r.reference AND s.event_at>=r.local_record_bound_at*1000))))"
+               (r.remote_id IS NULL AND s.meeting_no=r.reference AND s.event_at>=r.local_record_bound_at*1000)))"
     ).bind(&c.app_id).bind(&c.owner_id).bind(c.auto_record_since).bind(now())
-        .fetch_one(pool).await.map_err(db_error)
+        .fetch_one(pool).await.map_err(db_error)?;
+    Ok(launched.max(bound))
 }
 
 async fn claim(pool: &SqlitePool, c: &AppConfig, id: &str, number: &str) -> Result<bool, String> {
@@ -146,8 +152,9 @@ pub async fn run<R: Runtime>(handle: AppHandle<R>, pool: SqlitePool) {
     let mut owned: Option<Owned> = None;
     let mut cooldown = 0;
     let mut last_error = String::new();
-    // Local checks share a 5s successful API cache and a 60s error cache.
+    // Local ticks share a phase-dependent successful cache and a 60s error cache.
     let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
+    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         tokio::select! { _=timer.tick()=>{}, _=meeting_state::CHANGED.notified()=>{} }
         if let Err(e) = tick(&handle, &pool, &mut owned, &mut cooldown).await {
@@ -246,10 +253,8 @@ async fn tick<R: Runtime>(
     {
         return Ok(());
     }
-    if !has_pending_meeting(pool, &c).await? {
-        return Ok(());
-    }
-    let (c, active, observation) = meeting_state::current(pool).await?;
+    let Some(command_at) = pending_meeting_since(pool, &c).await? else { return Ok(()); };
+    let (c, active, observation) = meeting_state::current_with_interval(pool, meeting_state::waiting_interval(command_at, now())).await?;
     let Some((id, no, topic)) = active else {
         return Ok(());
     };
@@ -470,6 +475,9 @@ mod tests {
         assert!(!has_pending_meeting(&pool,&c).await.unwrap(), "a delivery-only binding cannot arm later");
         app::receive(&pool,&c,&event("armed","owner","oc_a")).await.unwrap();
         assert!(has_pending_meeting(&pool,&c).await.unwrap());
+        let command_at = pending_meeting_since(&pool,&c).await.unwrap().unwrap();
+        assert_eq!(meeting_state::waiting_interval(command_at, command_at + 299), std::time::Duration::from_secs(2));
+        assert_eq!(meeting_state::waiting_interval(command_at, command_at + 300), std::time::Duration::from_secs(15));
         assert!(!claim(&pool,&c,"101","987654321").await.unwrap());
         let cloud = AppConfig { recording_source:app::RecordingSource::Cloud, ..c.clone() };
         assert!(!has_pending_meeting(&pool,&cloud).await.unwrap());

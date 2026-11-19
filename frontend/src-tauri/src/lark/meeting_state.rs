@@ -7,6 +7,11 @@ use tokio::sync::{Mutex, Notify};
 
 pub(super) type Meeting = (String, String, String);
 const FALLBACK: Duration = Duration::from_secs(5);
+const LEAVE_CONFIRMATION: Duration = Duration::from_secs(2);
+
+pub(super) fn waiting_interval(command_at: i64, clock: i64) -> Duration {
+    Duration::from_secs(if clock.saturating_sub(command_at) < 300 { 2 } else { 15 })
+}
 static REVISION: AtomicU64 = AtomicU64::new(1);
 static CACHE: Mutex<StateCache> = Mutex::const_new(StateCache { entry: None, sequence: 0 });
 pub(super) static CHANGED: Notify = Notify::const_new();
@@ -14,14 +19,31 @@ pub(super) static CHANGED: Notify = Notify::const_new();
 struct Entry {
     identity: (String, String),
     revision: u64,
+    fetched_at: Instant,
     expires: Instant,
     result: Result<Option<Meeting>, String>,
 }
 struct StateCache { entry: Option<Entry>, sequence: u64 }
 
 impl StateCache {
+    fn confirm_absence(&mut self, at: Instant) {
+        if let Some(entry) = self.entry.as_mut() {
+            if entry.result.as_ref().is_ok_and(|active| active.is_none()) {
+                entry.expires = entry.expires.min(at + LEAVE_CONFIRMATION);
+            }
+        }
+    }
+    #[cfg(test)]
     async fn read<F, Fut>(&mut self, identity: (String, String), revision: u64, fetch: F) -> Result<(Option<Meeting>, u64), String>
     where F: FnOnce() -> Fut, Fut: Future<Output=Result<Option<Meeting>, String>> {
+        self.read_with_interval(identity, revision, FALLBACK, fetch).await
+    }
+    async fn read_with_interval<F, Fut>(&mut self, identity: (String, String), revision: u64, interval: Duration, fetch: F) -> Result<(Option<Meeting>, u64), String>
+    where F: FnOnce() -> Fut, Fut: Future<Output=Result<Option<Meeting>, String>> {
+        if let Some(entry) = self.entry.as_mut() {
+            // A faster phase may shorten a successful cache, never an error backoff.
+            if entry.result.is_ok() { entry.expires = entry.expires.min(entry.fetched_at + interval); }
+        }
         if let Some(entry) = &self.entry {
             if entry.identity == identity && entry.revision == revision && Instant::now() < entry.expires {
                 return entry.result.clone().map(|m| (m, self.sequence));
@@ -30,8 +52,9 @@ impl StateCache {
         let result = fetch().await;
         self.sequence += 1;
         // Poll promptly while armed/recording; back off errors so quota failures cannot spin.
-        let ttl = if result.is_err() { Duration::from_secs(60) } else { FALLBACK };
-        self.entry = Some(Entry { identity, revision, expires: Instant::now() + ttl, result: result.clone() });
+        let ttl = if result.is_err() { Duration::from_secs(60) } else { interval };
+        let fetched_at = Instant::now();
+        self.entry = Some(Entry { identity, revision, fetched_at, expires: fetched_at + ttl, result: result.clone() });
         result.map(|m| (m, self.sequence))
     }
 }
@@ -43,17 +66,19 @@ pub(super) fn invalidate() {
 
 // Confirm an empty observation promptly without counting a cached response twice.
 pub(super) async fn confirm_absence() {
-    if let Some(entry) = CACHE.lock().await.entry.as_mut() {
-        entry.expires = entry.expires.min(Instant::now() + Duration::from_secs(5));
-    }
+    CACHE.lock().await.confirm_absence(Instant::now());
 }
 
 pub(super) async fn current(pool: &SqlitePool) -> Result<(AppConfig, Option<Meeting>, u64), String> {
+    current_with_interval(pool, FALLBACK).await
+}
+
+pub(super) async fn current_with_interval(pool: &SqlitePool, interval: Duration) -> Result<(AppConfig, Option<Meeting>, u64), String> {
     let c = app::load(pool).await?;
     let mut cache = CACHE.lock().await;
     for _ in 0..2 {
         let revision = REVISION.load(Ordering::SeqCst);
-        let (meeting, sequence) = cache.read((c.app_id.clone(), c.owner_id.clone()), revision, || async {
+        let (meeting, sequence) = cache.read_with_interval((c.app_id.clone(), c.owner_id.clone()), revision, interval, || async {
             // Refresh failures must also be cached; do not retry OAuth on every local tick.
             let authorized = oauth::authorized_config(pool).await?;
             if authorized.app_id != c.app_id || authorized.owner_id != c.owner_id {
@@ -109,6 +134,48 @@ pub(super) async fn receive(pool: &SqlitePool, c: &AppConfig, value: &Value) -> 
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[tokio::test]
+    async fn polling_phases_share_observations_without_shortening_error_backoff() {
+        let key = ("app".into(), "owner".into());
+        let mut cache = StateCache { entry:None, sequence:0 };
+        let recent = waiting_interval(1000, 1299);
+        let waiting = waiting_interval(1000, 1300);
+        assert_eq!(recent, Duration::from_secs(2));
+        assert_eq!(waiting, Duration::from_secs(15));
+        let first = cache.read_with_interval(key.clone(), 1, waiting, || async { Ok(None) }).await.unwrap();
+        assert_eq!(cache.entry.as_ref().unwrap().expires.duration_since(cache.entry.as_ref().unwrap().fetched_at), waiting);
+        // A new fast phase must not reuse a still-live 15-second result that is already 3 seconds old.
+        cache.entry.as_mut().unwrap().fetched_at = Instant::now() - Duration::from_secs(3);
+        let fast = cache.read_with_interval(key.clone(), 1, recent, || async { Ok(Some(("1".into(), "123456789".into(), "test".into()))) }).await.unwrap();
+        assert_ne!(first.1, fast.1);
+        assert_eq!(cache.read_with_interval(key.clone(), 1, FALLBACK, || async { panic!("recording starts from the same observation") }).await.unwrap().1, fast.1);
+        cache.entry.as_mut().unwrap().expires = Instant::now();
+        cache.read_with_interval(key.clone(), 1, FALLBACK, || async { Ok(Some(("1".into(), "123456789".into(), "test".into()))) }).await.unwrap();
+        let entry = cache.entry.as_ref().unwrap();
+        assert_eq!(entry.expires.duration_since(entry.fetched_at), Duration::from_secs(5));
+        cache.entry.as_mut().unwrap().expires = Instant::now();
+        assert!(cache.read_with_interval(key.clone(), 1, waiting, || async { Err("offline".into()) }).await.is_err());
+        let expires = cache.entry.as_ref().unwrap().expires;
+        cache.confirm_absence(Instant::now());
+        assert!(cache.read_with_interval(key, 1, recent, || async { panic!("fast polling must retain error backoff") }).await.is_err());
+        assert_eq!(cache.entry.as_ref().unwrap().expires, expires);
+    }
+
+    #[tokio::test]
+    async fn absence_requires_another_network_observation_after_short_confirmation() {
+        let mut cache = StateCache { entry:None, sequence:0 };
+        let key = ("app".into(), "owner".into());
+        let missing = cache.read(key.clone(), 1, || async { Ok(None) }).await.unwrap();
+        let at = Instant::now();
+        cache.confirm_absence(at);
+        assert!(cache.entry.as_ref().unwrap().expires <= at + Duration::from_secs(2));
+        let reused = cache.read(key.clone(), 1, || async { panic!("one observation cannot count as two absences") }).await.unwrap();
+        assert_eq!(missing.1, reused.1);
+        cache.entry.as_mut().unwrap().expires = Instant::now();
+        let confirmed = cache.read(key, 1, || async { Ok(None) }).await.unwrap();
+        assert_ne!(missing.1, confirmed.1);
+    }
 
     #[tokio::test]
     async fn shared_cache_reuses_reads_and_refreshes_for_events_expiry_or_identity() {
