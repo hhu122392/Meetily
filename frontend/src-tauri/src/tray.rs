@@ -41,12 +41,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, item_id: &str) {
         "resume_recording" => resume_recording_handler(app),
         "stop_recording" => stop_recording_handler(app),
         "open_window" => focus_main_window(app),
-        "settings" => {
-            focus_main_window(app);
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("window.location.assign('/settings')");
-            }
-        }
+        "settings" => focus_main_window_at(app, true),
         "check_updates" => check_updates_handler(app),
         "quit" => app.exit(0),
         _ => {}
@@ -392,23 +387,61 @@ fn build_menu<R: Runtime>(
 }
 
 pub(crate) fn focus_main_window<R: Runtime>(app: &AppHandle<R>) {
+    focus_main_window_at(app, false);
+}
+
+static MAIN_WINDOW_RECOVERY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn show_main_window<R: Runtime>(window: &tauri::WebviewWindow<R>, settings: bool) {
+    for (operation, result) in [
+        ("restore", window.unminimize()),
+        ("show", window.show()),
+        ("focus", window.set_focus()),
+    ] {
+        if let Err(error) = result { log::error!("Failed to {operation} main window: {error}"); }
+    }
+    if settings {
+        if let Err(error) = window.eval("window.location.assign('/settings')") {
+            log::error!("Failed to open settings: {error}");
+        }
+    }
+}
+
+fn focus_main_window_at<R: Runtime>(app: &AppHandle<R>, settings: bool) {
     if let Some(window) = app.get_webview_window("main") {
-        if let Err(e) = window.unminimize() {
-            log::error!("Failed to unminimize main window: {}", e);
+        show_main_window(&window, settings);
+        return;
+    }
+    // WebView2 creation can deadlock inside Windows tray/single-instance callbacks.
+    // Serialize creation on a separate thread and recheck after taking the lock.
+    let app = app.clone();
+    if let Err(error) = std::thread::Builder::new().name("main-window-recovery".into()).spawn(move || {
+        let _guard = MAIN_WINDOW_RECOVERY.lock().unwrap_or_else(|e|e.into_inner());
+        if let Some(window) = app.get_webview_window("main") {
+            show_main_window(&window, settings);
+            return;
         }
-
-        if let Err(e) = window.show() {
-            log::error!("Failed to show main window: {}", e);
+        let result = (|| -> Result<_, String> {
+            let mut config = app.config().app.windows.iter().find(|w|w.label == "main")
+                .cloned().ok_or("未找到主窗口配置")?;
+            config.visible = true;
+            if settings { config.url = tauri::WebviewUrl::App("settings".into()); }
+            tauri::WebviewWindowBuilder::from_config(&app, &config)
+                .and_then(|builder|builder.build()).map_err(|e|e.to_string())
+        })();
+        match result {
+            Ok(window) => {
+                log::info!("Recreated missing main window");
+                show_main_window(&window, false);
+            }
+            Err(error) => {
+                log::error!("Failed to recreate main window: {error}");
+                use tauri_plugin_dialog::DialogExt;
+                app.dialog().message(format!("主窗口恢复失败：{error}\n请从托盘退出 Meetily 后重新打开。录音和会议资料不会被删除。"))
+                    .title("Meetily 主窗口恢复失败").show(|_|{});
+            }
         }
-
-        if let Err(e) = window.set_focus() {
-            log::error!("Failed to focus main window: {}", e);
-        }
-
-        if let Err(e) = window.eval("window.focus()") {
-            log::error!("Failed to focus main webview: {}", e);
-        }
-    } else {
-        log::warn!("Could not find main window");
+    }) {
+        log::error!("Failed to start main window recovery: {error}");
     }
 }
