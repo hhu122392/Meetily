@@ -867,6 +867,7 @@ pub fn run() {
             summary::markdown_export::summary_export_markdown,
             lark::app::lark_app_meeting_status,
             lark::app::lark_app_remove_route,
+            lark::app::lark_invitation_manage,
             lark::oauth::lark_app_authorize,
             summary::commands::api_process_transcript,
             summary::commands::api_get_summary,

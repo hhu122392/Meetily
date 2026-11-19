@@ -51,7 +51,7 @@ fn apply_calendar_mode(c: &mut AppConfig) {
     c.calendar_auth_revision = uuid::Uuid::new_v4().to_string();
 }
 fn auth_scope(meeting_control: bool) -> String {
-    if meeting_control { format!("{AUTH_SCOPE} vc:meeting") } else { AUTH_SCOPE.into() }
+    if meeting_control { format!("{AUTH_SCOPE} vc:meeting calendar:calendar.event:read") } else { AUTH_SCOPE.into() }
 }
 fn requested_scope(meeting_control: bool, cloud: bool) -> String {
     let mut scope = auth_scope(meeting_control);

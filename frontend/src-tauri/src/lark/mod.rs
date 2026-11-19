@@ -3,6 +3,8 @@ pub(crate) mod payload;
 mod macos_credentials;
 mod card;
 mod launches;
+mod invitations;
+mod scheduled;
 mod ending;
 mod meeting_state;
 pub mod auto_recording;

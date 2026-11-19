@@ -20,6 +20,7 @@ pub(super) async fn recover(pool: &SqlitePool) -> Result<(), String> {
     sqlx::query("UPDATE lark_meeting_launches SET status='unknown',detail='上次创建或链接发送中断，结果不确定；不会自动重试，请核对群消息和会议。' WHERE status IN ('creating','link_sending')")
         .execute(pool).await.map_err(db_error)?;
     super::ending::recover(pool).await?;
+    super::scheduled::recover(pool).await?;
     Ok(())
 }
 
@@ -36,6 +37,9 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
             app::status(e).await;
         }
         if let Err(e) = super::ending::process_one(&pool).await {
+            app::status(e).await;
+        }
+        if let Err(e) = super::scheduled::process_one(&pool).await {
             app::status(e).await;
         }
     }
@@ -79,7 +83,7 @@ fn reservation(value: &Value) -> Result<(String, String, String), String> {
 }
 
 // An ambiguous mutation is never automatically retried, even after restarting the app.
-async fn mutation(path: &str, token: &str, body: Value) -> Result<Value, (&'static str, String)> {
+pub(super) async fn mutation(path: &str, token: &str, body: Value) -> Result<Value, (&'static str, String)> {
     let http = client().map_err(|e| ("failed", e))?;
     let response = http
         .post(format!("{BASE}{path}"))
@@ -330,6 +334,7 @@ mod tests {
         .await
         .unwrap();
         sqlx::raw_sql(include_str!("../../migrations/20261020010000_lark_end_meeting.sql")).execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!("../../migrations/20261119000000_lark_invitations.sql")).execute(&pool).await.unwrap();
         app::save(
             &pool,
             &AppConfig {

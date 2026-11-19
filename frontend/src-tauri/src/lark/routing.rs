@@ -15,10 +15,11 @@ pub fn parse_binding(text: &str) -> Option<MeetingReference> {
         return (id.len() >= 10 && id.len() <= 32 && id.bytes().all(|b| b.is_ascii_digit()))
             .then(|| MeetingReference::Id(id.into()));
     }
+    if let Some(no) = super::invitations::bare_link(text) { return Some(MeetingReference::Number(no)); }
+    let label = regex::Regex::new(r"^会议\s*ID\s*[:：]\s*(.+)$").ok()?;
+    let captures = label.captures(text);
     let value = text.strip_prefix("绑定会议 ")
-        .or_else(|| text.strip_prefix("会议ID:"))
-        .or_else(|| text.strip_prefix("会议ID："))?
-        .trim();
+        .or_else(|| captures.as_ref().and_then(|c|c.get(1).map(|m|m.as_str())))?.trim();
     let number: String = value.chars().filter(|c| *c != ' ' && *c != '-').collect();
     (number.len() == 9 && number.bytes().all(|b| b.is_ascii_digit()))
         .then(|| MeetingReference::Number(number))
@@ -97,7 +98,7 @@ mod tests {
     }
     #[test]
     fn only_explicit_commands() {
-        for command in ["@_user_1 会议ID:123 456 789", "@_user_1 会议ID： 123456789"] {
+        for command in ["@_user_1 会议ID:123 456 789", "@_user_1 会议ID： 123456789", "@_user_1 会议 ID：123 456 789", "@_user_1 https://vc-jp.larksuite.com/j/123456789"] {
             assert_eq!(parse_binding(command), Some(MeetingReference::Number("123456789".into())));
         }
         assert_eq!(

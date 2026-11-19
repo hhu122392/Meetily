@@ -181,6 +181,32 @@ fn event_path(id: &str) -> String {
     url.path().to_owned()
 }
 
+// Resolve only an exact share token belonging to an accessible primary-calendar instance.
+// Title/time narrow the search; they are never sufficient proof of event identity.
+pub(super) async fn resolve_invitation(c: &AppConfig, invitation: &super::invitations::Invitation, known_id: Option<&str>) -> Result<CalendarMeeting,String> {
+    if let Some(id)=known_id {
+        let data=app::api(reqwest::Method::GET,&event_path(id),&c.user_token,None).await?;
+        let event=&data["event"];
+        if event["status"]=="cancelled" {return Err("日程已取消，本次不发送提醒。".into());}
+        let start=timestamp(&event["start_time"]).ok_or("日程开始时间无效")?;
+        let end=timestamp(&event["end_time"]).ok_or("日程结束时间无效")?;
+        let values=normalize(c,&json!({"items":[event]}),start-1,end+1)?;
+        return values.into_iter().next().ok_or("日程已取消或不可访问。".into());
+    }
+    let expected=invitation.share_url.as_deref().and_then(super::invitations::share_token).ok_or("日程分享链接无效")?;
+    let candidates=fetch(c,invitation.start-86400,invitation.end+86400).await?;
+    let candidates:Vec<_>=candidates.into_iter().filter(|m|m.title==invitation.title && m.start==invitation.start && m.end==invitation.end).collect();
+    if candidates.is_empty() {return Err("授权账号的主日历中找不到该日程。请先打开邀请加入日程，再点重试；也可改发带会议号的视频会议邀请。".into());}
+    if candidates.len()>10 {return Err("同一时间有过多同名日程，请改发带会议号的视频会议邀请。".into());}
+    let mut matched=Vec::new();
+    for candidate in candidates {
+        let info=app::api(reqwest::Method::POST,&format!("{}/share_info",event_path(&candidate.event_id)),&c.user_token,Some(json!({}))).await?;
+        if info["share_link"].as_str().and_then(super::invitations::share_token).as_deref()==Some(expected.as_str()) {matched.push(candidate);}
+    }
+    if matched.len()!=1 {return Err("无法通过分享链接唯一核对日程，请改发带会议号的视频会议邀请。".into());}
+    Ok(matched.remove(0))
+}
+
 async fn invitees(c: &AppConfig, meeting: &CalendarMeeting) -> Result<(Vec<String>, String), String> {
     let mut names = Vec::new();
     let mut unnamed = false;

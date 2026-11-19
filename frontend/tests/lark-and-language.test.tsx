@@ -62,6 +62,25 @@ test('损坏的 Lark 配置显示真实错误并阻止保存和授权', async ()
   expect(button('授权会议助手')).toBeUndefined();
   expect(invoke.mock.calls.every(call => call[0] === 'lark_app_status')).toBe(true);
 });
+
+test('预约展示东八区时间并区分重试与取消，送达不确定时不能盲目重发', async () => {
+  respond = async command => command === 'lark_app_status' ? {
+    app_id: 'cli_test', has_secret: true, enabled: true, authorized: true, manual_mode: false,
+    routes: [], deliveries: [], recording: null,
+    invitations: [
+      { id: 'failed-one', topic: '研发例会', start: 1795059000, chat_id: 'oc_source', status: 'failed', detail: '请先加入日程' },
+      { id: 'unknown-one', topic: '已尝试发送', start: 1795059000, chat_id: 'oc_source', status: 'unknown', detail: '请核对群消息' },
+    ],
+  } : undefined;
+  await act(async () => { renderer = create(<LarkAppSettings />); });
+  expect(content()).toContain('东八区');
+  expect(content()).toContain('送达待核对');
+  expect(renderer!.root.findAllByType('button').filter(n => n.children.includes('重试核对与提醒'))).toHaveLength(1);
+  await act(async () => button('重试核对与提醒').props.onClick());
+  expect(invoke.mock.calls).toContainEqual(['lark_invitation_manage', { id: 'failed-one', retry: true }]);
+  await act(async () => button('取消预约').props.onClick());
+  expect(invoke.mock.calls).toContainEqual(['lark_invitation_manage', { id: 'failed-one', retry: false }]);
+});
 async function mountSender(getSummary = async () => '## 讨论结论\n保留当前编辑内容') {
   await act(async () => { renderer = create(<LarkSendButton compact meetingId="meeting-a" title="产品例会" createdAt="2026-10-14T02:00:00Z" getSummary={getSummary} />); });
   await act(async () => button('Webhook 发送').props.onClick());

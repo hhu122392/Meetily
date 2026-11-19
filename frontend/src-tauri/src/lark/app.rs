@@ -263,6 +263,7 @@ pub async fn lark_app_status(state: tauri::State<'_, AppState>) -> Result<Value,
             "auto_record":c.auto_record,"recording_source":c.recording_source,"automation":automation,"allow_group_launch":c.allow_group_launch,
             "authorized":super::oauth::authorization_status(&c).1,"authorization_status":super::oauth::authorization_status(&c).0,"owner_id":c.owner_id,"connection":STATUS.lock().await.clone(),
             "launches":launches.iter().map(|r|json!({"request_id":r.get::<String,_>("request_id"),"chat_id":r.get::<String,_>("chat_id"),"topic":r.get::<String,_>("topic"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"meeting_url":r.get::<Option<String>,_>("meeting_url")})).collect::<Vec<_>>(),
+            "invitations":super::scheduled::list(pool,&c).await?,
             "routes":routes.iter().map(|r| json!({"reference":r.get::<String,_>("reference"),"chat_id":r.get::<String,_>("chat_id"),"remote_id":r.get::<Option<String>,_>("remote_id")})).collect::<Vec<_>>(),
             "deliveries":deliveries.iter().map(|r| json!({"meeting_id":r.get::<String,_>("meeting_id"),"chat_id":r.get::<String,_>("chat_id"),"status":r.get::<String,_>("status"),"detail":r.get::<String,_>("detail")})).collect::<Vec<_>>(),
             "recording":recording.map(|r| json!({"remote_id":r.get::<Option<String>,_>("remote_id"),"meeting_no":r.get::<Option<String>,_>("meeting_no"),"topic":r.get::<Option<String>,_>("topic"),"blocked":r.get::<i64,_>("blocked")!=0,"detail":r.get::<String,_>("detail"),"stopped":r.get::<i64,_>("stopped")!=0}))
@@ -498,7 +499,7 @@ pub(super) async fn receive(
     }
     let _routing = DELIVERY_LOCK.lock().await;
     let current = load(pool).await?;
-    if !current.enabled || current.app_id != config.app_id || current.owner_id.is_empty() {
+    if !current.enabled || current.manual_mode || current.app_id != config.app_id || current.owner_id.is_empty() {
         return Ok(());
     }
     let event = &value["event"];
@@ -506,7 +507,7 @@ pub(super) async fn receive(
     let is_owner = sender == current.owner_id;
     let message = &event["message"];
     if message["chat_type"] != "group"
-        || message["message_type"] != "text"
+        || !matches!(message["message_type"].as_str(),Some("text"|"post"))
         || message["mentions"].as_array().is_none_or(|a| a.is_empty())
     {
         return Ok(());
@@ -521,16 +522,18 @@ pub(super) async fn receive(
     }
     let content: Value =
         serde_json::from_str(message["content"].as_str().unwrap_or("")).unwrap_or(Value::Null);
-    let text = content["text"].as_str().unwrap_or("");
-    let launch_topic = super::launches::parse_command(text);
+    let extracted = super::invitations::message_text(message["message_type"].as_str().unwrap_or(""),&content).unwrap_or_default();
+    let text = extracted.as_str();
+    let invitation = super::invitations::parse(text, timestamp);
+    let launch_topic = if invitation.is_none() { super::launches::parse_command(text) } else { None };
     let end_command = super::ending::parse_command(text);
     let binding = parse_binding(text);
-    if launch_topic.is_none() && binding.is_none() && end_command.is_none() {
+    if launch_topic.is_none() && binding.is_none() && end_command.is_none() && invitation.is_none() {
         return Ok(());
     }
-    // Group members may create a new meeting, but cannot reroute an existing meeting's notes.
+    // The opt-in also allows group members to submit invitations to this recording host.
     if !is_owner && !(current.allow_group_launch
-        && (launch_topic.is_some() || end_command.is_some())
+        && (launch_topic.is_some() || end_command.is_some() || invitation.is_some())
         && !sender.is_empty()
         && event["sender"]["sender_type"].as_str() == Some("user")) {
         return Ok(());
@@ -553,7 +556,10 @@ pub(super) async fn receive(
             .map_err(db_error)?
             .rows_affected();
     if inserted == 1 {
-        if let Some(topic) = launch_topic {
+        if let Some(invitation) = invitation {
+            let message_id=message["message_id"].as_str().filter(|s|!s.is_empty()).ok_or("消息 ID 缺失。")?;
+            super::scheduled::enqueue(&mut tx,&current,chat,message_id,timestamp_ms,invitation).await?;
+        } else if let Some(topic) = launch_topic {
             let message_id = message["message_id"]
                 .as_str()
                 .filter(|s| !s.is_empty())
@@ -575,7 +581,7 @@ pub(super) async fn receive(
             let record_bound_at = (kind == "number" && !current.manual_mode && current.auto_record
                 && current.recording_source == RecordingSource::Local && timestamp >= current.auto_record_since)
                 .then_some(timestamp);
-            sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at,local_record_bound_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(app_id,owner_id,reference,reference_kind,chat_id) DO UPDATE SET remote_id=excluded.remote_id,expires_at=excluded.expires_at,local_record_bound_at=excluded.local_record_bound_at")
+            sqlx::query("INSERT INTO lark_app_routes(app_id,owner_id,reference,reference_kind,chat_id,remote_id,expires_at,local_record_bound_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(app_id,owner_id,reference,reference_kind,chat_id) DO UPDATE SET remote_id=excluded.remote_id,expires_at=excluded.expires_at,local_record_bound_at=excluded.local_record_bound_at,invitation_id=NULL")
                 .bind(&current.app_id).bind(&current.owner_id).bind(reference).bind(kind).bind(chat).bind(remote).bind(now()+21600).bind(record_bound_at)
             .execute(&mut *tx).await.map_err(db_error)?;
             tx.commit().await.map_err(db_error)?;
@@ -944,6 +950,8 @@ pub async fn lark_app_remove_route(
 ) -> Result<(), String> {
     let _guard = DELIVERY_LOCK.lock().await;
     let c = load(state.db_manager.pool()).await?;
+    sqlx::query("UPDATE lark_invitations SET status='cancelled',detail='已移除群绑定，取消预约提醒' WHERE app_id=? AND owner_id=? AND meeting_no=? AND chat_id=? AND status IN ('queued','ready','failed')")
+        .bind(&c.app_id).bind(&c.owner_id).bind(&reference).bind(&chat_id).execute(state.db_manager.pool()).await.map_err(db_error)?;
     sqlx::query(
         "DELETE FROM lark_app_routes WHERE app_id=? AND owner_id=? AND reference=? AND chat_id=?",
     )
@@ -955,6 +963,11 @@ pub async fn lark_app_remove_route(
     .await
     .map_err(db_error)?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn lark_invitation_manage(state:tauri::State<'_,AppState>,id:String,retry:bool)->Result<(),String> {
+    super::scheduled::manage(state.db_manager.pool(),&id,retry).await
 }
 
 pub async fn report_summary_result(pool: &SqlitePool, id: &str) {
@@ -1238,6 +1251,7 @@ mod tests {
         .await
         .unwrap();
         sqlx::raw_sql(include_str!("../../migrations/20261117000000_bound_meeting_recording.sql")).execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!("../../migrations/20261119000000_lark_invitations.sql")).execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!("../../migrations/20261020010000_lark_end_meeting.sql")).execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!(
             "../../migrations/20261015020000_add_lark_auto_recording.sql"
@@ -1269,6 +1283,29 @@ mod tests {
     }
     fn event(id: &str, sender: &str, chat: &str, time: i64) -> Value {
         json!({"header":{"app_id":"cli_test","event_type":"im.message.receive_v1","event_id":id},"event":{"sender":{"sender_id":{"open_id":sender}},"message":{"chat_type":"group","chat_id":chat,"message_type":"text","mentions":[{"key":"@_user_1"}],"create_time":(time*1000).to_string(),"content":json!({"text":"@_user_1 绑定会议 123456789"}).to_string()}}})
+    }
+    #[tokio::test]
+    async fn invitations_are_durable_scoped_and_only_accept_opted_in_group_members() {
+        let pool=database().await; let mut c=load(&pool).await.unwrap();
+        c.auto_record=true; c.auto_record_since=now()-60; save(&pool,&c).await.unwrap();
+        let zone=chrono::FixedOffset::east_opt(8*3600).unwrap();
+        let start=(chrono::Utc::now()+chrono::Duration::hours(1)).with_timezone(&zone);
+        let end=start+chrono::Duration::minutes(30);
+        let text=format!("@_user_1 Lili邀请你加入Lark视频会议 会议主题：IP 会议时间：{} {} - {} (GMT+8) 会议 ID：550 544 175 会议链接：https://vc-jp.larksuite.com/j/550544175",start.format("%Y年%m月%d日"),start.format("%H:%M"),end.format("%H:%M"));
+        let mut msg=event("invite","ou_lili","oc_source",now());
+        msg["event"]["sender"]["sender_type"]=json!("user");
+        msg["event"]["message"]["message_id"]=json!("om_invite");
+        msg["event"]["message"]["content"]=json!(json!({"text":text}).to_string());
+        receive(&pool,&c,&msg).await.unwrap();
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM lark_invitations").fetch_one(&pool).await.unwrap(),0);
+        c.allow_group_launch=true;save(&pool,&c).await.unwrap();
+        receive(&pool,&c,&msg).await.unwrap();receive(&pool,&c,&msg).await.unwrap();
+        let row=sqlx::query("SELECT chat_id,owner_id,record_bound_at FROM lark_invitations").fetch_one(&pool).await.unwrap();
+        assert_eq!(row.get::<String,_>("chat_id"),"oc_source");assert_eq!(row.get::<String,_>("owner_id"),"ou_owner");assert!(row.get::<Option<i64>,_>("record_bound_at").is_some());
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM lark_invitations").fetch_one(&pool).await.unwrap(),1);
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM lark_meeting_launches").fetch_one(&pool).await.unwrap(),0);
+        c.manual_mode=true;save(&pool,&c).await.unwrap();msg["header"]["event_id"]=json!("newinvite");msg["event"]["message"]["chat_id"]=json!("oc_other");
+        receive(&pool,&c,&msg).await.unwrap();assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM lark_invitations").fetch_one(&pool).await.unwrap(),1);
     }
     #[tokio::test]
     async fn group_end_commands_are_persisted_once_with_original_target_and_requester() {

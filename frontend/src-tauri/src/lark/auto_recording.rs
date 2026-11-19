@@ -450,6 +450,7 @@ mod tests {
             include_str!("../../migrations/20261015020000_add_lark_auto_recording.sql"),
             include_str!("../../migrations/20261016000000_add_lark_meeting_signals.sql"),
             include_str!("../../migrations/20261117000000_bound_meeting_recording.sql"),
+            include_str!("../../migrations/20261119000000_lark_invitations.sql"),
         ] { sqlx::raw_sql(migration).execute(&pool).await.unwrap(); }
         let mut c = AppConfig { app_id:"cli_test".into(), owner_id:"owner".into(), enabled:true,
             allow_group_launch:true, auto_record_since:now()-30, ..Default::default() };
