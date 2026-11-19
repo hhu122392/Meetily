@@ -30,9 +30,6 @@ pub(super) fn selected_groups(
     input: Vec<SyncGroup>,
     clock: i64,
 ) -> Result<Vec<SyncGroup>, String> {
-    if input.len() > 10 {
-        return Err("最多同步十个群，请只选择需要录音的会议群。".into());
-    }
     let mut out = Vec::<SyncGroup>::new();
     for g in input {
         if !valid_chat(&g.id) || g.name.len() > 500 {
@@ -222,8 +219,24 @@ trait SyncApi: ReplyApi {
     async fn history(&self, path: &str, token: &str) -> Result<Value, String>;
 }
 struct Production;
+// Per-process pacing also covers pagination and overlapping workers during a settings restart.
+struct ReadPacer(tokio::sync::Mutex<Option<tokio::time::Instant>>);
+impl ReadPacer {
+    const fn new() -> Self {
+        Self(tokio::sync::Mutex::const_new(None))
+    }
+    async fn wait(&self) {
+        let mut last = self.0.lock().await;
+        if let Some(previous) = *last {
+            tokio::time::sleep_until(previous + Duration::from_secs(1)).await;
+        }
+        *last = Some(tokio::time::Instant::now());
+    }
+}
+static HISTORY_PACER: ReadPacer = ReadPacer::new();
 impl SyncApi for Production {
     async fn history(&self, path: &str, token: &str) -> Result<Value, String> {
+        HISTORY_PACER.wait().await;
         app::api(reqwest::Method::GET, path, token, None).await
     }
 }
@@ -403,6 +416,7 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
         if cancel.is_cancelled() {
             break;
         }
+        let round_started = std::time::Instant::now();
         let result: Result<String, String> = async {
             if cancel.is_cancelled() {
                 return Ok(String::new());
@@ -453,7 +467,7 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
             }
             if errors.is_empty() {
                 Ok(format!(
-                    "已同步 {} 个群；每 15 秒检查新指令，只读取当前账号可访问的所选群。",
+                    "已完成 {} 个群的本轮同步；逐群读取，每轮至少 15 秒，群多或翻页时耗时会增加。",
                     c.sync_groups.len()
                 ))
             } else {
@@ -461,6 +475,7 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
             }
         }
         .await;
+        let failed = result.is_err();
         match result {
             Ok(message) => {
                 delay = 15;
@@ -473,7 +488,14 @@ pub(super) async fn run(pool: SqlitePool, cancel: CancellationToken) {
                 app::status(format!("{e} {delay} 秒后重试读取。不会重发不确定的回执。")).await;
             }
         }
-        tokio::select! {_=cancel.cancelled()=>break,_=tokio::time::sleep(Duration::from_secs(delay))=>{}}
+        let pause = if failed {
+            Duration::from_secs(delay)
+        } else {
+            Duration::from_secs(15)
+                .saturating_sub(round_started.elapsed())
+                .max(Duration::from_secs(1))
+        };
+        tokio::select! {_=cancel.cancelled()=>break,_=tokio::time::sleep(pause)=>{}}
     }
     tracker.abort();
 }
@@ -764,8 +786,39 @@ mod tests {
             selected_groups(&first, vec![g.clone()], 200).unwrap()[0].since,
             100
         );
-        assert!(selected_groups(&[], vec![g; 11], 100).is_err());
+        assert_eq!(selected_groups(&[], vec![g; 11], 100).unwrap().len(), 1);
         assert!(next_page(&json!({"has_more":true,"page_token":"old"}), "old").is_err());
+    }
+    #[test]
+    fn more_than_ten_distinct_groups_can_be_saved_without_changing_existing_cursors() {
+        let input: Vec<_> = (0..35)
+            .map(|i| SyncGroup {
+                id: format!("oc_{i}"),
+                name: format!("会议群{i}"),
+                since: 1,
+            })
+            .collect();
+        let saved = selected_groups(&[], input.clone(), 100).unwrap();
+        assert_eq!(saved.len(), 35);
+        assert!(saved.iter().all(|g| g.since == 100));
+        let mut edited = input;
+        edited.remove(0);
+        let again = selected_groups(&saved, edited, 200).unwrap();
+        assert_eq!(again.len(), 34);
+        assert!(again.iter().all(|g| g.since == 100));
+    }
+    #[tokio::test]
+    async fn concurrent_history_reads_and_pages_share_one_paced_queue() {
+        let pacer = ReadPacer::new();
+        let request = || async {
+            pacer.wait().await;
+            tokio::time::Instant::now()
+        };
+        let (a, b, c) = tokio::join!(request(), request(), request());
+        let mut observed = [a, b, c];
+        observed.sort();
+        assert!(observed[1].duration_since(observed[0]) >= Duration::from_millis(950));
+        assert!(observed[2].duration_since(observed[1]) >= Duration::from_millis(950));
     }
     #[tokio::test]
     async fn pagination_resumes_after_budget_and_malformed_response_never_advances_cursor() {

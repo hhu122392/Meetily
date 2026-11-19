@@ -59,7 +59,7 @@ test('损坏的 Lark 配置显示真实错误并阻止保存和授权', async ()
   expect(content()).toContain('配置读取失败');
   expect(content()).not.toContain('请确认运行的是新版 Meetily');
   expect(button('保存并连接').props.disabled).toBe(true);
-  expect(button('授权会议助手')).toBeUndefined();
+  expect(button('授权会议助手').props.disabled).toBe(true);
   expect(invoke.mock.calls.every(call => call[0] === 'lark_app_status')).toBe(true);
 });
 
@@ -208,8 +208,9 @@ describe('Lark enterprise app configuration', () => {
   test('空配置先导入 App ID，已有 App ID 可只补密钥', async () => {
     respond = async command => command === 'lark_app_status' ? { ...appStatus, app_id: '', has_secret: false, manual_mode: false } : undefined;
     await act(async () => { renderer = create(<LarkAppSettings />); });
-    expect(renderer!.root.findByProps({ 'aria-label': '会议助手使用方式' }).props.value).toBe('manual');
-    expect(button('授权会议助手')).toBeUndefined();
+    expect(renderer!.root.findByProps({ 'aria-label': '会议助手使用方式' }).props.value).toBe('automatic');
+    expect(renderer!.root.findByProps({ id: 'lark-auto-record' }).props.checked).toBe(false);
+    expect(button('授权会议助手').props.disabled).toBe(true);
     await pasteCredential('TestOnlySecret0123456789abcdefABCD');
     expect(content()).toContain('请先复制并粘贴 App ID');
     expect(renderer!.root.findByProps({ id: 'lark-app-secret' }).props.value).toBe('');
@@ -226,6 +227,23 @@ describe('Lark enterprise app configuration', () => {
     await act(async()=>button('保存并连接').props.onClick());
     expect(invoke.mock.calls.find(call=>call[0]==='lark_app_save')?.[1]).toEqual(expect.objectContaining({manualMode:true,recordingSource:'local',autoRecord:false,allowGroupLaunch:false}));
     expect(invoke.mock.calls.some(call=>call[0]==='lark_app_authorize')).toBe(false);
+  });
+  test('已保存的手动模式不被新的默认值覆盖', async () => {
+    respond=async command=>command==='lark_app_status'?{...appStatus,manual_mode:true}:undefined;
+    await act(async()=>{renderer=create(<LarkAppSettings />);});
+    expect(renderer!.root.findByProps({'aria-label':'会议助手使用方式'}).props.value).toBe('manual');
+    expect(button('授权会议助手')).toBeUndefined();
+    expect(invoke.mock.calls.some(c=>c[0]==='lark_app_save')).toBe(false);
+  });
+  test('超过十个群可以全部保存，搜索不删除已选择的群', async () => {
+    const groups=Array.from({length:12},(_,i)=>({id:`oc_${i}`,name:`项目群${i}`}));
+    respond=async command=>command==='lark_app_status'?{...appStatus,authorized:true,sync_groups:groups}:undefined;
+    await act(async()=>{renderer=create(<LarkAppSettings />);});
+    await act(async()=>renderer!.root.findByProps({'aria-label':'搜索会议群'}).props.onChange({target:{value:'项目群11'}}));
+    expect(renderer!.root.findAllByProps({'aria-label':'项目群0'})).toHaveLength(0);
+    expect(renderer!.root.findByProps({'aria-label':'项目群11'}).props.checked).toBe(true);
+    await act(async()=>button('保存并连接').props.onClick());
+    expect(invoke.mock.calls.find(c=>c[0]==='lark_app_save')?.[1]?.syncGroups).toEqual(groups);
   });
   test('saving sends credentials only to the backend and clears the secret input without sending messages', async () => {
     respond = async command => command === 'lark_app_status' ? appStatus : undefined;

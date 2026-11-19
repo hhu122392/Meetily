@@ -41,13 +41,14 @@ export function LarkAppSettings() {
   const [secret, setSecret] = useState('');
   const [editingSecret, setEditingSecret] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const [manualMode, setManualMode] = useState(true);
+  const [manualMode, setManualMode] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [autoRecord, setAutoRecord] = useState(false);
   const recordingSource = 'local';
   const allowGroupLaunch = false;
   const [syncGroups, setSyncGroups] = useState<SyncGroup[]>([]);
   const [availableGroups, setAvailableGroups] = useState<SyncGroup[]>([]);
+  const [groupSearch, setGroupSearch] = useState('');
   const groupIdentity = useRef('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -63,7 +64,7 @@ export function LarkAppSettings() {
     if (!initialized.current) {
       initialized.current = true;
       setAppId(value.app_id); setEnabled(value.enabled); setAutoSend(value.auto_send);
-      setManualMode(!value.app_id || !!value.manual_mode);
+      setManualMode(!!value.app_id && !!value.manual_mode);
       setAutoRecord(value.auto_record ?? false);
       setSyncGroups(value.sync_groups ?? []);
     }
@@ -98,8 +99,8 @@ export function LarkAppSettings() {
       const manual = e.target.value === 'manual'; setManualMode(manual);
       if (manual) { setAutoRecord(false); }
     }}>
-      <option value="manual">本地录音 · 手动选群发送（推荐）</option>
-      <option value="automatic">同步群会议 · 本机自动录音（多人共用助手）</option>
+      <option value="automatic">同步群会议 · 本机自动录音（默认）</option>
+      <option value="manual">本地录音 · 手动选群发送</option>
     </select></label>
     <p className="text-xs text-gray-500">每人登录自己的 Lark 账号、选择自己的会议群；录音保存在各自电脑，无需统一服务。</p>
 
@@ -138,11 +139,12 @@ export function LarkAppSettings() {
     {manualMode ? <p className="text-xs text-gray-600">使用本机麦克风和系统声音手动录音，会后在会议详情选择目标群并确认发送。需要指定会议号入会自动录音时，请选择「同步群会议 · 本机自动录音」，启用本机自动录音后在群里发送会议号。</p> : <>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={autoSend} disabled={busy} onChange={e => setAutoSend(e.target.checked)} />新录音生成纪要后准备发往唯一绑定群（需审核确认）</label>
     <label className="flex items-center gap-2 text-sm"><input id="lark-auto-record" type="checkbox" checked={autoRecord} disabled={busy} onChange={e => setAutoRecord(e.target.checked)} />本人加入已同步的指定会议后，自动在本机录音</label>
-    <p className="text-xs text-gray-500">录制麦克风和系统声音，不下载云录音。群指令约每 15 秒同步，待参会和录音时约每 5 秒核验本人状态；可能漏掉入会最初几秒，请等录音提示后再开始讨论。</p>
+    <p className="text-xs text-gray-500">录制麦克风和系统声音，不下载云录音。逐群轮询，每轮至少 15 秒，群多或翻页时耗时增加；待参会和录音时约每 5 秒核验本人状态。请等录音提示后再开始讨论。</p>
     <div className="space-y-2 rounded border p-3">
       <div className="flex items-center justify-between"><Label>同步会议群</Label><Button variant="outline" disabled={busy || !loginAvailable} onClick={() => void perform(async () => setAvailableGroups(await invoke<SyncGroup[]>('lark_sync_groups')))}>加载我的群</Button></div>
-      <p className="text-xs text-gray-500">只列出本人和会议助手都已加入的群，最多选择 10 个。首次保存后再发指令；重新打开软件只补读最近十分钟，避免旧消息启动录音。</p>
-      {[...availableGroups, ...syncGroups.filter(g => !availableGroups.some(a => a.id === g.id))].map(g => <label key={g.id} className="flex gap-2 text-sm"><input type="checkbox" aria-label={g.name} checked={syncGroups.some(v => v.id === g.id)} disabled={busy} onChange={e => setSyncGroups(previous => e.target.checked ? [...previous, g] : previous.filter(v => v.id !== g.id))} />{g.name}</label>)}
+      <p className="text-xs text-gray-500">已选择 {syncGroups.length} 个群，不再限制为 10 个。只列出本人和会议助手都已加入的群，群越多同步等待越长。首次保存后再发指令；只补读最近十分钟，避免旧消息启动录音。</p>
+      {(availableGroups.length > 0 || syncGroups.length > 0) && <Input aria-label="搜索会议群" placeholder="搜索会议群" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} />}
+      <div className="max-h-60 overflow-y-auto space-y-2">{[...availableGroups, ...syncGroups.filter(g => !availableGroups.some(a => a.id === g.id))].filter(g => g.name.toLowerCase().includes(groupSearch.trim().toLowerCase())).map(g => <label key={g.id} className="flex gap-2 text-sm"><input type="checkbox" aria-label={g.name} checked={syncGroups.some(v => v.id === g.id)} disabled={busy} onChange={e => setSyncGroups(previous => e.target.checked ? [...previous, g] : previous.filter(v => v.id !== g.id))} />{g.name}</label>)}</div>
       {!availableGroups.length && !syncGroups.length && <p className="text-xs text-gray-500">登录后加载并选择群，再点击“保存并连接”。</p>}
     </div>
     <p className="text-xs text-gray-500">在所选群里实际 @会议助手，发送“会议ID:123 456 789”、入会链接或完整邀请，就会立即建立六小时有效的待参会绑定。任何群成员发指令都能同步；只有指令发送者的电脑负责回执。没有预约或到点提醒。多群绑定同一场会议时需手动录音并选群。</p>
