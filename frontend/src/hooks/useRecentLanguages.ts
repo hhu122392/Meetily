@@ -23,7 +23,7 @@ function readFromStorage(): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(MRU_KEY);
-    if (!raw) return [];
+    if (!raw) { const pinned = readPinnedFromStorage(); return pinned ? [pinned] : []; }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     const normalised: string[] = [];
@@ -33,7 +33,10 @@ function readFromStorage(): string[] {
       if (code && !normalised.includes(code)) normalised.push(code);
       if (normalised.length >= MAX_RECENTS) break;
     }
-    return normalised;
+    const pinned = readPinnedFromStorage();
+    return pinned && !normalised.includes(pinned)
+      ? [pinned, ...normalised].slice(0, MAX_RECENTS)
+      : normalised;
   } catch {
     return [];
   }

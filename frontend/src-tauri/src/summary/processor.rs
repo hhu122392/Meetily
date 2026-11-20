@@ -101,7 +101,10 @@ fn resolve_final_language_action(
     summary_language: Option<&str>,
     detected_transcript_language: Option<&str>,
 ) -> FinalLanguageAction {
-    match summary_language.and_then(language_name_from_code) {
+    // Auto follows the transcript for both the heading and the complete document.
+    let target = summary_language.and_then(language_name_from_code)
+        .or_else(|| detected_transcript_language.and_then(language_name_from_code));
+    match target {
         Some(name) if name != "English" => FinalLanguageAction::Translate(name),
         _ => match detected_transcript_language.and_then(language_name_from_code) {
             Some("English") => FinalLanguageAction::ReturnEnglish,
@@ -207,7 +210,7 @@ fn translation_system_prompt(target_language: &str) -> String {
         r#"You are a precise translator. Translate the provided Markdown document into {target_language} while preserving structure exactly.
 
 **CRITICAL RULES:**
-1. Translate every sentence, heading, list item, and table cell into {target_language}.
+1. Translate every sentence, heading, list item, and table cell into {target_language}, including the first # meeting title. The title and body must use the same target language.
 2. Preserve the Markdown structure EXACTLY: keep every `#`, `**`, `-`, `|`, code fence marker, and table pipe in the same position.
 3. Do NOT translate: proper nouns (names of people, products, companies), code identifiers, file paths, URLs, numeric values, or text inside backticks.
 4. Do not add commentary or explanation. Output ONLY the translated Markdown.
@@ -746,6 +749,18 @@ mod tests {
             resolve_final_language_action(Some("fr"), Some("ja")),
             FinalLanguageAction::Translate("French")
         );
+    }
+
+    #[test]
+    fn auto_follows_transcript_and_explicit_language_takes_precedence() {
+        for unset in [None, Some(""), Some("invalid")] {
+            assert_eq!(resolve_final_language_action(unset, Some("zh")), FinalLanguageAction::Translate("Chinese"));
+            assert_eq!(resolve_final_language_action(unset, Some("ja")), FinalLanguageAction::Translate("Japanese"));
+            assert_eq!(resolve_final_language_action(unset, Some("en")), FinalLanguageAction::ReturnEnglish);
+        }
+        assert_eq!(resolve_final_language_action(Some("zh"), Some("en")), FinalLanguageAction::Translate("Chinese"));
+        assert_eq!(resolve_final_language_action(Some("en"), Some("zh")), FinalLanguageAction::NormalizeEnglish);
+        assert_eq!(resolve_final_language_action(None, None), FinalLanguageAction::NormalizeEnglish);
     }
 
     #[test]

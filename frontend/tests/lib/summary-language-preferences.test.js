@@ -56,6 +56,27 @@ describe("summary language local fallback", () => {
     storageValues = installLocalStorage();
   });
 
+  test("新安装默认中文，显式选择自动或其他语言后重读不覆盖", async () => {
+    const prefs = await import("../../src/lib/summary-language-preferences");
+    expect(prefs.readPinnedSummaryLanguageDefault()).toBe("zh");
+    prefs.writePinnedSummaryLanguageDefault(null);
+    expect(prefs.readPinnedSummaryLanguageDefault()).toBeNull();
+    expect(storageValues.get(prefs.SUMMARY_LANGUAGE_DEFAULT_KEY)).toBe("auto");
+    prefs.writePinnedSummaryLanguageDefault("en");
+    expect(prefs.readPinnedSummaryLanguageDefault()).toBe("en");
+  });
+
+  test("新会议保存默认中文，取消默认后不再强制语言", async () => {
+    const prefs = await import("../../src/lib/summary-language-preferences");
+    invokeMock.mockResolvedValue({language: "zh", storage: "metadata"});
+    expect(await prefs.applyPinnedSummaryLanguageToMeeting("new-meeting")).toBe("zh");
+    expect(invokeMock).toHaveBeenCalledWith("api_save_meeting_summary_language", {meetingId: "new-meeting", summaryLanguage: "zh"});
+    invokeMock.mockClear();
+    prefs.writePinnedSummaryLanguageDefault(null);
+    expect(await prefs.applyPinnedSummaryLanguageToMeeting("auto-meeting")).toBeNull();
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
   test("reads summary language from local fallback when meeting has no folder", async () => {
     const prefs = await import("../../src/lib/summary-language-preferences");
     storageValues.set("summaryLanguageFallback:meeting-1", "fr");

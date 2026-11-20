@@ -34,7 +34,9 @@ export interface SummaryLanguageDetectionResult {
 export function readPinnedSummaryLanguageDefault(): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    return normaliseLanguageCode(window.localStorage.getItem(SUMMARY_LANGUAGE_DEFAULT_KEY));
+    const saved = window.localStorage.getItem(SUMMARY_LANGUAGE_DEFAULT_KEY);
+    // A missing preference is a fresh default. Explicit Auto must survive restarts.
+    return saved === null ? 'zh' : normaliseLanguageCode(saved);
   } catch {
     return null;
   }
@@ -43,8 +45,7 @@ export function readPinnedSummaryLanguageDefault(): string | null {
 export function writePinnedSummaryLanguageDefault(value: string | null): void {
   if (typeof window === 'undefined') return;
   try {
-    if (value) window.localStorage.setItem(SUMMARY_LANGUAGE_DEFAULT_KEY, value);
-    else window.localStorage.removeItem(SUMMARY_LANGUAGE_DEFAULT_KEY);
+    window.localStorage.setItem(SUMMARY_LANGUAGE_DEFAULT_KEY, value || 'auto');
   } catch {
     // Preference writes are non-critical; meeting-specific persistence happens separately.
   }

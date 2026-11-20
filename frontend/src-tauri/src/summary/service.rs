@@ -1073,6 +1073,17 @@ mod tests {
     }
 
     #[test]
+    fn chinese_title_and_body_are_taken_from_final_document_not_english_cache() {
+        let final_markdown = "# 开发周会：订单迭代完成\n## 行动项\n下周对接支付。";
+        let result = build_summary_result_json(final_markdown,
+            "# Dev Team Weekly Meeting\n## Actions\nIntegrate payments next week.",
+            sample_cache_source(), None, false, false).unwrap();
+        assert_eq!(extract_meeting_name_from_markdown(final_markdown).as_deref(), Some("开发周会：订单迭代完成"));
+        assert_eq!(result["markdown"], "## 行动项\n下周对接支付。");
+        assert!(result["english_cache"]["markdown"].as_str().unwrap().starts_with("# Dev Team"));
+    }
+
+    #[test]
     fn result_json_rejects_title_only_display_markdown() {
         assert_eq!(
             build_summary_result_json(
