@@ -19,7 +19,17 @@
     {
       "id": "summary",
       "title": "摘要",
-      "instruction": "用一段简短文字概括整场会议的核心内容。必须保留转写中明确出现的参会人、项目或产品代号（例如 M100）、会议日期与时间、截止日期和主要风险；不得遗漏这些关键信息，也不得编造未出现的人名、代号、数字、决定或完成状态。",
+      "instruction": "用一段简短文字概括会议核心内容，保留明确的项目或产品代号、主要风险和结论，不编造信息。出席及缺席名单仅放入参会人员栏目，具体待办仅放入行动项栏目。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
+      "id": "attendance",
+      "title": "参会人员",
+      "instruction": "只采用程序提供的出席、缺席名单或用户明确确认的本场名单。被提到、被安排任务或在邀请名单中不代表实际出席。出席人员、缺席人员分别横向排列，用顿号分隔；未提到的名单留空，不推测。",
       "format": "paragraph",
       "item_format": null,
       "example_item_format": null,
@@ -39,7 +49,7 @@
     {
       "id": "action_items",
       "title": "行动项",
-      "instruction": "列出所有已分配任务、负责人和截止日期，只保留会议结论和行动字段。原文依据和时间戳由程序内部保存，不写入摘要正文。",
+      "instruction": "列出会议明确确认、尚需完成的任务，即使没有负责人或截止时间也要保留任务。负责人和截止时间只采用会议明确的信息，未提到的单元格留空，不写待定、不推测。建议、疑问、假设、已完成事项不作为待办。原文依据由程序单独保存，不写入正文。",
       "format": "list",
       "item_format": "| **负责人** | **任务** | **截止时间** |\n| --- | --- | --- |",
       "example_item_format": null,
@@ -58,6 +68,6 @@
     }
   ],
   "extensions": {
-    "meetily.content_revision": 3
+    "meetily.content_revision": 4
   }
 }

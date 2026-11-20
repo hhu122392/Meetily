@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronRight, File, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, Upload } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
+import { rememberSettingsReturnPath } from '@/lib/settings-navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting } from '@/components/Sidebar/SidebarProvider';
 import { ConfirmationModal } from '../ConfirmationModel/confirmation-modal';
@@ -45,6 +46,10 @@ const Sidebar: React.FC = () => {
   useUiLanguage();
   const router = useRouter();
   const pathname = usePathname();
+  const openSettingsPage = () => {
+    rememberSettingsReturnPath();
+    router.push('/settings');
+  };
   const {
     currentMeeting,
     setCurrentMeeting,
@@ -530,7 +535,7 @@ const Sidebar: React.FC = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => router.push('/settings')}
+                onClick={openSettingsPage}
                 className={`p-2 rounded-lg transition-colors duration-150 ${isSettingsPage ? 'bg-gray-100' : 'hover:bg-gray-100'
                   }`}
               >
@@ -807,7 +812,7 @@ const Sidebar: React.FC = () => {
             )}
 
             <button
-              onClick={() => router.push('/settings')}
+              onClick={openSettingsPage}
               className="w-full flex items-center justify-center px-3 py-1.5 mt-1 mb-1 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors shadow-sm"
             >
               <Settings className="w-4 h-4 mr-2" />

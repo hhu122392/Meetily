@@ -40,7 +40,19 @@ impl SummaryProcessesRepository {
             return Ok(false);
         }
 
-        let result_json = serde_json::to_string(summary);
+        // Editor saves only contain visible minutes. Preserve independently extracted meeting
+        // data on the server; neither editing nor changing templates should erase it.
+        let previous: Option<Option<String>> = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id = ?")
+            .bind(meeting_id).fetch_optional(&mut *transaction).await?;
+        let mut summary = summary.clone();
+        let field = crate::summary::action_extraction::RESULT_FIELD;
+        summary.as_object_mut().map(|object| object.remove(field));
+        if let Some(actions) = previous.flatten()
+            .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+            .and_then(|value| value.get(field).cloned()) {
+            summary[field] = actions;
+        }
+        let result_json = serde_json::to_string(&summary);
         if result_json.is_err() {
             error!("Can't convert the json to string for saving to Database");
             transaction.rollback().await?;
@@ -265,6 +277,20 @@ mod tests {
         .execute(pool)
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn visible_minutes_save_preserves_server_extracted_actions() {
+        let pool = test_pool().await;
+        sqlx::raw_sql("CREATE TABLE meetings(id TEXT PRIMARY KEY, updated_at TEXT); INSERT INTO meetings VALUES('m','now');")
+            .execute(&pool).await.unwrap();
+        let actions = json!([{"summary":"补充测试","evidence":"补充测试。","ownerText":"","dueText":""}]);
+        seed_pending(&pool, "m", Utc::now(), Some(&json!({"markdown":"摘要", "meeting_action_items":actions}).to_string()), None).await;
+        assert!(SummaryProcessesRepository::update_meeting_summary(&pool, "m", &json!({"markdown":"人工编辑摘要", "meeting_action_items":[]})).await.unwrap());
+        let result: String = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id='m'").fetch_one(&pool).await.unwrap();
+        let result: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(result["markdown"], "人工编辑摘要");
+        assert_eq!(result["meeting_action_items"], actions);
     }
 
     #[tokio::test]

@@ -16,7 +16,7 @@ pub struct Member {
     pub name: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Action {
     pub id: String,
@@ -28,7 +28,12 @@ pub struct Action {
     pub due_time: String,
     pub member_chat_id: String,
     pub members: Vec<Member>,
+    // Historical drafts do not record whether they were edited; preserve them conservatively.
+    #[serde(default = "historical_draft_is_manual")]
+    pub manually_edited: bool,
 }
+
+fn historical_draft_is_manual() -> bool { true }
 
 fn plain(s: &str) -> String {
     s.replace("**", "").replace('`', "").trim().to_owned()
@@ -142,7 +147,32 @@ fn candidate(summary: String, evidence: String, owner: String, due: String) -> O
         due_time: time,
         member_chat_id: String::new(),
         members: vec![],
+        manually_edited: false,
     })
+}
+
+fn merge_candidate(result: &mut Vec<Action>, item: Action) {
+    if let Some(existing) = result.iter_mut().find(|v| key(&v.summary) == key(&item.summary)) {
+        for (previous, next, separator) in [
+            (&mut existing.owner_text, &item.owner_text, "、"),
+            (&mut existing.due_text, &item.due_text, "；"),
+        ] {
+            if !next.is_empty() && next.as_str() != previous.as_str() {
+                if !previous.is_empty() { previous.push_str(separator); }
+                previous.push_str(next);
+            }
+        }
+        if existing.due_text != item.due_text {
+            existing.due_date.clear();
+            existing.due_time.clear();
+        }
+        if !existing.evidence.lines().any(|line| line == item.evidence) {
+            existing.evidence.push('\n');
+            existing.evidence.push_str(&item.evidence);
+        }
+    } else {
+        result.push(item);
+    }
 }
 
 // Extract only explicit action sections. This is local parsing, without model/API calls.
@@ -312,7 +342,7 @@ fn config_revision(c: &AppConfig) -> String {
         &c.tasks_authorized.to_string(),
     ])
 }
-async fn source(pool: &SqlitePool, meeting: &str) -> Result<(String, String, String), String> {
+async fn source(pool: &SqlitePool, meeting: &str) -> Result<(String, String, Vec<Action>), String> {
     let title: String = sqlx::query_scalar("SELECT title FROM meetings WHERE id=?")
         .bind(meeting)
         .fetch_optional(pool)
@@ -322,11 +352,24 @@ async fn source(pool: &SqlitePool, meeting: &str) -> Result<(String, String, Str
     let file = markdown_export::preview(pool, meeting)
         .await?
         .ok_or("请先保存会议纪要。")?;
-    Ok((
-        title,
-        file["hash"].as_str().ok_or("纪要版本无效")?.into(),
-        file["content"].as_str().ok_or("纪要内容无效")?.into(),
-    ))
+    let raw: Option<Option<String>> = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id=?")
+        .bind(meeting).fetch_optional(pool).await.map_err(db_error)?;
+    let result = raw.flatten().map(|s| serde_json::from_str::<Value>(&s))
+        .transpose().map_err(|_| "会议分析数据损坏。")?;
+    let independent = result.as_ref().and_then(|r| r.get(crate::summary::action_extraction::RESULT_FIELD));
+    let markdown = file["content"].as_str().ok_or("纪要内容无效")?;
+    let hash = file["hash"].as_str().ok_or("纪要版本无效")?;
+    if let Some(value) = independent {
+        let items: Vec<crate::summary::action_extraction::ExtractedAction> = serde_json::from_value(value.clone())
+            .map_err(|_| "独立行动项数据损坏。")?;
+        let mut actions = Vec::new();
+        for item in items.into_iter().filter_map(|i| candidate(i.summary, i.evidence, i.owner_text, i.due_text)) {
+            merge_candidate(&mut actions, item);
+        }
+        return Ok((title, fingerprint(&[hash, &value.to_string()]), actions));
+    }
+    // Older meetings have no independent extraction yet; retain their existing workflow.
+    Ok((title, hash.into(), extract(markdown)))
 }
 async fn drafts(pool: &SqlitePool, meeting: &str, hash: &str) -> Result<Vec<Action>, String> {
     let rows: Vec<String> = sqlx::query_scalar("SELECT draft_json FROM lark_action_drafts WHERE meeting_id=? AND source_hash=? ORDER BY rowid")
@@ -365,8 +408,13 @@ pub async fn lark_actions_extract(
     let _storage = crate::audio::storage_migration::use_storage().await?;
     let _guard = app::DELIVERY_LOCK.lock().await;
     let pool = state.db_manager.pool();
-    let (_, hash, markdown) = source(pool, &meeting_id).await?;
-    let items = extract(&markdown);
+    let hash = refresh_drafts(pool, &meeting_id).await?;
+    context(pool, &meeting_id, &hash, &app::load(pool).await?).await
+}
+
+// Caller holds DELIVERY_LOCK. This only creates local review drafts, never Lark tasks.
+pub(crate) async fn refresh_drafts(pool: &SqlitePool, meeting_id: &str) -> Result<String, String> {
+    let (_, hash, items) = source(pool, meeting_id).await?;
     if items.len() > 100 {
         return Err("纪要包含超过 100 条行动项，请先拆分整理。".into());
     }
@@ -374,7 +422,7 @@ pub async fn lark_actions_extract(
     for mut item in items {
         let source_key = key(&item.summary);
         let old = sqlx::query(
-            "SELECT id,source_hash FROM lark_action_drafts WHERE meeting_id=? AND source_key=?",
+            "SELECT id,source_hash,draft_json FROM lark_action_drafts WHERE meeting_id=? AND source_key=?",
         )
         .bind(&meeting_id)
         .bind(&source_key)
@@ -386,14 +434,24 @@ pub async fn lark_actions_extract(
                 continue;
             }
             item.id = old.get("id");
+            let previous: Action = serde_json::from_str(old.get::<&str, _>("draft_json"))
+                .map_err(|_| "行动项草稿损坏。")?;
+            if previous.manually_edited {
+                // Regeneration may update automatic candidates, never reviewed user edits.
+                sqlx::query("UPDATE lark_action_drafts SET source_hash=?,updated_at=? WHERE id=?")
+                    .bind(&hash).bind(now()).bind(&item.id).execute(&mut *tx).await.map_err(db_error)?;
+                continue;
+            }
         } else {
             item.id = uuid::Uuid::new_v4().to_string();
         }
         sqlx::query("INSERT INTO lark_action_drafts(id,meeting_id,source_key,source_hash,draft_json,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(meeting_id,source_key) DO UPDATE SET source_hash=excluded.source_hash,draft_json=excluded.draft_json,updated_at=excluded.updated_at")
             .bind(&item.id).bind(&meeting_id).bind(source_key).bind(&hash).bind(serde_json::to_string(&item).unwrap()).bind(now()).execute(&mut *tx).await.map_err(db_error)?;
     }
+    sqlx::query("UPDATE lark_action_drafts SET source_hash=?,updated_at=? WHERE meeting_id=? AND (source_key LIKE 'new-%' OR COALESCE(json_extract(draft_json,'$.manuallyEdited'),1)=1)")
+        .bind(&hash).bind(now()).bind(meeting_id).execute(&mut *tx).await.map_err(db_error)?;
     tx.commit().await.map_err(db_error)?;
-    context(pool, &meeting_id, &hash, &app::load(pool).await?).await
+    Ok(hash)
 }
 
 fn valid_id(s: &str, prefix: &str) -> bool {
@@ -522,12 +580,19 @@ async fn save_drafts(
     }
     let mut tx = pool.begin().await.map_err(db_error)?;
     for item in items {
+        let mut saved_item = item.clone();
+        if let Some(previous) = by_id.get(item.id.as_str()) {
+            saved_item.manually_edited = previous.manually_edited;
+            saved_item.manually_edited |= &saved_item != *previous;
+        } else {
+            saved_item.manually_edited = true;
+        }
         if by_id.contains_key(item.id.as_str()) {
             sqlx::query("UPDATE lark_action_drafts SET draft_json=?,updated_at=? WHERE id=? AND meeting_id=? AND source_hash=?")
-                .bind(serde_json::to_string(item).unwrap()).bind(now()).bind(&item.id).bind(meeting).bind(hash).execute(&mut *tx).await.map_err(db_error)?;
+                .bind(serde_json::to_string(&saved_item).unwrap()).bind(now()).bind(&item.id).bind(meeting).bind(hash).execute(&mut *tx).await.map_err(db_error)?;
         } else {
             sqlx::query("INSERT INTO lark_action_drafts(id,meeting_id,source_key,source_hash,draft_json,updated_at) VALUES(?,?,?,?,?,?)")
-                .bind(&item.id).bind(meeting).bind(&item.id).bind(hash).bind(serde_json::to_string(item).unwrap()).bind(now()).execute(&mut *tx).await.map_err(db_error)?;
+                .bind(&item.id).bind(meeting).bind(&item.id).bind(hash).bind(serde_json::to_string(&saved_item).unwrap()).bind(now()).execute(&mut *tx).await.map_err(db_error)?;
         }
     }
     tx.commit().await.map_err(db_error)?;
@@ -835,6 +900,7 @@ mod tests {
     async fn db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::raw_sql("PRAGMA foreign_keys=ON; CREATE TABLE meetings(id TEXT PRIMARY KEY); INSERT INTO meetings VALUES('m'),('other');").execute(&pool).await.unwrap();
+        sqlx::raw_sql("CREATE TABLE summary_processes(meeting_id TEXT PRIMARY KEY,result TEXT);").execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!(
             "../../migrations/20261116030000_lark_action_tasks.sql"
         ))
@@ -871,6 +937,61 @@ mod tests {
         assert_eq!(items[3].summary, "调查问题");
         assert!(extract("## 摘要\n今天需要测试\n## 风险\n- 负责人：张三").is_empty());
     }
+    #[tokio::test]
+    async fn independent_actions_survive_missing_template_section_and_manual_minutes_edits() {
+        let pool = db().await;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("纪要.md");
+        std::fs::write(&path, "## 摘要\n会议讨论了接口交付。").unwrap();
+        sqlx::raw_sql("ALTER TABLE meetings ADD COLUMN title TEXT NOT NULL DEFAULT '例会'; CREATE TABLE summary_markdown_exports(meeting_id TEXT PRIMARY KEY,path TEXT,error TEXT);").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO summary_markdown_exports VALUES('m',?,NULL)")
+            .bind(path.to_string_lossy().as_ref()).execute(&pool).await.unwrap();
+        let result = json!({"markdown":"只有摘要", "meeting_action_items":[
+            {"summary":"补充接口测试","evidence":"确定补充接口测试。","ownerText":"","dueText":""}
+        ]});
+        sqlx::query("INSERT INTO summary_processes VALUES('m',?)")
+            .bind(result.to_string()).execute(&pool).await.unwrap();
+        let first_hash = refresh_drafts(&pool, "m").await.unwrap();
+        let first = drafts(&pool, "m", &first_hash).await.unwrap();
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].summary, "补充接口测试");
+        assert!(first[0].owner_text.is_empty() && first[0].due_date.is_empty());
+        let mut edited = first.clone();
+        edited[0].summary = "人工调整任务内容".into();
+        edited[0].owner_text = "李四".into();
+        save_drafts(&pool, "m", &first_hash, &revision(&first).unwrap(), &edited).await.unwrap();
+        std::fs::write(&path, "## 摘要\n人工修改纪要，仍然没有行动项栏目。").unwrap();
+        let next_hash = refresh_drafts(&pool, "m").await.unwrap();
+        assert_ne!(first_hash, next_hash);
+        let next = drafts(&pool, "m", &next_hash).await.unwrap();
+        assert_eq!(next.len(), 1);
+        assert_eq!(next[0].id, first[0].id);
+        assert_eq!(next[0].summary, "人工调整任务内容");
+        assert_eq!(next[0].owner_text, "李四");
+        let receipt_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lark_action_receipts").fetch_one(&pool).await.unwrap();
+        assert_eq!(receipt_count, 0);
+        sqlx::query("UPDATE summary_processes SET result=? WHERE meeting_id='m'")
+            .bind(json!({"meeting_action_items":[]}).to_string()).execute(&pool).await.unwrap();
+        std::fs::write(&path, "## 行动项\n- 旧纪要中的任务").unwrap();
+        assert!(source(&pool, "m").await.unwrap().2.is_empty());
+        let hash = refresh_drafts(&pool, "m").await.unwrap();
+        let retained = drafts(&pool, "m", &hash).await.unwrap();
+        assert_eq!(retained.len(), 1);
+        assert_eq!(retained[0].summary, "人工调整任务内容");
+        assert!(retained[0].manually_edited);
+    }
+
+    #[test]
+    fn independent_duplicate_tasks_retain_owners_and_conflicting_deadlines() {
+        let mut items = vec![];
+        merge_candidate(&mut items, candidate("发布".into(), "张三周五发布".into(), "张三".into(), "周五".into()).unwrap());
+        merge_candidate(&mut items, candidate("发布".into(), "李四周六发布".into(), "李四".into(), "周六".into()).unwrap());
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].owner_text, "张三、李四");
+        assert_eq!(items[0].due_text, "周五；周六");
+        assert!(items[0].due_date.is_empty());
+    }
+
     #[test]
     fn request_omits_absent_fields_and_converts_dates_without_using_today() {
         let mut a = item("a");

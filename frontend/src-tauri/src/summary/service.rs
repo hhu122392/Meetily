@@ -127,7 +127,7 @@ fn build_summary_cache_source(
 
 fn template_cache_fingerprint(template: &Template) -> String {
     let rendered_template = format!(
-        "{}\n---SECTION-INSTRUCTIONS---\n{}",
+        "independent-meeting-actions-v1\n{}\n---SECTION-INSTRUCTIONS---\n{}",
         template.to_markdown_structure(),
         template.to_section_instructions()
     );
@@ -568,7 +568,7 @@ impl SummaryService {
                     "✓ Successfully processed {} chunks for meeting_id: {}. Duration: {:.2}s",
                     generated.successful_chunk_count, meeting_id, duration
                 );
-                let result_json = match build_summary_result_json(
+                let mut result_json = match build_summary_result_json(
                     &generated.final_markdown,
                     &generated.english_markdown,
                     cache_source,
@@ -583,6 +583,8 @@ impl SummaryService {
                         return;
                     }
                 };
+
+                result_json[super::action_extraction::RESULT_FIELD] = serde_json::json!(generated.action_items);
 
                 let review_guard = crate::lark::app::DELIVERY_LOCK.lock().await;
                 match SummaryProcessesRepository::update_process_completed(
@@ -611,6 +613,9 @@ impl SummaryService {
                         let export_dir = crate::company::data_dir(&_app).ok();
                         if let Err(error) = super::markdown_export::export(&pool, &meeting_id, export_dir.as_deref(), true).await {
                             error!("{}", error);
+                        }
+                        if let Err(error) = crate::lark::actions::refresh_drafts(&pool, &meeting_id).await {
+                            error!("自动保存行动项草稿失败，打开行动项面板时可重试：{}", error);
                         }
                         drop(review_guard);
                         crate::lark::app::report_summary_result(&pool, &meeting_id).await;

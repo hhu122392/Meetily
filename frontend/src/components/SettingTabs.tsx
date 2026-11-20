@@ -3,6 +3,7 @@ import { ModelConfig, ModelSettingsModal } from "./ModelSettingsModal"
 import { TranscriptModelProps, TranscriptSettings } from "./TranscriptSettings"
 import { RecordingSettings, RecordingPreferences } from "./RecordingSettings"
 import Link from 'next/link';
+import { rememberSettingsReturnPath } from '@/lib/settings-navigation';
 import { About } from "./About";
 import { t, useUiLanguage } from "@/i18n";
 
@@ -42,7 +43,7 @@ export function SettingTabs({
     <TabsTrigger value="about">{t("About")}</TabsTrigger>
   </TabsList>
   <TabsContent value="modelSettings">
-    <Link className="my-3 inline-block text-blue-700" href="/settings/templates">管理纪要模板 →</Link>
+    <Link className="my-3 inline-block text-blue-700" href="/settings/templates" onClick={() => rememberSettingsReturnPath()}>管理纪要模板 →</Link>
     <ModelSettingsModal
 
 modelConfig={modelConfig}

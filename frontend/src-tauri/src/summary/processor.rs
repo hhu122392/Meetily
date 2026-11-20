@@ -245,6 +245,8 @@ fn build_final_report_system_prompt(
 6. Output **only** the completed Markdown report.
 7. Do not include reasoning, thinking, self-correction, decision strategy, or any meta-commentary sections — output only the completed Markdown report.
 8. If unsure about something, omit it.
+9. Only include the sections defined by the template. Attendance and action items are independently extracted by the application; include them in the report only when the template has a corresponding section. Do not append extra attendance or action-item sections or insert a roster into an unrelated summary section.
+10. In attendance sections, only use explicitly stated attendance or user-confirmed attendance. Mentioning a person, assigning a task or listing invitees does not prove attendance. In action-item sections, include agreed pending tasks even without an owner or deadline; leave missing fields blank and never invent assignments or dates.
 
 **SECTION-SPECIFIC INSTRUCTIONS:**
 {section_instructions}
@@ -361,6 +363,7 @@ pub(crate) struct GeneratedMeetingSummary {
     pub successful_chunk_count: i64,
     pub reasoning_stripped: bool,
     pub normalization_fallback: bool,
+    pub action_items: Vec<super::action_extraction::ExtractedAction>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -389,6 +392,17 @@ pub(crate) async fn generate_meeting_summary(
         return Err("Summary generation was cancelled".to_string());
     }
     info!("Starting summary generation with provider: {:?}, model: {}", provider, model_name);
+
+    let action_items = super::action_extraction::extract_all(
+        text, token_threshold.saturating_sub(1500), |prompt| async move {
+            generate_summary(
+                client, provider, model_name, api_key,
+                super::action_extraction::SYSTEM_PROMPT, &prompt,
+                ollama_endpoint, custom_openai_endpoint, max_tokens, temperature, top_p,
+                app_data_dir, cancellation_token,
+            ).await.map(|completion| completion.content)
+        },
+    ).await?;
 
     let total_tokens = rough_token_count(text);
     let (mut english_markdown, successful_chunk_count, mut reasoning_stripped) =
@@ -500,6 +514,8 @@ pub(crate) async fn generate_meeting_summary(
             );
             let mut final_user_prompt =
                 format!("<transcript_chunks>\n{content_to_summarize}\n</transcript_chunks>\n");
+            final_user_prompt.push_str("\nVerified-source action candidates (use only in a corresponding template section; missing fields must remain blank):\n");
+            final_user_prompt.push_str(&serde_json::to_string(&action_items).map_err(|e| e.to_string())?);
             if !custom_prompt.is_empty() {
                 final_user_prompt.push_str("\n\nUser Provided Context:\n\n<user_context>\n");
                 final_user_prompt.push_str(custom_prompt);
@@ -554,6 +570,7 @@ pub(crate) async fn generate_meeting_summary(
         successful_chunk_count,
         reasoning_stripped,
         normalization_fallback,
+        action_items,
     })
 }
 

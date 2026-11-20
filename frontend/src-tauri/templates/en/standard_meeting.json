@@ -27,6 +27,16 @@
       "empty_behavior": "show_not_mentioned"
     },
     {
+      "id": "attendance",
+      "title": "Attendance",
+      "instruction": "Use only explicitly stated or user-confirmed attendance. Mentioned names, task owners and invitees are not proof of attendance. List present and absent people separately on one line each. Leave unknown lists blank.",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    },
+    {
       "id": "key_decisions",
       "title": "Key Decisions",
       "instruction": "List the most important decisions made during the meeting.",
@@ -39,7 +49,7 @@
     {
       "id": "action_items",
       "title": "Action Items",
-      "instruction": "List all assigned tasks with their owners and due date. Keep only conclusions and business fields in the report; source excerpts and timestamps remain internal.",
+      "instruction": "List explicitly agreed pending tasks, including tasks with no assigned owner or deadline. Use only explicitly stated owners and deadlines; leave missing cells blank. Exclude suggestions, questions, hypothetical plans and completed work. Keep source evidence outside the report.",
       "format": "list",
       "item_format": "| **Owner** | Task | Due |\n| --- | --- | --- |",
       "example_item_format": null,
@@ -58,6 +68,6 @@
     }
   ],
   "extensions": {
-    "meetily.content_revision": 3
+    "meetily.content_revision": 4
   }
 }

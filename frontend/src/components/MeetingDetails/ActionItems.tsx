@@ -94,7 +94,7 @@ export function ActionItems({ meetingId, saveEdits, disabled }: { meetingId: str
     <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full p-0" aria-label="行动项" title="行动项 · 确认后同步 Lark 任务" disabled={disabled || busy} onClick={() => void prepare()}><ListTodo className="h-4 w-4" /></Button>
     <Dialog open={open} onOpenChange={next => { if (!next) close(); }}>
       <DialogContent className="flex w-[calc(100vw-2rem)] max-w-5xl max-h-[92vh] flex-col overflow-hidden rounded-2xl" onEscapeKeyDown={e => { if (dirty || busy) e.preventDefault(); }} onPointerDownOutside={e => { if (dirty || busy) e.preventDefault(); }}>
-        <DialogHeader className="shrink-0"><DialogTitle>行动项 · 核对后同步任务</DialogTitle><DialogDescription>从已保存纪要的行动项表格或列表提取。默认不勾选、不自动同步。保存草稿、保存云文档和发群均不会创建任务。</DialogDescription></DialogHeader>
+        <DialogHeader className="shrink-0"><DialogTitle>行动项 · 核对后同步任务</DialogTitle><DialogDescription>生成纪要时默认从转写提取行动项，模板没有行动项栏目也会单独保存。旧会议仍可从纪要表格或列表提取。默认不勾选，人工确认后才同步任务。</DialogDescription></DialogHeader>
         {(busy || error || notice) && <div className="max-h-28 shrink-0 overflow-y-auto" aria-label="行动项处理状态" aria-busy={busy}>
           {busy && <p role="status">正在处理，请稍候…</p>}
           {error && <p role="alert" className="whitespace-pre-wrap text-sm text-red-700">{error}</p>}
@@ -121,7 +121,7 @@ export function ActionItems({ meetingId, saveEdits, disabled }: { meetingId: str
             {memberError && <p role="alert" className="mt-2 text-sm text-red-700">{memberError}</p>}
           </details>
           <p className="text-xs text-muted-foreground">负责人、截止时间未提到则留空。相对日期保留原文，请确认具体日期；填写时刻按北京时间处理。不支持的格式可手动补充，未提取到不代表会议没有待办。</p>
-          {!items.length && <p className="rounded-lg bg-muted p-4 text-sm">未找到明确的行动项表格或列表。可以在纪要中整理“行动项”章节后重新打开，也可以手动补充。</p>}
+          {!items.length && <p className="rounded-lg bg-muted p-4 text-sm">未找到明确的待办事项。旧会议可重新生成纪要，从转写独立提取行动项；也可以手动补充。未提到的负责人和截止时间留空。</p>}
           <div className="space-y-3">{items.map((item, index) => <section key={item.id} className="space-y-3 rounded-lg border p-4" aria-label={`行动项 ${index + 1}`}>
             <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" aria-label={`同步行动项 ${index + 1}`} checked={selected.includes(item.id)} disabled={busy || blocked(item.id)} onChange={e => { setSelected(current => e.target.checked ? [...current, item.id] : current.filter(id => id !== item.id)); invalidate(); }} />{blocked(item.id) ? '已同步或待核对，不重复创建' : '勾选此项同步'}</label>
             <fieldset disabled={busy || blocked(item.id)} className="space-y-3">

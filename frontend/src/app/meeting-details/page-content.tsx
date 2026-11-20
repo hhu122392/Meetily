@@ -135,6 +135,14 @@ export default function PageContent({
     onOpenModelSettings: handleOpenModelSettings,
   });
 
+  const refreshMeetingSettings = meetingSettings.refresh;
+  useEffect(() => {
+    if (summaryGeneration.summaryStatus === 'completed' && meetingSettings.ready) {
+      // Refresh independently extracted attendance while preserving pending manual edits.
+      void refreshMeetingSettings().catch(error => console.error('刷新会议人员失败', error));
+    }
+  }, [summaryGeneration.summaryStatus, meetingSettings.ready, refreshMeetingSettings]);
+
   const copyOperations = useCopyOperations({
     meeting,
     transcripts: meetingData.transcripts,
