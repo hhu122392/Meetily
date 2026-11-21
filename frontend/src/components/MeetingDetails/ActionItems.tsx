@@ -157,6 +157,7 @@ export function ActionItems({ meetingId, saveEdits, disabled }: { meetingId: str
           {!context.authorized ? <p className="text-sm text-muted-foreground">请先在上方连接 Lark 任务，完成授权后点击“刷新授权”，再预览同步。</p> : !selected.length && <p className="text-sm text-muted-foreground">请先勾选需要同步的行动项，再预览同步。</p>}
           {preview && <section ref={previewRef} tabIndex={-1} className="space-y-3 rounded-lg border border-blue-300 bg-blue-50/50 p-4" aria-label="同步预览">
             <p className="font-medium">将创建 {preview.items.length} 条 Lark 任务</p>
+            {preview.items.some(item => Array.from(item.evidence).length > 2000) && <p className="text-sm text-amber-800">较长的原文依据会在任务描述中附前 2,000 字并注明节选，完整依据保留在 Meetily。</p>}
             <p className="text-xs text-muted-foreground">创建账号：{preview.ownerId}。创建后 Lark 可能通知所选负责人；不会向会议群发送消息。</p>
             <ul className="space-y-2 text-sm">{preview.items.map(item => <li key={item.id}><p className="font-medium">{item.summary}</p><p>负责人：{item.members.map(m => m.name).join('、') || '留空'}；截止：{item.dueDate ? `${item.dueDate}${item.dueTime ? ` ${item.dueTime}（北京时间）` : '（全天）'}` : '留空'}</p></li>)}</ul>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label="已人工核对行动项" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} />我已逐条核对事项、负责人和截止时间</label>

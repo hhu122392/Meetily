@@ -156,3 +156,13 @@ test('手动补充不默认同步，未保存修改阻止关闭，任务授权�
   expect(invoke.mock.calls.find(c => c[0] === 'lark_app_authorize')?.[1]).toEqual({ tasksOnly: true });
   expect(invoke.mock.calls.some(c => c[0] === 'lark_app_save' || c[0] === 'lark_actions_sync')).toBe(false);
 });
+
+test("长依据预览明确说明节选且仍需人工确认", async () => {
+  const context = structuredClone(base);
+  context.items[0].evidence = "证".repeat(2001);
+  await mount(context); await preview();
+  expect(JSON.stringify(field("同步预览").findAllByType("p").map(p => p.children))).toContain("前 2,000 字");
+  expect(field("已人工核对行动项").props.checked).toBe(false);
+  expect(button("确认同步到 Lark 任务").props.disabled).toBe(true);
+  expect(invoke.mock.calls.some(c => c[0] === "lark_actions_sync")).toBe(false);
+});

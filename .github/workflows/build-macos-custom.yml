@@ -70,17 +70,7 @@ jobs:
       - name: 测试凭证加密与文件完整性
         env:
           CMAKE_PROJECT_INCLUDE: ${{ github.workspace }}/.github/force-portable-ggml.cmake
-        run: |
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' summary::action_extraction::tests
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' lark::actions::tests
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' lark::macos_credentials::tests
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' parakeet_engine::parakeet_engine::tests
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' sensevoice_engine::model::tests
-          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' onboarding::tests
-          bundle='target/${{ matrix.target }}/release/bundle'
-          test -f "$bundle/macos/meetily.app/Contents/MacOS/meetily"
-          codesign --verify --deep --strict "$bundle/macos/meetily.app"
-          find "$bundle/dmg" -name '*.dmg' -exec hdiutil verify {} \;
+        run: bash scripts/test-macos-custom.sh '${{ matrix.target }}'
       - name: 上传安装包
         uses: actions/upload-artifact@v4
         with:

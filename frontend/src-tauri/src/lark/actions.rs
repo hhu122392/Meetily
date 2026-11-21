@@ -636,7 +636,12 @@ fn task_body(item: &Action, meeting_title: &str) -> Result<Value, String> {
             item.summary
         ));
     }
-    let mut body = json!({"summary":item.summary.trim(),"description":format!("会议：{}\n纪要依据：{}\n负责人原文：{}\n截止原文：{}\n已在 Meetily 人工确认",meeting_title.chars().take(300).collect::<String>(),item.evidence,item.owner_text,item.due_text)});
+    // Lark task descriptions allow 3,000 Unicode characters. Keep full evidence locally.
+    let mut excerpt: String = item.evidence.chars().take(2000).collect();
+    if item.evidence.chars().count() > 2000 {
+        excerpt.push_str("…（依据节选，完整原文保存在 Meetily）");
+    }
+    let mut body = json!({"summary":item.summary.trim(),"description":format!("会议：{}\n纪要依据：{}\n负责人原文：{}\n截止原文：{}\n已在 Meetily 人工确认",meeting_title.chars().take(300).collect::<String>(),excerpt,item.owner_text,item.due_text)});
     if !item.members.is_empty() {
         body["members"] = json!(item
             .members
@@ -1019,6 +1024,18 @@ mod tests {
         assert_eq!(items[0].owner_text, "张三、李四");
         assert_eq!(items[0].due_text, "周五；周六");
         assert!(items[0].due_date.is_empty());
+    }
+
+    #[test]
+    fn long_quotes_are_retained_locally_and_task_description_fits_lark() {
+        let mut action = item("a");
+        action.evidence = "证".repeat(MAX_EVIDENCE_CHARS);
+        let body = task_body(&action, &"会".repeat(400)).unwrap();
+        let description = body["description"].as_str().unwrap();
+        assert!(description.chars().count() <= 3000);
+        assert!(description.contains("依据节选，完整原文保存在 Meetily"));
+        assert_eq!(description.chars().filter(|c| *c == '证').count(), 2000);
+        assert_eq!(action.evidence.chars().count(), MAX_EVIDENCE_CHARS);
     }
 
     #[test]
