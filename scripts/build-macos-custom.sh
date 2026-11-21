@@ -21,9 +21,11 @@ done
 xcrun --find clang >/dev/null
 rustup target add "$TARGET"
 pnpm --dir frontend install --frozen-lockfile
-cargo build --locked --release -p llama-helper --target "$TARGET" --features metal
+# 辅助程序与 Tauri 的最终 sidecar 目标不能共用同一路径。
+# macOS 链接产物可能受系统保护，Tauri 替换它时会遇到 EPERM。
+CARGO_TARGET_DIR="$ROOT/target/helper-build" cargo build --locked --release -p llama-helper --target "$TARGET" --features metal
 mkdir -p frontend/src-tauri/binaries
-cp "target/$TARGET/release/llama-helper" "frontend/src-tauri/binaries/llama-helper-$TARGET"
+cp "target/helper-build/$TARGET/release/llama-helper" "frontend/src-tauri/binaries/llama-helper-$TARGET"
 cd frontend
 pnpm exec tauri build --target "$TARGET" --bundles app,dmg --config src-tauri/tauri.macos-custom.conf.json
 cd "$ROOT"

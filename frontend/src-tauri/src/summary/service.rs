@@ -585,6 +585,7 @@ impl SummaryService {
                 };
 
                 result_json[super::action_extraction::RESULT_FIELD] = serde_json::json!(generated.action_items);
+                result_json[super::action_extraction::ERROR_FIELD] = serde_json::json!(generated.action_items_error);
 
                 let review_guard = crate::lark::app::DELIVERY_LOCK.lock().await;
                 match SummaryProcessesRepository::update_process_completed(

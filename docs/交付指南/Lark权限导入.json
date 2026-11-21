@@ -1,0 +1,26 @@
+{
+  "scopes": {
+    "tenant": [
+      "docx:document",
+      "docx:document.block:convert",
+      "im:chat.members:read",
+      "im:chat:read",
+      "im:message:send_as_bot",
+      "im:resource",
+      "wiki:wiki"
+    ],
+    "user": [
+      "calendar:calendar.event:read",
+      "docx:document",
+      "docx:document.block:convert",
+      "drive:drive:readonly",
+      "im:chat:read",
+      "im:message.group_msg:get_as_user",
+      "im:message:readonly",
+      "offline_access",
+      "task:task:write",
+      "vc:meeting",
+      "vc:meeting.meetingevent:read"
+    ]
+  }
+}

@@ -58,7 +58,7 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: swatinem/rust-cache@v2
         with:
-          key: mac-custom-${{ matrix.target }}
+          key: mac-custom-isolated-helper-v2-${{ matrix.target }}
       - name: 检查构建工具
         run: |
           xcodebuild -version
@@ -71,6 +71,8 @@ jobs:
         env:
           CMAKE_PROJECT_INCLUDE: ${{ github.workspace }}/.github/force-portable-ggml.cmake
         run: |
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' summary::action_extraction::tests
+          cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' lark::actions::tests
           cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' lark::macos_credentials::tests
           cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' parakeet_engine::parakeet_engine::tests
           cargo test --locked --release -p meetily --lib --target '${{ matrix.target }}' sensevoice_engine::model::tests

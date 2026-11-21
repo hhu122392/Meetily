@@ -364,6 +364,7 @@ pub(crate) struct GeneratedMeetingSummary {
     pub reasoning_stripped: bool,
     pub normalization_fallback: bool,
     pub action_items: Vec<super::action_extraction::ExtractedAction>,
+    pub action_items_error: Option<String>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -393,7 +394,7 @@ pub(crate) async fn generate_meeting_summary(
     }
     info!("Starting summary generation with provider: {:?}, model: {}", provider, model_name);
 
-    let action_items = super::action_extraction::extract_all(
+    let extracted_actions = super::action_extraction::extract_all(
         text, token_threshold.saturating_sub(1500), |prompt| async move {
             generate_summary(
                 client, provider, model_name, api_key,
@@ -402,7 +403,10 @@ pub(crate) async fn generate_meeting_summary(
                 app_data_dir, cancellation_token,
             ).await.map(|completion| completion.content)
         },
-    ).await?;
+    ).await;
+    let (action_items, action_items_error) = super::action_extraction::non_blocking_result(
+        extracted_actions, cancellation_token.is_some_and(CancellationToken::is_cancelled),
+    )?;
 
     let total_tokens = rough_token_count(text);
     let (mut english_markdown, successful_chunk_count, mut reasoning_stripped) =
@@ -571,6 +575,7 @@ pub(crate) async fn generate_meeting_summary(
         reasoning_stripped,
         normalization_fallback,
         action_items,
+        action_items_error,
     })
 }
 

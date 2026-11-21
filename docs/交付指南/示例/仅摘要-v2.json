@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "id": "summary_only_example",
+  "name": "仅摘要示例",
+  "description": "可导入的会议纪要模板示例；未明确的信息留空。",
+  "version": 1,
+  "locale": "zh-CN",
+  "tags": [
+    "导入示例"
+  ],
+  "source": {
+    "type": "manual"
+  },
+  "created_at": "2026-11-21T00:00:00+08:00",
+  "updated_at": "2026-11-21T00:00:00+08:00",
+  "sections": [
+    {
+      "id": "summary",
+      "title": "摘要",
+      "instruction": "用一段简短文字概括会议核心内容，保留明确的项目或产品代号、主要风险和结论，不编造信息。出席及缺席名单仅放入参会人员栏目，具体待办仅放入行动项栏目。",
+      "format": "paragraph",
+      "item_format": null,
+      "example_item_format": null,
+      "required": true,
+      "empty_behavior": "show_not_mentioned"
+    }
+  ],
+  "extensions": {}
+}

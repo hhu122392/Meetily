@@ -580,6 +580,24 @@ pub fn default_for_meeting() -> Result<String, String> {
 mod tests {
     use super::*;
     #[test]
+    fn delivery_examples_import_without_overwriting_and_can_be_default() {
+        let root = tempfile::tempdir().unwrap();
+        let repo = Repository::new(root.path().into(), None);
+        for text in [
+            include_str!("../../../../../docs/交付指南/示例/项目例会-v2.json"),
+            include_str!("../../../../../docs/交付指南/示例/仅摘要-v2.json"),
+        ] {
+            let parsed = Document::parse(text, "example").unwrap();
+            let first = repo.import(text).unwrap();
+            let second = repo.import(text).unwrap();
+            assert_ne!(first.id, second.id);
+            assert_eq!(first.sections.len(), parsed.sections.len());
+            repo.set_default(&first.id).unwrap();
+            assert_eq!(repo.default_id().unwrap(), first.id);
+            assert_eq!(repo.get(&first.id).unwrap().0.name, parsed.name);
+        }
+    }
+    #[test]
     fn all_builtins_and_three_column_actions() {
         assert_eq!(builtin_sources().len(), 12);
         for (id, _) in builtin_sources() {

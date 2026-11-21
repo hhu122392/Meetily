@@ -45,12 +45,12 @@ impl SummaryProcessesRepository {
         let previous: Option<Option<String>> = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id = ?")
             .bind(meeting_id).fetch_optional(&mut *transaction).await?;
         let mut summary = summary.clone();
-        let field = crate::summary::action_extraction::RESULT_FIELD;
-        summary.as_object_mut().map(|object| object.remove(field));
-        if let Some(actions) = previous.flatten()
-            .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
-            .and_then(|value| value.get(field).cloned()) {
-            summary[field] = actions;
+        let previous = previous.flatten().and_then(|raw| serde_json::from_str::<Value>(&raw).ok());
+        for field in [crate::summary::action_extraction::RESULT_FIELD, crate::summary::action_extraction::ERROR_FIELD] {
+            summary.as_object_mut().map(|object| object.remove(field));
+            if let Some(value) = previous.as_ref().and_then(|value| value.get(field)).cloned() {
+                summary[field] = value;
+            }
         }
         let result_json = serde_json::to_string(&summary);
         if result_json.is_err() {
@@ -285,12 +285,13 @@ mod tests {
         sqlx::raw_sql("CREATE TABLE meetings(id TEXT PRIMARY KEY, updated_at TEXT); INSERT INTO meetings VALUES('m','now');")
             .execute(&pool).await.unwrap();
         let actions = json!([{"summary":"补充测试","evidence":"补充测试。","ownerText":"","dueText":""}]);
-        seed_pending(&pool, "m", Utc::now(), Some(&json!({"markdown":"摘要", "meeting_action_items":actions}).to_string()), None).await;
+        seed_pending(&pool, "m", Utc::now(), Some(&json!({"markdown":"摘要", "meeting_action_items":actions, "meeting_action_items_error":"提取失败，请重试"}).to_string()), None).await;
         assert!(SummaryProcessesRepository::update_meeting_summary(&pool, "m", &json!({"markdown":"人工编辑摘要", "meeting_action_items":[]})).await.unwrap());
         let result: String = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id='m'").fetch_one(&pool).await.unwrap();
         let result: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(result["markdown"], "人工编辑摘要");
         assert_eq!(result["meeting_action_items"], actions);
+        assert_eq!(result["meeting_action_items_error"], "提取失败，请重试");
     }
 
     #[tokio::test]

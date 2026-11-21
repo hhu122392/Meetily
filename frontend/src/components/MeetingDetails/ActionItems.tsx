@@ -11,7 +11,7 @@ type Action = {
   dueDate: string; dueTime: string; memberChatId: string; members: Member[];
 };
 type Receipt = { id: string; summary: string; status: 'sent' | 'failed' | 'sending' | 'unknown'; detail: string; taskGuid?: string; taskUrl?: string };
-type Context = { sourceHash: string; revision: string; items: Action[]; receipts: Receipt[]; authorized: boolean; ownerId: string };
+type Context = { extractionWarning?: string | null; sourceHash: string; revision: string; items: Action[]; receipts: Receipt[]; authorized: boolean; ownerId: string };
 type Preview = { id: string; items: Action[]; ownerId: string };
 const inputClass = 'w-full rounded-md border bg-background px-3 py-2 text-sm';
 
@@ -103,6 +103,7 @@ export function ActionItems({ meetingId, saveEdits, disabled }: { meetingId: str
         <div className="min-h-0 flex-1 overflow-y-auto" aria-label="行动项内容">
         <div className="space-y-4">
         {context && <>
+          {context.extractionWarning && <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{context.extractionWarning}</p>}
           <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
             <p className="flex-1">{context.authorized ? '已连接 Lark 任务：以当前登录账号创建。' : '同步前需连接 Lark 任务；提取和保存草稿可以先做。'}</p>
             <Button variant="outline" disabled={busy} onClick={() => void run(async () => {
@@ -121,7 +122,7 @@ export function ActionItems({ meetingId, saveEdits, disabled }: { meetingId: str
             {memberError && <p role="alert" className="mt-2 text-sm text-red-700">{memberError}</p>}
           </details>
           <p className="text-xs text-muted-foreground">负责人、截止时间未提到则留空。相对日期保留原文，请确认具体日期；填写时刻按北京时间处理。不支持的格式可手动补充，未提取到不代表会议没有待办。</p>
-          {!items.length && <p className="rounded-lg bg-muted p-4 text-sm">未找到明确的待办事项。旧会议可重新生成纪要，从转写独立提取行动项；也可以手动补充。未提到的负责人和截止时间留空。</p>}
+          {!items.length && !context.extractionWarning && <p className="rounded-lg bg-muted p-4 text-sm">未找到明确的待办事项。旧会议可重新生成纪要，从转写独立提取行动项；也可以手动补充。未提到的负责人和截止时间留空。</p>}
           <div className="space-y-3">{items.map((item, index) => <section key={item.id} className="space-y-3 rounded-lg border p-4" aria-label={`行动项 ${index + 1}`}>
             <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" aria-label={`同步行动项 ${index + 1}`} checked={selected.includes(item.id)} disabled={busy || blocked(item.id)} onChange={e => { setSelected(current => e.target.checked ? [...current, item.id] : current.filter(id => id !== item.id)); invalidate(); }} />{blocked(item.id) ? '已同步或待核对，不重复创建' : '勾选此项同步'}</label>
             <fieldset disabled={busy || blocked(item.id)} className="space-y-3">

@@ -4,6 +4,7 @@ use super::{
     payload::fingerprint,
 };
 use crate::{state::AppState, summary::markdown_export};
+use crate::summary::action_extraction::{MAX_ITEMS, MAX_SUMMARY_CHARS, MAX_EVIDENCE_CHARS, MAX_OWNER_CHARS, MAX_DUE_CHARS};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
@@ -395,8 +396,12 @@ async fn context(
     c: &AppConfig,
 ) -> Result<Value, String> {
     let items = drafts(pool, meeting, hash).await?;
+    let raw: Option<Option<String>> = sqlx::query_scalar("SELECT result FROM summary_processes WHERE meeting_id=?")
+        .bind(meeting).fetch_optional(pool).await.map_err(db_error)?;
+    let extraction_warning = raw.flatten().and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .and_then(|v| v.get(crate::summary::action_extraction::ERROR_FIELD).and_then(Value::as_str).map(str::to_owned));
     Ok(
-        json!({"sourceHash":hash,"revision":revision(&items)?,"items":items,"receipts":receipts(pool,meeting,c).await?,"authorized":c.enabled && c.tasks_authorized && !c.owner_id.is_empty() && oauth::authorization_status(c).1,"ownerId":c.owner_id}),
+        json!({"sourceHash":hash,"extractionWarning":extraction_warning,"revision":revision(&items)?,"items":items,"receipts":receipts(pool,meeting,c).await?,"authorized":c.enabled && c.tasks_authorized && !c.owner_id.is_empty() && oauth::authorization_status(c).1,"ownerId":c.owner_id}),
     )
 }
 
@@ -521,10 +526,11 @@ pub async fn lark_actions_members(
 
 fn validate_draft(item: &Action) -> Result<(), String> {
     if item.summary.trim().is_empty()
-        || item.summary.chars().count() > 1000
-        || item.evidence.chars().count() > 1500
-        || item.owner_text.chars().count() > 200
-        || item.due_text.chars().count() > 100
+        || item.summary.chars().count() > MAX_SUMMARY_CHARS
+        // Evidence is server-owned and may combine quotes from multiple duplicate candidates.
+        || item.evidence.chars().count() > MAX_EVIDENCE_CHARS * MAX_ITEMS
+        || item.owner_text.chars().count() > MAX_OWNER_CHARS
+        || item.due_text.chars().count() > MAX_DUE_CHARS
         || item.members.len() > 20
     {
         return Err("行动项内容为空或过长，请精简后保存。".into());
@@ -919,6 +925,29 @@ mod tests {
         }
         pool
     }
+    #[tokio::test]
+    async fn long_verified_quotes_can_be_saved_but_cannot_be_rewritten() {
+        let pool = db().await;
+        for size in [1501, MAX_EVIDENCE_CHARS] {
+            let evidence = "确".repeat(size);
+            let raw = json!({"items":[{"summary":"补充测试","evidence":evidence,"ownerText":"","dueText":""}]}).to_string();
+            let source = crate::summary::action_extraction::parse(&raw, &evidence).unwrap().remove(0);
+            let mut action = candidate(source.summary, source.evidence, source.owner_text, source.due_text).unwrap();
+            action.id = "a".into();
+            sqlx::query("UPDATE lark_action_drafts SET draft_json=? WHERE id='a'")
+                .bind(serde_json::to_string(&action).unwrap()).execute(&pool).await.unwrap();
+            let old = drafts(&pool, "m", "hash").await.unwrap();
+            let mut changed = old.clone();
+            changed.iter_mut().find(|i| i.id == "a").unwrap().summary = "人工补充测试要求".into();
+            save_drafts(&pool, "m", "hash", &revision(&old).unwrap(), &changed).await.unwrap();
+            let saved = drafts(&pool, "m", "hash").await.unwrap();
+            assert_eq!(saved.iter().find(|i| i.id == "a").unwrap().evidence, evidence);
+            let mut tampered = saved.clone();
+            tampered.iter_mut().find(|i| i.id == "a").unwrap().evidence = "伪造依据".into();
+            assert!(save_drafts(&pool, "m", "hash", &revision(&saved).unwrap(), &tampered).await.is_err());
+        }
+    }
+
     #[test]
     fn extraction_is_scoped_deduplicated_and_never_invents_people_or_dates() {
         let md="# 纪要\n## 讨论\n- 不应作为待办\n## 行动项\n| **负责人** | **任务** | **截止时间** |\n| --- | --- | --- |\n| 张三 | 完成接口 | 下周五 |\n| 待定 | 补充测试 | 未提及 |\n| 待定 | 补充测试 | 未提及 |\n## 风险\n- 不应提取\n**待办事项**\n- [ ] 补充文档；负责人：李四；截止日期：2026-11-20\n- [x] 已完成的事\n```\n- 代码不是待办\n```\n- 调查问题\n";
